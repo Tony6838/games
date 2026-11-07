@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f0e0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>拖拉机 · 80 分</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<header id="topbar">
+  <div class="brand">拖拉机<span>80 分 · 升级</span></div>
+  <div id="roundInfo" class="round-info"></div>
+  <div class="tools">
+    <button id="btnSpeed" class="ghost" title="切换动画速度"><span class="lbl">速度：</span>标准</button>
+    <button id="btnSound" class="ghost" title="开关声音"><span class="lbl">声音：</span>开</button>
+    <button id="btnLog" class="ghost" title="显示牌局记录">记录</button>
+    <button id="btnRules" class="ghost">规则</button>
+  </div>
+</header>
+
+<div class="plate" id="plate1" data-seat="1"></div>
+<div class="plate" id="plate2" data-seat="2"></div>
+<div class="plate" id="plate3" data-seat="3"></div>
+<div class="plate" id="plate0" data-seat="0"></div>
+
+<div id="scoreBox" hidden>
+  <div class="score-label"><span id="scoreRole">闲家得分</span><b id="scoreValue">0</b><span class="score-line">/ 80</span></div>
+  <div class="score-bar"><div id="scoreFill"></div><div class="score-mark"></div></div>
+</div>
+
+<div id="floaters" aria-live="polite"></div>
+<div id="hint" hidden></div>
+<div id="actions" hidden></div>
+
+<aside id="logPanel" hidden>
+  <h3>牌局记录</h3>
+  <ol id="logList"></ol>
+</aside>
+
+<section id="startScreen" class="overlay">
+  <div class="card intro">
+    <h1>拖拉机</h1>
+    <p class="sub">80 分 · 你和对家（徐涌）对阵两位电脑玩家</p>
+    <ul>
+      <li>两副牌 108 张，用密码学随机数洗牌，发牌完全随机。</li>
+      <li>电脑只知道自己的手牌和桌面上出过的牌，不会偷看；对家和你的配合也只靠出牌。</li>
+      <li>亮主、埋底、甩牌、抠底都有，从 2 打起，打 A 并且守住才算通关。</li>
+    </ul>
+    <button id="btnStart" class="primary big">开始</button>
+    <button id="btnStartRules" class="ghost">看规则</button>
+    <div class="dedication">
+      <p>这是沈强孝敬母亲胡杏素开发的免费无广告无作弊无偷看版本的网络版单机游戏。</p>
+      <p>老母中风之后唯一的娱乐活动就是打牌和麻将，但是无良奸商把这些游戏变成需要登陆购买金币才能玩的真正的昂贵的赌博。</p>
+      <p>欢迎传播和免费使用，作者对游戏的安全负责。</p>
+      <p>改进意见可以发电子邮件给作者 <a href="mailto:Tony.Shen.Qiang@Gmail.Com">Tony.Shen.Qiang@Gmail.Com</a></p>
+    </div>
+  </div>
+</section>
+
+<section id="resultScreen" class="overlay" hidden>
+  <div class="card result">
+    <div id="verdict" class="verdict"></div>
+    <div id="resultBody"></div>
+    <div class="result-buttons">
+      <button id="btnNext" class="primary big">下一局</button>
+      <button id="btnViewTable" class="ghost">看牌桌</button>
+    </div>
+  </div>
+</section>
+<button id="btnBackResult" class="primary" hidden>返回结果</button>
+
+<section id="rulesScreen" class="overlay" hidden>
+  <div class="card rules">
+    <button id="btnRulesClose" class="close" aria-label="关闭">×</button>
+    <h2>本游戏采用的规则</h2>
+    <p class="note">拖拉机各地打法略有出入，这里写的就是程序实际执行的规则。</p>
+    <h3>牌和发牌</h3>
+    <ul>
+      <li>两副牌 108 张，四人对坐，对家是朋友。逆时针一张张发，每人 25 张，留 8 张底牌。</li>
+      <li>两队都从 2 打起，庄家所在队的级别就是本局打几。第一局最先亮主的人坐庄。</li>
+    </ul>
+    <h3>亮主</h3>
+    <ul>
+      <li>发牌中或刚发完时，亮出级牌定主：单张 &lt; 一对 &lt; 一对小王（无主）&lt; 一对大王（无主）。后亮的必须比前面的强。单张王不能亮。</li>
+      <li>没人亮主：逐张翻底牌，翻到级牌就定它的花色；一直翻不到就取最大那张的花色。</li>
+    </ul>
+    <h3>埋底</h3>
+    <ul><li>庄家把 8 张底牌拿进手里，再挑任意 8 张埋回去。埋分也可以，但被抠底会翻倍。</li></ul>
+    <h3>牌的大小</h3>
+    <ul>
+      <li>主牌从大到小：大王 &gt; 小王 &gt; 主花色级牌 &gt; 其他花色级牌（彼此一样大）&gt; 主花色 A、K、Q…。</li>
+      <li>副牌：A、K、Q…，级牌不算在里面，它两边的牌算相邻。无主时只有王和级牌是主。</li>
+    </ul>
+    <h3>牌型</h3>
+    <ul>
+      <li>单张；对子（花色点数完全相同）；拖拉机（同一门里两对以上相连的对子，例如 5566）。</li>
+      <li>主牌的相连算法：主花色 A 对 - 副级牌对 - 主级牌对 - 小王对 - 大王对相邻。两种副级牌一样大，不能连。</li>
+      <li>甩牌：同一门的几组大牌一起领。只要有一家能压过其中一组就算失败：只能打出被压住的最小那组，其余收回，罚 10 分（庄家方失败闲家加 10，闲家失败闲家减 10）。</li>
+    </ul>
+    <h3>跟牌</h3>
+    <ul>
+      <li>出牌张数和领牌相同。有这一门就必须跟这一门；领对子有对子必须跟对子，领拖拉机有拖拉机必须跟拖拉机，没有拖拉机就跟对子。</li>
+      <li>这一门不够时，全部打出再用别的牌补。断门时可以垫任何牌，也可以用主牌毙。</li>
+      <li>只有结构相同才可能赢：两张散主压不了对子，同样长度的主牌连对才能毙拖拉机。一样大时先出的赢。甩牌被毙时比最大的那一组。</li>
+    </ul>
+    <h3>计分</h3>
+    <ul>
+      <li>5 算 5 分，10 和 K 算 10 分，共 200 分。闲家赢的墩里的分算闲家的。</li>
+      <li>抠底：闲家赢最后一墩，底牌的分乘倍数计入闲家：单张 ×2，对子 ×4，两对拖拉机 ×8，以此类推（最后一墩最大一组的张数 ×2）。</li>
+    </ul>
+    <table>
+      <tr><th>闲家得分</th><th>结果</th><th>下一局庄家</th></tr>
+      <tr><td>0</td><td>庄家升 3 级</td><td rowspan="3">本局庄家的对家</td></tr>
+      <tr><td>5 - 35</td><td>庄家升 2 级</td></tr>
+      <tr><td>40 - 75</td><td>庄家升 1 级</td></tr>
+      <tr><td>80 - 115</td><td>闲家上台，不升级</td><td rowspan="4">本局庄家的下家</td></tr>
+      <tr><td>120 - 155</td><td>闲家上台，升 1 级</td></tr>
+      <tr><td>160 - 195</td><td>闲家上台，升 2 级</td></tr>
+      <tr><td>200 以上</td><td>闲家上台，升 3 级，每多 40 分再加 1 级</td></tr>
+    </table>
+    <p class="note">打 A 的庄家守住才算通关。不管是庄家还是闲家，升级最多升到 A，都要再打一局 A。</p>
+  </div>
+</section>
+
+<div id="rotateHint"><div><span class="phone-icon"></span><p>请把手机横过来玩</p></div></div>
+
+<div id="noWebgl" class="overlay" hidden>
+  <div class="card intro"><h2>浏览器不支持 WebGL2</h2><p>请用新版 Edge、Chrome、Firefox 或 Safari 打开，并开启硬件加速。</p></div>
+</div>
+
+<script src="js/cards.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/art.js"></script>
+<script src="js/gfx.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f0e0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>上海麻将 · 清混碰</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="stage"></canvas>
+
+<header id="topbar">
+  <div class="brand">上海麻将<span>清混碰</span></div>
+  <div id="roundInfo" class="round-info"></div>
+  <div class="tools">
+    <button id="btnSpeed" class="ghost" title="切换动画速度"><span class="lbl">速度：</span>标准</button>
+    <button id="btnSound" class="ghost" title="开关声音"><span class="lbl">声音：</span>开</button>
+    <button id="btnLog" class="ghost" title="显示牌局记录">记录</button>
+    <button id="btnRules" class="ghost">规则</button>
+  </div>
+</header>
+
+<div class="plate" id="plate1" data-seat="1"></div>
+<div class="plate" id="plate2" data-seat="2"></div>
+<div class="plate" id="plate3" data-seat="3"></div>
+<div class="plate" id="plate0" data-seat="0"></div>
+
+<div id="callout" aria-live="polite"></div>
+<div id="waitsPanel" hidden></div>
+<div id="hint" hidden></div>
+<div id="actions" hidden></div>
+
+<aside id="logPanel" hidden>
+  <h3>牌局记录</h3>
+  <ol id="logList"></ol>
+</aside>
+
+<section id="startScreen" class="overlay">
+  <div class="card intro">
+    <h1>上海麻将</h1>
+    <p class="sub">清混碰 · 你对三位电脑玩家</p>
+    <ul>
+      <li>144 张牌，用密码学随机数洗牌，发牌完全随机。</li>
+      <li>电脑只知道自己的手牌和桌面上看得见的牌，不会偷看，也没有特殊待遇。</li>
+      <li>胡牌必须是清一色、混一色、碰碰胡或乱风向，没有平胡。</li>
+    </ul>
+    <button id="btnStart" class="primary big">开始</button>
+    <button id="btnStartRules" class="ghost">看规则</button>
+    <div class="dedication">
+      <p>这是沈强孝敬母亲胡杏素开发的免费无广告无作弊无偷看版本的网络版单机游戏。</p>
+      <p>老母中风之后唯一的娱乐活动就是打牌和麻将，但是无良奸商把这些游戏变成需要登陆购买金币才能玩的真正的昂贵的赌博。</p>
+      <p>欢迎传播和免费使用，作者对游戏的安全负责。</p>
+      <p>改进意见可以发电子邮件给作者 <a href="mailto:Tony.Shen.Qiang@Gmail.Com">Tony.Shen.Qiang@Gmail.Com</a></p>
+    </div>
+  </div>
+</section>
+
+<section id="resultScreen" class="overlay" hidden>
+  <div class="card result">
+    <div id="verdict" class="verdict"></div>
+    <div id="resultBody"></div>
+    <div class="result-buttons">
+      <button id="btnNext" class="primary big">再来一局</button>
+      <button id="btnViewTable" class="ghost">看牌桌</button>
+    </div>
+  </div>
+</section>
+<button id="btnBackResult" class="primary" hidden>返回结果</button>
+
+<section id="rulesScreen" class="overlay" hidden>
+  <div class="card rules">
+    <button id="btnRulesClose" class="close" aria-label="关闭">×</button>
+    <h2>本游戏采用的规则</h2>
+    <p class="note">上海麻将各家打法略有出入，这里写的就是程序实际执行的规则。</p>
+    <h3>牌与发牌</h3>
+    <ul>
+      <li>万、条、筒各 36 张，东南西北中发白各 4 张，春夏秋冬梅兰竹菊各 1 张，共 144 张。</li>
+      <li>庄家 14 张，其余 13 张。摸到花牌亮出，从牌尾补一张。杠牌也从牌尾补。</li>
+      <li>不留牌，牌墙摸完算流局。第一局庄家随机；谁胡谁坐庄，流局庄家不变。</li>
+    </ul>
+    <h3>吃碰杠</h3>
+    <ul>
+      <li>只能吃上家的牌；碰、杠任何一家。优先级：胡 &gt; 碰/杠 &gt; 吃。可以一炮多响。</li>
+      <li>吃进的那张不能马上打出（吃 4 万不能打 4 万）。放弃碰某张牌后，轮到自己之前不能再碰或明杠这张。</li>
+      <li>最后一张牌打出后只能胡，不能吃碰杠。</li>
+    </ul>
+    <h3>能胡的牌型（没有平胡）</h3>
+    <table>
+      <tr><th>牌型</th><th>要求</th><th>牌面</th></tr>
+      <tr><td>混一色</td><td>一门花色 + 风/箭牌</td><td>底 2 + 花数</td></tr>
+      <tr><td>碰碰胡</td><td>四副刻子/杠 + 一对将</td><td>底 2 + 花数</td></tr>
+      <tr><td>清一色</td><td>只有一门花色</td><td>1 辣</td></tr>
+      <tr><td>混碰</td><td>混一色 + 碰碰胡</td><td>1 辣</td></tr>
+      <tr><td>清碰</td><td>清一色 + 碰碰胡</td><td>2 辣</td></tr>
+      <tr><td>乱风向</td><td>全是风牌、箭牌，不必成副</td><td>2 辣</td></tr>
+      <tr><td>字一色</td><td>全是风牌、箭牌，且成副</td><td>4 辣</td></tr>
+    </table>
+    <p class="note">1 辣 = 10 点。底 2 + 花数最多到 10 点（8 花算 1 辣）。</p>
+    <h3>花数</h3>
+    <table>
+      <tr><th></th><th>碰/暗刻</th><th>明杠</th><th>暗杠</th></tr>
+      <tr><td>万条筒</td><td>0</td><td>1</td><td>2</td></tr>
+      <tr><td>东南西北</td><td>1</td><td>2</td><td>3</td></tr>
+      <tr><td>中发白</td><td>2</td><td>3</td><td>4</td></tr>
+      <tr><td>花牌</td><td colspan="3">每张 1 花</td></tr>
+    </table>
+    <h3>加成</h3>
+    <ul>
+      <li>门清（没吃碰、没明杠，暗杠可以）：×2。海底捞月（摸最后一张自摸）：×2。</li>
+      <li>大吊车（四副都亮出，单吊）、杠开：不足 1 辣算 1 辣，已是辣子再加 1 辣。</li>
+      <li>拉杠胡（抢别人加杠的那张）：被抢的一家独付 3 倍。</li>
+      <li>天胡 10 辣、地胡 8 辣（牌型仍要合法）。八花：集齐八张花直接胡，4 辣。七捉一：一家七花、另一家一花时，七花一家胜，一花一家付 1 辣。</li>
+      <li>荒番：流局时荒番数加 1，有人胡牌时减 1（减到 0 为止），荒番数大于 0 的局 ×2。开宝（骰子两颗点数相同）：×2。</li>
+    </ul>
+    <h3>输赢</h3>
+    <ul>
+      <li>自摸：其余三家各付牌面。放炮：只有放炮的一家付。</li>
+      <li>三口（包牌）：吃碰杠同一家累计 3 次，两人互相绑定。一方自摸时另一方独付 5 份（不再由三家分摊）；另一方放炮付 2 份；第三家放炮时，若第三家已听牌，他和绑定方各付 1 份，未听牌则他独付 2 份。同时和两家绑定时，自摸由这两家各付 5 份；其中一家放炮时，他付 2 份、另一家付 1 份。</li>
+      <li>只算当局输赢，不累计积分。</li>
+    </ul>
+  </div>
+</section>
+
+<div id="rotateHint"><div><span class="phone-icon"></span><p>请把手机横过来玩</p></div></div>
+
+<div id="noWebgl" class="overlay" hidden>
+  <div class="card intro"><h2>浏览器不支持 WebGL2</h2><p>请用新版 Edge、Chrome、Firefox 或 Safari 打开，并开启硬件加速。</p></div>
+</div>
+
+<script src="js/tiles.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/art.js"></script>
+<script src="js/gfx.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+{
+  "refine": 1,
+  "surviveMeld": 0.006,
+  "gFlush": [
+    0.175,
+    0.395,
+    0.57,
+    0.745
+  ],
+  "gHalf": [
+    0.1,
+    0.25,
+    0.416,
+    0.582
+  ],
+  "gPeng": [
+    0.058,
+    0.116,
+    0.174,
+    0.232
+  ],
+  "callBonus": 0.8,
+  "ronBonus": 0.755,
+  "horizon": 12.42,
+  "survive": 0.97,
+  "second": 0.2,
+  "third": 0.05,
+  "closedBonus": 0.983,
+  "payScale": 1.8,
+  "defense": 1,
+  "relHonor": 0.42,
+  "relOffSuit": 0.03,
+  "relMulti": 0.36,
+  "relZiNumber": 0.8,
+  "relZiHonor": 1.4,
+  "relOwnRiver": 0.06,
+  "ptsPlain": 7.5,
+  "ptsClosed": 14,
+  "ptsZi": 20,
+  "ptsFour": 20,
+  "stayBias": 1.05,
+  "stayAdd": 0.1,
+  "gangAn": 0.35,
+  "gangMing": 0.3,
+  "gangJia": 0.1,
+  "sankouRisk": 0.372,
+  "passRonMaxPoints": 6,
+  "passRonFactor": 1
+}

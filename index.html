@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>上海麻将 · 拖拉机</title>
+<style>
+  :root { --ink: #f3ead6; --muted: #a9a290; --gold: #e6bd6e; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 18px;
+    background: radial-gradient(ellipse at 50% 35%, #1d3b2e 0%, #0e1512 70%);
+    color: var(--ink); font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  }
+  main { width: min(720px, 100%); text-align: center; }
+  h1 { margin: 0 0 6px; font-family: "KaiTi", "STKaiti", serif; font-size: 40px; letter-spacing: 6px; color: var(--gold); }
+  .sub { margin: 0 0 22px; color: var(--muted); }
+  .games { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .games a {
+    display: block; width: min(320px, 100%); padding: 18px 16px; border-radius: 12px; text-decoration: none; color: var(--ink);
+    background: rgba(24, 25, 29, .9); border: 1px solid rgba(230, 189, 110, .35); box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  }
+  .games a:hover { border-color: var(--gold); }
+  .games b { display: block; font-family: "KaiTi", "STKaiti", serif; font-size: 28px; letter-spacing: 4px; color: var(--gold); }
+  .games span { font-size: 14px; color: var(--muted); }
+  .dedication {
+    margin: 24px auto 0; padding: 12px 16px; text-align: left; font-size: 14px; line-height: 1.7; color: var(--muted);
+    border-left: 3px solid var(--gold); border-radius: 6px; background: rgba(255, 255, 255, .04);
+  }
+  .dedication p { margin: 0 0 4px; }
+  .dedication a { color: var(--gold); text-decoration: none; word-break: break-all; }
+  .foot { margin-top: 14px; font-size: 12px; color: var(--muted); }
+  .foot a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>上海麻将 · 拖拉机</h1>
+  <p class="sub">打开就能玩，不用登录，没有广告，电脑和手机横屏都可以</p>
+  <div class="games">
+    <a href="MaJiang/"><b>上海麻将</b><span>清混碰 · 你对三位电脑玩家</span></a>
+    <a href="Tractor/"><b>拖拉机</b><span>80 分 · 你和对家对阵两位电脑玩家</span></a>
+  </div>
+  <div class="dedication">
+    <p>这是沈强孝敬母亲胡杏素开发的免费无广告无作弊无偷看版本的网络版单机游戏。</p>
+    <p>老母中风之后唯一的娱乐活动就是打牌和麻将，但是无良奸商把这些游戏变成需要登陆购买金币才能玩的真正的昂贵的赌博。</p>
+    <p>欢迎传播和免费使用，作者对游戏的安全负责。</p>
+    <p>改进意见可以发电子邮件给作者 <a href="mailto:Tony.Shen.Qiang@Gmail.Com">Tony.Shen.Qiang@Gmail.Com</a></p>
+  </div>
+  <p class="foot">开源代码：<a href="https://github.com/Tony6838/games">github.com/Tony6838/games</a>（MIT 许可）</p>
+</main>
+</body>
+</html>

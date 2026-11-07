@@ -1,0 +1,595 @@
+/* 机器玩家。
+ *
+ * 决策是 view（自己的手牌 + 公开信息）的纯函数，没有别的输入，也不碰随机数：
+ * 对手手牌和牌墙顺序变了，只要 view 不变，决定就完全相同。tests/run_tests.js 专门验证这一点。
+ *
+ * 思路：把每种合法牌型（清一色、混一色、碰碰胡、混碰、清碰、乱风向）当作一个目标，
+ * 用向听数和进张估算「来得及做成的概率 × 做成后的点数」，再减去按公开信息估计的放炮风险。
+ * PARAMS 里的数字由 tools/selfplay.js 四家对局调出来，调优记录在 docs/selfplay_log.md。
+ */
+(function (root) {
+  'use strict';
+  const isNode = typeof module === 'object' && module.exports;
+  const T = isNode ? require('./tiles.js') : root.MJ.Tiles;
+  const R = isNode ? require('./rules.js') : root.MJ.Rules;
+
+  // 由 tools/selfplay.js tune 四家对局调出，含义见 docs/ai.md
+  const PARAMS = {
+    refine: 1,
+    surviveMeld: 0.006,
+    gFlush: [0.175, 0.395, 0.57, 0.745],
+    gHalf: [0.1, 0.25, 0.416, 0.582],
+    gPeng: [0.058, 0.116, 0.174, 0.232],
+    callBonus: 0.8,
+    ronBonus: 0.755,
+    horizon: 12.42,
+    survive: 0.97,
+    second: 0.2,
+    third: 0.05,
+    closedBonus: 0.983,
+    payScale: 1.8,
+    defense: 1,
+    relHonor: 0.42,
+    relOffSuit: 0.03,
+    relMulti: 0.36,
+    relZiNumber: 0.8,
+    relZiHonor: 1.4,
+    relOwnRiver: 0.06,
+    ptsPlain: 7.5,
+    ptsClosed: 14,
+    ptsZi: 20,
+    ptsFour: 20,
+    stayBias: 1.05,
+    stayAdd: 0.1,
+    gangAn: 0.35,
+    gangMing: 0.3,
+    gangJia: 0.1,
+    sankouRisk: 0.372,
+    passRonMaxPoints: 6,
+    passRonFactor: 1,
+  };
+
+  // ---- 向听数表：按花色缓存 ---------------------------------------------------
+  const POW5 = [1, 5, 25, 125, 625, 3125, 15625, 78125, 390625];
+  const suitCache = new Map();
+  const honorCache = new Map();
+
+  function record(t, h, s, p) {
+    const idx = h * 5 + Math.min(s, 4);
+    if (p > t[idx]) t[idx] = p;
+  }
+
+  function exploreSuit(c, from, h, s, p, t) {
+    let i = from;
+    while (i < 9 && c[i] === 0) i++;
+    if (i === 9) { record(t, h, s, p); return; }
+    if (c[i] >= 3 && s < 4) {
+      c[i] -= 3; exploreSuit(c, i, h, s + 1, p, t); c[i] += 3;
+    }
+    if (i <= 6 && c[i + 1] && c[i + 2] && s < 4) {
+      c[i]--; c[i + 1]--; c[i + 2]--;
+      exploreSuit(c, i, h, s + 1, p, t);
+      c[i]++; c[i + 1]++; c[i + 2]++;
+    }
+    if (c[i] >= 2) {
+      if (!h) { c[i] -= 2; exploreSuit(c, i, 1, s, p, t); c[i] += 2; }
+      if (p < 4) { c[i] -= 2; exploreSuit(c, i, h, s, p + 1, t); c[i] += 2; }
+    }
+    if (p < 4) {
+      if (i <= 7 && c[i + 1]) { c[i]--; c[i + 1]--; exploreSuit(c, i, h, s, p + 1, t); c[i]++; c[i + 1]++; }
+      if (i <= 6 && c[i + 2]) { c[i]--; c[i + 2]--; exploreSuit(c, i, h, s, p + 1, t); c[i]++; c[i + 2]++; }
+    }
+    c[i]--; exploreSuit(c, i, h, s, p, t); c[i]++;
+  }
+
+  function suitTable(c, base) {
+    let key = 0;
+    for (let i = 0; i < 9; i++) key += c[base + i] * POW5[i];
+    let t = suitCache.get(key);
+    if (t) return t;
+    t = new Int8Array(10).fill(-1);
+    exploreSuit(c.slice(base, base + 9), 0, 0, 0, 0, t);
+    if (suitCache.size > 20000) suitCache.clear(); // 手机上也只占几 MB，常见牌形很快又会算回来
+    suitCache.set(key, t);
+    return t;
+  }
+
+  function exploreHonor(c, i, h, s, p, t) {
+    if (i === 7) { record(t, h, s, p); return; }
+    const n = c[i];
+    exploreHonor(c, i + 1, h, s, p, t);
+    if (n >= 3 && s < 4) exploreHonor(c, i + 1, h, s + 1, p, t);
+    if (n >= 2) {
+      if (!h) exploreHonor(c, i + 1, 1, s, p, t);
+      if (p < 4) exploreHonor(c, i + 1, h, s, p + 1, t);
+    }
+  }
+
+  function honorTable(c) {
+    let key = 0;
+    for (let i = 0; i < 7; i++) key += c[27 + i] * POW5[i];
+    let t = honorCache.get(key);
+    if (t) return t;
+    t = new Int8Array(10).fill(-1);
+    exploreHonor(c.slice(27, 34), 0, 0, 0, 0, t);
+    honorCache.set(key, t);
+    return t;
+  }
+
+  /** N 是还要凑齐的副数。向听 = 2N - 2×成副 - 搭子 - 将；-1 表示已胡。 */
+  function fromParts(N, s, p, h) {
+    const sets = Math.min(s, N);
+    const partial = Math.min(p, N - sets);
+    return 2 * N - 2 * sets - partial - h;
+  }
+
+  function shantenOne(a, N) {
+    let best = 99;
+    for (let h = 0; h < 2; h++) {
+      for (let s = 0; s < 5; s++) {
+        const p = a[h * 5 + s];
+        if (p < 0) continue;
+        const v = fromParts(N, s, p, h);
+        if (v < best) best = v;
+      }
+    }
+    return best;
+  }
+
+  function shantenTwo(a, b, N) {
+    let best = 99;
+    for (let ha = 0; ha < 2; ha++) {
+      for (let sa = 0; sa < 5; sa++) {
+        const pa = a[ha * 5 + sa];
+        if (pa < 0) continue;
+        for (let hb = 0; hb + ha < 2; hb++) {
+          for (let sb = 0; sb < 5; sb++) {
+            const pb = b[hb * 5 + sb];
+            if (pb < 0) continue;
+            const v = fromParts(N, sa + sb, pa + pb, ha + hb);
+            if (v < best) best = v;
+          }
+        }
+      }
+    }
+    return best;
+  }
+
+  function shantenTriplets(c, from, to, honors, N) {
+    let tri = 0;
+    let pairs = 0;
+    const tally = (x) => {
+      if (x >= 3) tri++;
+      else if (x === 2) pairs++;
+    };
+    for (let k = from; k < to; k++) tally(c[k]);
+    if (honors) for (let k = 27; k < 34; k++) tally(c[k]);
+    const sets = Math.min(tri, N);
+    let head = 0;
+    let part = pairs;
+    if (pairs > 0) { head = 1; part = pairs - 1; }
+    else if (tri > N) head = 1;
+    return 2 * N - 2 * sets - Math.min(part, N - sets) - head;
+  }
+
+  /** 目标牌型的向听数。 */
+  function shantenOf(t, c, N) {
+    switch (t.type) {
+      case 'qing': return shantenOne(suitTable(c, t.suit * 9), N);
+      case 'hun': return shantenTwo(suitTable(c, t.suit * 9), honorTable(c), N);
+      case 'qpeng': return shantenTriplets(c, t.suit * 9, t.suit * 9 + 9, false, N);
+      case 'hpeng': return shantenTriplets(c, t.suit * 9, t.suit * 9 + 9, true, N);
+      case 'peng': return shantenTriplets(c, 0, 34, false, N);
+      default: { // luan：只看风牌箭牌张数，不必成副
+        let x = 0;
+        for (let k = 27; k < 34; k++) x += c[k];
+        return 3 * N + 1 - x;
+      }
+    }
+  }
+
+  function allowsKind(t, k) {
+    switch (t.type) {
+      case 'qing': case 'qpeng': return T.suitOf(k) === t.suit;
+      case 'hun': case 'hpeng': return T.suitOf(k) === t.suit || T.isHonor(k);
+      case 'luan': return T.isHonor(k);
+      default: return true;
+    }
+  }
+
+  /** 已有副露决定了哪些牌型还走得通。 */
+  function targetsFor(melds) {
+    let mask = 0;
+    let honor = false;
+    let chi = false;
+    for (const m of melds) {
+      if (m.type === 'chi') chi = true;
+      for (const k of m.kinds) {
+        if (T.isHonor(k)) honor = true;
+        else mask |= 1 << T.suitOf(k);
+      }
+    }
+    const out = [];
+    for (let s = 0; s < 3; s++) {
+      if (mask & ~(1 << s)) continue;
+      if (!honor) {
+        out.push({ type: 'qing', suit: s });
+        if (!chi) out.push({ type: 'qpeng', suit: s });
+      }
+      out.push({ type: 'hun', suit: s });
+      if (!chi) out.push({ type: 'hpeng', suit: s });
+    }
+    if (!chi) out.push({ type: 'peng' });
+    if (mask === 0 && !chi) out.push({ type: 'luan' });
+    return out;
+  }
+
+  /** 到目标完成时大概能拿几点。 */
+  function targetValue(t, c, st, P) {
+    let v;
+    switch (t.type) {
+      case 'qing': v = 10; break;
+      case 'qpeng': v = 20; break;
+      case 'hpeng': v = 10; break;
+      case 'luan': v = 20; break;
+      default: {
+        let f = st.flowerBase;
+        for (let k = 27; k < 34; k++) {
+          const dragon = k >= 31;
+          if (c[k] >= 3) f += dragon ? 2 : 1;
+          else if (c[k] === 2) f += dragon ? 1 : 0.5;
+        }
+        v = Math.min(2 + f, 10);
+      }
+    }
+    if (st.N === 1) v = v < 10 ? (v + 10) / 2 : v + 4; // 再一副就是大吊车
+    if (st.closed) v *= P.closedBonus;
+    return v * st.mult;
+  }
+
+  function stepTable(t, P) {
+    switch (t.type) {
+      case 'qing': return P.gFlush;
+      case 'hun': return P.gHalf;
+      case 'luan': return null;
+      default: return P.gPeng;
+    }
+  }
+
+  /**
+   * 还要进 steps.length 张牌，每一圈第 i 步成功的概率是 steps[i]，
+   * 在 rounds 圈内（牌局每圈以 survive 的概率继续）做完的概率。
+   */
+  function finishProbability(steps, rounds, survive) {
+    const n = steps.length;
+    const dp = new Float64Array(n + 1);
+    dp[0] = 1;
+    let done = 0;
+    let alive = 1;
+    const whole = Math.floor(rounds);
+    for (let r = 0; r <= whole; r++) {
+      const weight = r < whole ? 1 : rounds - whole;
+      if (weight <= 0) break;
+      alive *= survive;
+      for (let i = n - 1; i >= 0; i--) {
+        const move = dp[i] * steps[i] * weight;
+        dp[i] -= move;
+        if (i === n - 1) done += move * alive;
+        else dp[i + 1] += move;
+      }
+    }
+    return done;
+  }
+
+  function buildState(view, c, melds, P) {
+    const me = view.players[view.seat];
+    let flowerBase = me.flowers.length;
+    for (const m of melds) flowerBase += R.meldFlowers(m);
+    const seen = new Array(34).fill(0);
+    for (const t of view.hand) seen[t.kind]++;
+    for (const p of view.players) {
+      for (const k of p.discards) seen[k]++;
+      for (const m of p.melds) if (m.kinds) for (const k of m.kinds) seen[k]++;
+    }
+    const unseen = seen.map((n) => Math.max(0, 4 - n));
+    let U = 0;
+    for (const n of unseen) U += n;
+    return {
+      N: 4 - melds.length,
+      melds,
+      targets: targetsFor(melds),
+      flowerBase,
+      closed: melds.every((m) => m.type === 'gang' && m.sub === 'an'),
+      mult: (view.huangfan ? 2 : 1) * (view.kaibao ? 2 : 1),
+      unseen,
+      U: Math.max(U, 1),
+      rounds: view.wallRemaining / 4,
+      survive: Math.max(0.5, P.survive - P.surviveMeld * view.players.reduce((n, p) => n + (p.seat === view.seat ? 0 : p.melds.length), 0)),
+    };
+  }
+
+  /** 一向听：把每种进张都试一遍，选最好的打法，平均听牌后还有多少张可胡。 */
+  function expectedWaits(t, c, st) {
+    const N = st.N;
+    let total = 0;
+    let weight = 0;
+    for (let k = 0; k < 34; k++) {
+      if (st.unseen[k] === 0 || !allowsKind(t, k)) continue;
+      c[k]++;
+      if (shantenOf(t, c, N) === 0) {
+        let best = 0;
+        for (let d = 0; d < 34; d++) {
+          if (c[d] === 0) continue;
+          c[d]--;
+          if (shantenOf(t, c, N) === 0) {
+            let live = 0;
+            for (let w = 0; w < 34; w++) {
+              const left = st.unseen[w] - (w === k ? 1 : 0);
+              if (left <= 0 || !allowsKind(t, w)) continue;
+              c[w]++;
+              if (shantenOf(t, c, N) === -1) live += left;
+              c[w]--;
+            }
+            if (live > best) best = live;
+          }
+          c[d]++;
+        }
+        total += best * st.unseen[k];
+        weight += st.unseen[k];
+      }
+      c[k]--;
+    }
+    return weight > 0 ? total / weight : 0;
+  }
+
+  /** 13 - 3×副露 张牌（还没摸下一张）的期望收益。 */
+  function handEV(c, st, P, refine) {
+    const shanten = st.targets.map((t) => shantenOf(t, c, st.N));
+    let minS = 99;
+    for (const s of shanten) if (s < minS) minS = s;
+    const evs = [];
+    const rounds = Math.min(st.rounds, P.horizon);
+    for (let i = 0; i < st.targets.length; i++) {
+      const t = st.targets[i];
+      const s = shanten[i];
+      if (s > minS + 2 || s > 7) continue;
+      let accept = 0;
+      let allowed = 0;
+      for (let k = 0; k < 34; k++) {
+        if (st.unseen[k] === 0 || !allowsKind(t, k)) continue;
+        allowed += st.unseen[k];
+        c[k]++;
+        const ns = shantenOf(t, c, st.N);
+        c[k]--;
+        if (ns < s) accept += st.unseen[k];
+      }
+      if (accept === 0) continue;
+      // 第一步用实测进张和阶段估算的平均（向听数一格一格跳，实测值单独看很不稳定），
+      // 往后按阶段估算（越接近听牌，能进的牌越少）
+      const table = stepTable(t, P);
+      const frac = allowed / st.U;
+      const steps = [];
+      for (let left = s; left >= 0; left--) {
+        let model = table ? table[Math.min(left, 3)] * frac : frac;
+        if (refine && s === 1 && left === 0) model = expectedWaits(t, c, st) / st.U;
+        const raw = left === s ? (left === 0 ? accept / st.U : (accept / st.U + model) / 2) : model;
+        // 乱风向的单张风牌吃碰不了，没听牌之前只能靠自己摸
+        const tries = 1 + (left === 0 ? P.ronBonus : t.type === 'luan' ? 0 : P.callBonus);
+        steps.push(1 - Math.pow(1 - Math.min(raw, 0.95), tries));
+      }
+      const prob = finishProbability(steps, rounds, st.survive);
+      evs.push(prob * targetValue(t, c, st, P));
+    }
+    evs.sort((a, b) => b - a);
+    return P.payScale * ((evs[0] || 0) + P.second * (evs[1] || 0) + P.third * (evs[2] || 0));
+  }
+
+  // ---- 放炮风险：只用牌桌上看得见的东西 ----------------------------------------
+  function readOpponents(view) {
+    const stage = view.wallRemaining >= 60 ? 0 : view.wallRemaining >= 30 ? 1 : 2;
+    const out = [];
+    for (const p of view.players) {
+      if (p.seat === view.seat) continue;
+      let mask = 0;
+      let known = 0;
+      for (const m of p.melds) {
+        if (!m.kinds) continue; // 别人的暗杠看不见牌种
+        known++;
+        for (const k of m.kinds) if (T.isNumber(k)) mask |= 1 << T.suitOf(k);
+      }
+      const oneSuit = mask !== 0 && (mask & (mask - 1)) === 0;
+      out.push({
+        river: p.discards,
+        mCount: p.melds.length,
+        stage,
+        flushSuit: oneSuit ? (mask === 1 ? 0 : mask === 2 ? 1 : 2) : -1,
+        honorOnly: known > 0 && mask === 0,
+      });
+    }
+    return out;
+  }
+
+  // 真实放炮率（%），tools/danger_stats.js 统计 8000 局得到。
+  // 行是对手的副露数（1..4），列是牌局阶段（前、中、后）。基准是「对手只亮一门，打他那门的牌」。
+  const RON_RATE = [
+    [0.02, 0.02, 0.17], // 没副露：几乎不放炮，但门清一胡就大
+    [0.03, 0.32, 1.23],
+    [0.27, 1.15, 3.01],
+    [1.65, 4.14, 6.45],
+    [8.0, 8.2, 9.2],
+  ];
+  // 这张牌外面还剩 0、1、2、3 张时的倍数：外面没有也不等于安全，顺子听牌不需要别人手里有这张
+  const UNSEEN_FACTOR = [0.4, 0.55, 0.95, 2.2];
+
+  /** 打出 k 张的预期损失 = Σ 真实放炮率 × 这种情况下他胡牌的平均点数。 */
+  function discardDanger(k, opps, unseen, P) {
+    let total = 0;
+    const u = unseen[k];
+    const honor = T.isHonor(k);
+    for (const o of opps) {
+      const m = Math.min(o.mCount, 4);
+      let rate = RON_RATE[m][o.stage];
+      let pts;
+      if (m === 0) {
+        pts = P.ptsClosed;
+      } else if (o.honorOnly) {
+        // 亮的全是字牌：可能在做乱风向或字一色，打字牌最危险、也最贵
+        rate *= honor ? P.relZiHonor : P.relZiNumber;
+        pts = honor ? (m >= 2 ? P.ptsZi : P.ptsPlain * 1.5) : P.ptsPlain;
+      } else if (o.flushSuit < 0) {
+        rate *= P.relMulti; // 亮了两门，只可能碰碰胡
+        pts = P.ptsPlain;
+      } else if (honor) {
+        rate *= P.relHonor;
+        pts = P.ptsPlain;
+      } else if (T.suitOf(k) === o.flushSuit) {
+        pts = P.ptsPlain;
+      } else {
+        rate *= P.relOffSuit;
+        pts = P.ptsPlain;
+      }
+      if (m === 4) pts = Math.max(pts, P.ptsFour); // 大吊车至少 1 辣
+      if (o.river.includes(k)) rate *= P.relOwnRiver;
+      else rate *= UNSEEN_FACTOR[u];
+      total += (rate / 100) * pts;
+    }
+    return total;
+  }
+
+  function bestDiscard(view, c, st, forbid, P, defenseScale) {
+    const opps = readOpponents(view);
+    const weight = defenseScale * P.defense;
+    const scored = [];
+    for (let k = 0; k < 34; k++) {
+      if (c[k] === 0 || k === forbid) continue;
+      c[k]--;
+      const ev = handEV(c, st, P, false);
+      c[k]++;
+      const danger = weight * discardDanger(k, opps, st.unseen, P);
+      scored.push({ kind: k, value: ev - danger, danger });
+    }
+    if (!scored.length) return null;
+    scored.sort((a, b) => b.value - a.value || a.kind - b.kind);
+    if (!P.refine) return scored[0];
+    // 几乎一样好的选择之间，才用「一向听时实算等张」决胜；它和其他阶段的估算尺度不同，不能直接比大小
+    const top = scored[0];
+    const margin = Math.max(0.05, Math.abs(top.value) * 0.1);
+    let best = top;
+    let bestRefined = -Infinity;
+    for (const cand of scored.slice(0, 4)) {
+      if (cand.value < top.value - margin) break;
+      c[cand.kind]--;
+      const refined = handEV(c, st, P, true) - cand.danger;
+      c[cand.kind]++;
+      if (refined > bestRefined + 1e-9) {
+        bestRefined = refined;
+        best = cand;
+      }
+    }
+    return best;
+  }
+
+  /** 点太小而等张很多时，宁可放过别人的牌去摸自摸（三家都付）。 */
+  function shouldPassRon(view, st, c, points, P) {
+    if (!st.closed || view.wallRemaining < 32 || points > P.passRonMaxPoints) return false;
+    let live = 0;
+    for (const k of R.waits(c, st.melds)) live += st.unseen[k];
+    const zimo = 1 - Math.pow(1 - live / st.U, Math.min(st.rounds, P.horizon));
+    return zimo * 0.6 * 3 > P.passRonFactor; // 三家付，打六折算可能被别人抢先
+  }
+
+  /** style: { defense: 放炮风险权重的倍数, params: 覆盖 PARAMS 的部分数值（调优工具用） } */
+  function createPlayer(styleIn) {
+    const style = { defense: 1, ...styleIn };
+    const P = style.params ? { ...PARAMS, ...style.params } : PARAMS;
+    const defenseScale = style.defense;
+    return {
+      chooseTurn(view, opts) {
+        if (opts.canHu) return { type: 'hu' };
+        const me = view.players[view.seat];
+        const c = R.toCounts(view.hand.map((t) => t.kind));
+        const st = buildState(view, c, me.melds, P);
+        const best = bestDiscard(view, c, st, opts.forbid === null ? -1 : opts.forbid, P, defenseScale);
+        let action = { type: 'discard', kind: best.kind };
+        let top = best.value;
+        for (const g of opts.gangs) {
+          const c2 = c.slice();
+          let melds;
+          if (g.sub === 'an') {
+            c2[g.kind] -= 4;
+            melds = me.melds.concat([{ type: 'gang', sub: 'an', kinds: [g.kind, g.kind, g.kind, g.kind] }]);
+          } else {
+            c2[g.kind] -= 1;
+            melds = me.melds.map((m) => (m.type === 'peng' && m.kinds[0] === g.kind
+              ? { type: 'gang', sub: 'jia', kinds: [g.kind, g.kind, g.kind, g.kind] } : m));
+          }
+          const st2 = buildState(view, c2, melds, P);
+          const ev = handEV(c2, st2, P, false);
+          const value = ev + (g.sub === 'an' ? P.gangAn : P.gangJia);
+          if (ev > 0 && value >= top) {
+            top = value;
+            action = { type: 'gang', kind: g.kind, sub: g.sub };
+          }
+        }
+        return action;
+      },
+
+      chooseClaim(view, claim) {
+        const me = view.players[view.seat];
+        const c = R.toCounts(view.hand.map((t) => t.kind));
+        const st = buildState(view, c, me.melds, P);
+        const k = claim.kind;
+        const opt = claim.options;
+        if (opt.hu && !shouldPassRon(view, st, c, opt.preview.points, P)) return { type: 'hu' };
+
+        const stay = handEV(c, st, P, false);
+        let bestAct = { type: 'pass' };
+        let top = stay * P.stayBias + P.stayAdd;
+        const sankou = view.calls[view.seat][claim.from] === R.VALUES.sankouCalls - 1 ? P.sankouRisk : 0;
+
+        if (opt.peng) {
+          const c2 = c.slice();
+          c2[k] -= 2;
+          const st2 = buildState(view, c2, me.melds.concat([{ type: 'peng', kinds: [k, k, k] }]), P);
+          const b = bestDiscard(view, c2, st2, -1, P, defenseScale);
+          if (b && b.value - sankou > top) {
+            top = b.value - sankou;
+            bestAct = { type: 'peng' };
+          }
+        }
+        if (opt.gang) {
+          const c2 = c.slice();
+          c2[k] -= 3;
+          const melds = me.melds.concat([{ type: 'gang', sub: 'ming', kinds: [k, k, k, k] }]);
+          const ev = handEV(c2, buildState(view, c2, melds, P), P, false);
+          const v = ev + P.gangMing - sankou;
+          if (ev > 0 && v > top) {
+            top = v;
+            bestAct = { type: 'gang' };
+          }
+        }
+        for (const pair of opt.chi) {
+          const c2 = c.slice();
+          c2[pair[0]]--;
+          c2[pair[1]]--;
+          const kinds = [pair[0], pair[1], k].sort((x, y) => x - y);
+          const st2 = buildState(view, c2, me.melds.concat([{ type: 'chi', kinds }]), P);
+          const b = bestDiscard(view, c2, st2, k, P, defenseScale);
+          if (b && b.value - sankou > top) {
+            top = b.value - sankou;
+            bestAct = { type: 'chi', chi: pair };
+          }
+        }
+        return bestAct;
+      },
+
+      chooseRob() {
+        return { type: 'hu' };
+      },
+    };
+  }
+
+  const api = { createPlayer, PARAMS };
+  if (isNode) module.exports = api;
+  else (root.MJ = root.MJ || {}).AI = api;
+})(typeof self !== 'undefined' ? self : globalThis);
