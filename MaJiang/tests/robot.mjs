@@ -16,7 +16,7 @@ export function newRobotStats() {
 
 const STATE = `(()=>{const d=window.__mjDebug||window.__tjDebug;if(!d)return null;const s=d.scene;const $=(i)=>document.getElementById(i);
  const mj=!!window.__mjDebug;const p=d.pending;const me=s.seats&&s.seats[0];
- const list=!me?[]:(mj&&me.drawn!==null?me.hand.concat([me.drawn]):me.hand);
+ const list=!me?[]:(mj&&me.drawn!==null?me.hand.concat([me.drawn]):me.shown&&me.shown.length?me.hand.filter(id=>!me.shown.includes(id)):me.hand);
  if(p&&window.__robotLast!==p){window.__robotLast=p;window.__robotSeq=(window.__robotSeq||0)+1;}
  return {mj,kind:p?p.kind:null,forbid:mj&&p&&p.opts?p.opts.forbid:null,leadLen:!mj&&p&&p.info?p.info.lead.length:0,
   acts:[...document.querySelectorAll('#actions .act')].map(b=>b.className.replace('act ','')),

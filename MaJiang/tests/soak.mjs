@@ -99,10 +99,12 @@ const PAGE_MONITOR = `(() => {
         s.flowers.forEach((id) => add('花' + i, id));
         s.discards.forEach((id) => add('牌河' + i, id));
       } else {
-        s.hand.forEach((id) => add('手牌' + i, id));
+        const shown = s.shown || []; // 亮在桌上的牌还算手牌，但摆在出牌的位置上
+        s.hand.forEach((id) => add((shown.includes(id) ? '亮主' : '手牌') + i, id));
         s.play.forEach((id) => add('出牌' + i, id));
       }
     });
+    if (!isMJ()) (sc.won || []).forEach((id) => add('分牌', id));
     return g;
   }
 
@@ -208,7 +210,9 @@ const PAGE_MONITOR = `(() => {
         piles += s.pile.length;
         if (s.hand.length) problems.push('座位' + i + ' 打完还有 ' + s.hand.length + ' 张手牌');
       });
-      if (piles + sc.kitty.length !== 108) problems.push('牌总数 ' + (piles + sc.kitty.length));
+      const won = sc.won ? sc.won.length : 0; // 闲家赢到的分牌摊在桌上，不在牌堆里
+      if (piles + won + sc.kitty.length !== 108) problems.push('牌总数 ' + (piles + won + sc.kitty.length));
+      if (sc.won && sc.won.reduce((a, id) => a + window.TJ.Cards.points(sc.cards[id].kind), 0) !== res.trickPoints) problems.push('摊开的分牌 != 闲家赢墩分 ' + res.trickPoints);
       if (sc.consoleState.points !== res.attackerPoints) problems.push('中控台分数 ' + sc.consoleState.points + ' != ' + res.attackerPoints);
       const shown = document.getElementById('scoreValue').textContent;
       if (shown !== String(res.attackerPoints)) problems.push('分数框 ' + shown + ' != ' + res.attackerPoints);

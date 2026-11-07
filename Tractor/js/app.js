@@ -209,9 +209,8 @@
         scene.setConsole({ trump: e.suit, dealer: e.dealer });
         state.trump = e.suit;
         refreshHud();
-        // 亮的牌大家都看得见，之后电脑的这张牌收回手里盖住
+        // 亮的牌摆在桌上给大家看，庄家扣完底才收回
         await scene.showBid(e.seat, e.ids, e.kinds);
-        if (e.seat !== 0) e.ids.forEach((id) => scene.setKind(id, null));
         break;
       }
       case 'dealDone':
@@ -232,6 +231,8 @@
         scene.keyGroup = (k) => state.ctx.cls[k];
         scene.sorter = (a, b) => R.sortKey(a, state.ctx) - R.sortKey(b, state.ctx);
         scene.sortHuman();
+        // 闲家赢到的分牌摊在一家面前：对手是闲家就放右手，我们是闲家就放对家
+        scene.wonSeat = e.dealer % 2 === 0 ? 1 : 2;
         scene.setConsole({ trump: e.trump, level: e.level, dealer: e.dealer });
         refreshHud();
         await Promise.all([0, 1, 2, 3].map((s) => scene.layoutHand(s, 380)));
@@ -253,6 +254,7 @@
         refreshHud();
         await scene.bury(e.seat, e.ids);
         log(NAMES[e.seat] + ' 埋好底牌' + (e.kinds ? '：' + kindsText(e.kinds) : ''));
+        await scene.returnShown();
         await sleep(240);
         break;
       case 'trickStart':
@@ -289,7 +291,7 @@
         refreshHud();
         log(NAMES[e.winner] + ' 赢这一墩' + (e.points ? '，' + e.points + ' 分' : ''));
         if (e.points > 0) floater(e.winner, (e.toAttackers ? '+' : '守住 ') + e.points + ' 分', e.toAttackers ? 'plus' : 'guard');
-        await scene.collect(e.winner, e.ids, e.points, e.toAttackers);
+        await scene.collect(e.winner, e.ids, e.points, e.toAttackers, e.toAttackers ? e.pointIds : []);
         state.points = e.attackerPoints;
         scene.setConsole({ points: Math.max(0, e.attackerPoints) });
         refreshHud();
@@ -464,7 +466,9 @@
         onSelectionChanged();
       }));
       bar.hidden = false;
-      setHint('挑 8 张牌埋到底下（发亮的是刚拿到的底牌），按住滑动可以连选');
+      setHint(view.shownIds.length
+        ? '挑 8 张埋底（发亮的是底牌，桌上亮的不能扣），按住滑动可以连选'
+        : '挑 8 张牌埋到底下（发亮的是刚拿到的底牌），按住滑动可以连选');
     });
   }
 

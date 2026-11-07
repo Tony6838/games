@@ -620,9 +620,9 @@
     }
   }
 
-  /** 按牌种挑手里具体的牌编号。 */
-  function idsFor(view, kinds) {
-    const pool = view.hand.map((t) => ({ ...t }));
+  /** 按牌种挑手里具体的牌编号，跳过 skip 里的编号。 */
+  function idsFor(view, kinds, skip) {
+    const pool = view.hand.filter((t) => !(skip && skip.has(t.id))).map((t) => ({ ...t }));
     const out = [];
     for (const k of kinds) {
       const i = pool.findIndex((t) => t.kind === k);
@@ -670,6 +670,9 @@
         const A = analyze(view);
         const { ctx } = A;
         let hand = A.hand.slice();
+        // 亮在桌上的牌扣完底就回到手里，估价时算进去，但不能拿来扣
+        const onTable = new Set(view.shownIds);
+        const free = view.hand.filter((t) => !onTable.has(t.id)).map((t) => t.kind);
         const buried = [];
         // 一张张挑：每次埋掉「留着最不值」的牌
         for (let n = 0; n < R.VALUES.kittySize; n++) {
@@ -677,7 +680,7 @@
           for (const k of hand) counts.set(ctx.cls[k], (counts.get(ctx.cls[k]) || 0) + 1);
           let pick = -1;
           let bestVal = Infinity;
-          for (const k of new Set(hand)) {
+          for (const k of new Set(free)) {
             const cls = ctx.cls[k];
             let v = keepValue(k, hand, A, P);
             if (cls === TRUMP) v += 20;
@@ -691,8 +694,9 @@
           }
           buried.push(pick);
           hand.splice(hand.indexOf(pick), 1);
+          free.splice(free.indexOf(pick), 1);
         }
-        return idsFor(view, buried);
+        return idsFor(view, buried, onTable);
       },
 
       /** 可以分步驱动的版本：界面用它，每一步之间都能让出主线程。 */

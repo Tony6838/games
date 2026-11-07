@@ -35,7 +35,22 @@ function mulberry(seed) {
 
 function makeFactory(spec) {
   const AI = require(spec.module ? path.resolve(ROOT, spec.module) : path.join(ROOT, 'js/ai.js'));
-  return () => AI.createPlayer(spec.params ? { params: spec.params } : {});
+  return () => keepShownOut(AI.createPlayer(spec.params ? { params: spec.params } : {}));
+}
+
+/**
+ * tools/baselines 里的旧 AI 还不知道「亮在桌上的牌不能扣底」：万一挑中了，换成手里还没挑的牌，
+ * 让旧基线照样能拿来对打。现在的 AI 本来就不会挑，对它没有影响。
+ */
+function keepShownOut(p) {
+  const bury = p.chooseBury;
+  p.chooseBury = (v) => {
+    const ids = bury.call(p, v);
+    if (!ids.some((id) => v.shownIds.includes(id))) return ids;
+    const spare = v.hand.map((t) => t.id).filter((id) => !v.shownIds.includes(id) && !ids.includes(id));
+    return ids.map((id) => (v.shownIds.includes(id) ? spare.shift() : id));
+  };
+  return p;
 }
 
 function deal(seed) {

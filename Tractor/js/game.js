@@ -33,6 +33,7 @@
     #levels;
     #level;
     #bid = null;
+    #shown = null; // { seat, ids }：最后一次亮主亮在桌上的牌，庄家扣完底才收回
     #trump = null;
     #ctx = null;
     #tricks = [];
@@ -82,6 +83,8 @@
         levels: this.#levels.slice(),
         dealer: this.#dealer,
         bid: this.#bid ? { seat: this.#bid.seat, strength: this.#bid.strength, suit: this.#bid.suit } : null,
+        // 自己亮在桌上的牌：仍算手牌，但扣底时不在手里，不能扣
+        shownIds: this.#shown && this.#shown.seat === seat ? this.#shown.ids.slice() : [],
         trump: this.#trump,
         dealt: this.#dealt,
         hand: this.#hands[seat].map((id) => ({ id, kind: k[id] })),
@@ -169,6 +172,7 @@
           shown.push(id);
         }
       }
+      this.#shown = { seat, ids: shown.slice() }; // 被反主时，前一家亮的牌就此收回
       await this.#emit({
         type: 'bid', seat, strength: pick.strength, suit: pick.suit, kinds: pick.kinds.slice(),
         ids: shown, dealer: this.#dealer,
@@ -219,8 +223,11 @@
       if (!Array.isArray(act) || act.length !== R.VALUES.kittySize || new Set(act).size !== act.length || !act.every((id) => hand.includes(id))) {
         throw new Error('非法埋牌');
       }
+      const onTable = this.#shown && this.#shown.seat === dealer ? this.#shown.ids : [];
+      if (act.some((id) => onTable.includes(id))) throw new Error('非法埋牌：亮在桌上的牌不能扣底');
       for (const id of act) hand.splice(hand.indexOf(id), 1);
       this.#buried = act.slice();
+      this.#shown = null; // 扣完底，亮的牌收回手里
       await this.#emit({
         type: 'buried', seat: dealer, ids: act.slice(),
         kinds: dealer === this.#observer ? act.map((id) => this.#kinds[id]) : null,

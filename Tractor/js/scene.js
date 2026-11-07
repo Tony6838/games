@@ -36,10 +36,23 @@
   // 每家出牌的位置：牌平放，字朝玩家，方便一眼看清四家出了什么
   const SPOTS = [[0, 5.75], [15.2, -0.4], [0, -5.75], [-15.2, -0.4]];
   const PLAY_SCALE = 3.75;
+  // 亮主的牌摆在各家出牌的位置，比出牌略大。对家的往外挪一点：发牌时中央那叠牌很高，会挡住它。
+  // 自己的放在左边、按钮栏上方：亮主和埋底的按钮栏在正中偏下，手机上占了快一半宽。
+  // 亮主和埋底时桌上没有出牌，左家亮的牌也不会同时在桌上，这块地方是空的。
+  const BID_SCALE = 4.1;
+  const BID_SPOTS = [[-15, 0.2], SPOTS[1], [0, -7.4], SPOTS[3]];
   const HUMAN_SCALE = 5.5;
   // 赢来的牌堆放在四个角，底牌放在对家右手边
   const PILES = [[21.5, 5.6], [21.5, -13.6], [-21.5, -13.6], [-21.5, 5.6]];
   const KITTY_SPOT = [13.2, -12.4];
+  // 闲家赢到的分牌正面朝上摊在一家盖着的手牌前面：右手是一列（牌多分两列），对家是一行。
+  // 范围避开出牌位置、四角的牌堆和底牌堆。
+  const WON_SCALE = 2.4;
+  const WON_RIGHT = { cols: [18.9, 21.7], z0: -11, z1: 3.3, perCol: 12 };
+  const WON_TOP = { z: -9.8, span: 18 };
+  // 右手一次出好几张时会摊到分牌上：分牌贴着桌面叠得很薄，出的牌整体抬高一点，总是压在分牌上面
+  const WON_LAYER = 0.005;
+  const PLAY_LIFT = 0.16;
 
   class Scene {
     constructor(canvas) {
@@ -250,7 +263,10 @@
       this.tweens.forEach((t) => { if (!t.dead) { t.dead = true; t.res(); } });
       this.tweens = [];
       this.cards = [];
-      this.seats = [0, 1, 2, 3].map(() => ({ hand: [], pile: [], play: [] }));
+      // shown：亮在桌上的牌。它们仍在 hand 里（裁判也这样算），只是排手牌和点选时跳过
+      this.seats = [0, 1, 2, 3].map(() => ({ hand: [], pile: [], play: [], shown: [] }));
+      this.won = [];        // 闲家赢到的分牌，摊在 wonSeat 面前
+      this.wonSeat = 1;
       this.kitty = [];
       this.hoverId = null;
       this.selected = new Set();
@@ -279,16 +295,22 @@
       c.cell = kind === null ? null : new Float32Array(this.atlasInfo.cell(kind));
     }
 
+    /** 拿在手里的牌：手牌去掉亮在桌上的。 */
+    held(seat) {
+      const S = this.seats[seat];
+      return S.shown.length ? S.hand.filter((id) => !S.shown.includes(id)) : S.hand;
+    }
+
     /** 玩家手牌的布局。分门之间留一点空隙，主牌在最左。 */
     humanSlots() {
-      const S = this.seats[0];
-      const n = S.hand.length;
+      const hand = this.held(0);
+      const n = hand.length;
       const scale = HUMAN_SCALE;
       const w = CW * scale;
       const groupGap = 0.55;
       let gaps = 0;
       for (let i = 1; i < n; i++) {
-        if (this.keyGroup(this.cards[S.hand[i]].kind) !== this.keyGroup(this.cards[S.hand[i - 1]].kind)) gaps++;
+        if (this.keyGroup(this.cards[hand[i]].kind) !== this.keyGroup(this.cards[hand[i - 1]].kind)) gaps++;
       }
       const maxW = 57.5;
       const spacing = n > 1 ? Math.min(3.1, (maxW - w - gaps * groupGap) / (n - 1)) : 0;
@@ -296,7 +318,7 @@
       let x = -total / 2 + w / 2;
       const out = [];
       for (let i = 0; i < n; i++) {
-        if (i > 0 && this.keyGroup(this.cards[S.hand[i]].kind) !== this.keyGroup(this.cards[S.hand[i - 1]].kind)) x += groupGap;
+        if (i > 0 && this.keyGroup(this.cards[hand[i]].kind) !== this.keyGroup(this.cards[hand[i - 1]].kind)) x += groupGap;
         const t = total > 0 ? x / (total / 2) : 0; // -1..1
         const angle = -t * 0.05;
         // 弧形只在牌面平面内偏移，层次沿法线方向一张张加，右边的牌一定压在左边的牌上
@@ -307,7 +329,7 @@
         const y = CH * scale * 0.5 * tiltC + 0.15 + arc * tiltC + layer * tiltS;
         const z = 13.9 - arc * tiltS + layer * tiltC;
         const q = Quat.mul(Quat.axis(1, 0, 0, -HAND_TILT), Quat.axis(0, 0, 1, angle));
-        out.push({ id: S.hand[i], pos: [x, y, z], q, s: scale });
+        out.push({ id: hand[i], pos: [x, y, z], q, s: scale });
         x += spacing;
       }
       return out;
@@ -315,14 +337,14 @@
 
     /** 电脑手牌：牌背朝上斜靠着，只能看到张数。 */
     otherSlots(seat) {
-      const S = this.seats[seat];
-      const n = S.hand.length;
+      const hand = this.held(seat);
+      const n = hand.length;
       const top = seat === 2;
       const scale = top ? 2.5 : 2.15;
       const spacing = Math.min(top ? 0.78 : 0.62, (top ? 21 : 16) / Math.max(n, 1));
       const total = spacing * Math.max(0, n - 1);
       const q = seatQuat(seat, Quat.axis(1, 0, 0, AI_TILT));
-      return S.hand.map((id, i) => {
+      return hand.map((id, i) => {
         const u = -total / 2 + spacing * i;
         return {
           id,
@@ -360,23 +382,45 @@
       if (this.onSound) this.onSound('deal');
     }
 
-    /** 亮主：牌从手里抬起来亮给大家看。 */
+    /**
+     * 亮主：亮出的牌（一张或一对）正面朝上摆在亮主人面前的桌上，一直留到庄家扣完底（returnShown）。
+     * 被反主时，前一家亮的牌先收回手里，电脑的重新盖住。
+     */
     async showBid(seat, ids, kinds) {
-      ids.forEach((id, i) => this.setKind(id, kinds[i]));
-      const center = seatPos(seat, 0, 2.6, seat % 2 === 0 ? 7.5 : 14);
-      const ps = ids.map((id, i) => {
-        const off = (i - (ids.length - 1) / 2) * 4.1;
-        const pos = seatPos(seat, off, 2.6, seat % 2 === 0 ? 7.5 : 14);
-        return this.tween(this.cards[id], { pos, q: Quat.axis(1, 0, 0, -1.2), s: 3.9 }, { dur: 380, arc: 1.4, ease: easeInOut });
+      const relayout = new Set([seat]);
+      this.seats.forEach((S, s) => {
+        const back = S.shown.filter((id) => !(s === seat && ids.includes(id)));
+        if (!back.length) return;
+        if (s !== 0) back.forEach((id) => this.setKind(id, null));
+        S.shown = S.shown.filter((id) => !back.includes(id));
+        relayout.add(s);
       });
-      this.ring([center[0], 0.03, center[2]], [1, 0.75, 0.3, 0.9], 6.5, 600);
-      this.burst(center, 46, { speed: 4, up: 5, life: 0.8, size: 0.7 });
+      this.seats[seat].shown = ids.slice();
+      ids.forEach((id, i) => this.setKind(id, kinds[i]));
+      const spot = BID_SPOTS[seat];
+      const step = CW * BID_SCALE + 0.45;
+      const ps = ids.map((id, i) => this.tween(this.cards[id], {
+        pos: [spot[0] + (i - (ids.length - 1) / 2) * step, CT + i * 0.03, spot[1]],
+        q: FLAT_UP,
+        s: BID_SCALE,
+      }, { dur: 420, arc: 2.4, ease: easeInOut }));
+      for (const s of relayout) ps.push(this.layoutHand(s, 300, s === seat ? 0 : 1.4));
+      this.ring([spot[0], 0.03, spot[1]], [1, 0.75, 0.3, 0.9], 6.5, 600);
+      this.burst([spot[0], 0.6, spot[1]], 46, { speed: 4, up: 5, life: 0.8, size: 0.7 });
       if (this.onSound) this.onSound('bid');
       await Promise.all(ps);
-      await this.wait(620);
-      // 收回手里；电脑的牌收回后重新盖住
-      if (seat !== 0) ids.forEach((id) => { this.bidShown = id; });
-      return this.layoutHand(seat, 280);
+    }
+
+    /** 庄家扣完底：亮在桌上的牌收回手里，电脑的重新盖住。 */
+    returnShown() {
+      const ps = [];
+      this.seats.forEach((S, s) => {
+        if (!S.shown.length) return;
+        if (s !== 0) S.shown.forEach((id) => this.setKind(id, null));
+        S.shown = [];
+        ps.push(this.layoutHand(s, 380, 1.6));
+      });
+      return Promise.all(ps);
     }
 
     /** 翻底牌定主。 */
@@ -436,7 +480,7 @@
       const yaw = Quat.axis(0, 1, 0, (Math.random() - 0.5) * 0.05);
       const q = Quat.mul(yaw, FLAT_UP);
       const ps = ids.map((id, i) => this.tween(this.cards[id], {
-        pos: [spot[0] - total / 2 + step * i, CT + i * 0.03, spot[1]],
+        pos: [spot[0] - total / 2 + step * i, CT + PLAY_LIFT + i * 0.03, spot[1]],
         q,
         s: PLAY_SCALE,
       }, { dur: 330, delay: i * 26, arc: 2.6, ease: easeInOut }));
@@ -464,30 +508,82 @@
       await this.layoutHand(seat, 280);
     }
 
-    /** 一墩结束：赢家的牌先亮一下，然后收到赢家的牌堆。 */
-    async collect(winner, ids, points, toAttackers) {
+    /**
+     * 一墩结束：赢家的牌先亮一下，然后收到赢家的牌堆。
+     * wonIds：闲家赢到的分牌，不进牌堆，正面朝上摊到 wonSeat 面前；庄家方守住的分照旧盖着收走。
+     */
+    async collect(winner, ids, points, toAttackers, wonIds) {
       const S = this.seats[winner];
       const winCards = this.seats[winner].play;
       for (const id of winCards) this.glow.add(id);
       await this.wait(points > 0 ? 620 : 460);
       this.glow = new Set();
+      const won = wonIds || [];
+      const toPile = ids.filter((id) => !won.includes(id));
       const pileCount = S.pile.length;
       const anchor = [PILES[winner][0], 0, PILES[winner][1]];
       const q = FLAT_DOWN;
-      const ps = ids.map((id, i) => this.tween(this.cards[id], {
+      const ps = toPile.map((id, i) => this.tween(this.cards[id], {
         pos: [anchor[0], CT + (pileCount + i) * CT * 1.1, anchor[2]],
         q,
         s: 2.7,
       }, { dur: 420, delay: i * 16, arc: 1.8, ease: easeInOut }));
-      S.pile.push(...ids);
+      S.pile.push(...toPile);
       for (const s of this.seats) s.play = [];
+      if (won.length) {
+        this.won.push(...won);
+        ps.push(this.layoutWon(won));
+      }
       await Promise.all(ps);
       if (points > 0) {
-        const c = [anchor[0], 0.3, anchor[2]];
+        const c = won.length ? this.wonCenter() : [anchor[0], 0.3, anchor[2]];
         this.ring(c, toAttackers ? [1, 0.55, 0.3, 0.85] : [0.45, 0.8, 1, 0.75], 4.6, 520);
         this.burst(c, Math.min(60, 14 + points), { speed: 4, up: 5, life: 0.8, size: 0.7, colors: toAttackers ? [[1, 0.6, 0.3], [1, 0.82, 0.4]] : [[0.5, 0.8, 1], [0.8, 0.92, 1]] });
       }
       if (this.onSound) this.onSound(points > 0 ? 'points' : 'sweep');
+    }
+
+    /** 分牌摊开的位置：按 5、10、K 排，同点数按花色；后面的牌压着前面的，露出左上角的点数。 */
+    wonSlots() {
+      const key = (id) => {
+        const k = this.cards[id].kind;
+        return Cards.rankOf(k) * 4 + Cards.suitOf(k);
+      };
+      const list = this.won.slice().sort((a, b) => key(a) - key(b) || a - b);
+      const s = WON_SCALE;
+      const h = CH * s;
+      if (this.wonSeat === 2) {
+        const n = list.length;
+        const step = n > 1 ? Math.min(CW * s * 0.55, WON_TOP.span / (n - 1)) : 0;
+        const x0 = -step * (n - 1) / 2;
+        return list.map((id, i) => ({ id, pos: [x0 + step * i, CT + i * WON_LAYER, WON_TOP.z], s }));
+      }
+      const R = WON_RIGHT;
+      const cols = list.length > R.perCol ? 2 : 1;
+      const per = Math.ceil(list.length / cols);
+      const step = per > 1 ? Math.min(h * 0.3, (R.z1 - R.z0 - h) / (per - 1)) : 0;
+      return list.map((id, i) => {
+        const col = Math.floor(i / per);
+        const row = i % per;
+        return { id, pos: [R.cols[col], CT + i * WON_LAYER, R.z0 + h / 2 + step * row], s };
+      });
+    }
+
+    layoutWon(fresh) {
+      const ps = this.wonSlots().map((sl) => {
+        const isNew = fresh && fresh.includes(sl.id);
+        return this.tween(this.cards[sl.id], { pos: sl.pos, q: FLAT_UP, s: sl.s }, {
+          dur: isNew ? 460 : 260, arc: isNew ? 2.2 : 0, ease: easeInOut,
+        });
+      });
+      return Promise.all(ps);
+    }
+
+    wonCenter() {
+      const slots = this.wonSlots();
+      const c = [0, 0.3, 0];
+      for (const sl of slots) { c[0] += sl.pos[0] / slots.length; c[2] += sl.pos[2] / slots.length; }
+      return c;
     }
 
     /** 亮底牌。 */
@@ -524,7 +620,7 @@
       const far = M4.transform(this.vpInv, [nx, ny, 1]);
       const ro = [near[0], near[1], near[2]];
       const rd = V3.norm(V3.sub([far[0], far[1], far[2]], ro));
-      const list = this.seats[0].hand;
+      const list = this.held(0); // 桌上亮着的牌点不到，不能拿来扣底
       // 右边的牌压在左边的牌上面，从最上面一张往下找
       for (let i = list.length - 1; i >= 0; i--) {
         const c = this.cards[list[i]];

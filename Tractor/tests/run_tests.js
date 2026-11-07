@@ -218,7 +218,7 @@ function plain(extra) {
   const lowFirst = (view) => view.hand.slice().sort((a, b) => a.kind - b.kind);
   return {
     chooseBid: () => null,
-    chooseBury: (v) => lowFirst(v).slice(0, 8).map((t) => t.id),
+    chooseBury: (v) => lowFirst(v).filter((t) => !v.shownIds.includes(t.id)).slice(0, 8).map((t) => t.id),
     chooseLead: (v) => [lowFirst(v)[0].id],
     chooseFollow: (v, info) => {
       const ctx = R.makeCtx(v.level, v.trump);
@@ -279,6 +279,69 @@ function shuffled() {
     assert.equal(seen[1].suit, H);
     assert.equal(seen[1].strength, 2);
     assert.equal(seen[1].dealer, 0, '庄家仍是最先亮主的人');
+  });
+
+  await testAsync('亮在桌上的牌不能扣底，扣完底收回；被反主时收回', async () => {
+    const deck = shuffled();
+    const put = (pos, kind) => { const j = deck.indexOf(kind); const t = deck[pos]; deck[pos] = kind; deck[j] = t; };
+    put(0, c(S, 2)); // 起手 seat 0 的第一张：级牌 ♠2
+    const once = (v, opts) => (!v.bid && opts.length ? { strength: opts[0].strength, suit: opts[0].suit } : null);
+    // 1. 自己亮主坐庄，扣底想扣桌上那张：裁判拒绝
+    let shownAtBury = null;
+    const cheat = plain({
+      chooseBid: once,
+      chooseBury: (v) => {
+        shownAtBury = v.shownIds;
+        return v.shownIds.concat(v.hand.filter((t) => !v.shownIds.includes(t.id)).map((t) => t.id)).slice(0, 8);
+      },
+    });
+    await assert.rejects(new Hand({ dealer: null, starter: 0, levels: [2, 2], presetDeck: deck, adapters: [cheat, plain(), plain(), plain()] }).run(),
+      /亮在桌上的牌不能扣底/);
+    assert.deepEqual(shownAtBury, [0]);
+    // 2. 不扣它：打得完，扣完底后谁的 view 里都没有桌上的牌了
+    const later = [];
+    const honest = (extra) => plain({
+      chooseLead: (v) => { later.push(v.shownIds.length); return plain().chooseLead(v); },
+      chooseFollow: (v, i) => { later.push(v.shownIds.length); return plain().chooseFollow(v, i); },
+      ...extra,
+    });
+    await new Hand({ dealer: null, starter: 0, levels: [2, 2], presetDeck: deck, adapters: [honest({ chooseBid: once }), honest(), honest(), honest()] }).run();
+    assert.ok(later.length > 0 && later.every((n) => n === 0));
+    // 3. 被座位 1 用一对 ♥2 反主：座位 0 的 ♠2 收回手里，扣底时可以扣
+    const deck2 = deck.slice();
+    const put2 = (pos, kind, from) => { const j = deck2.indexOf(kind, from); const t = deck2[pos]; deck2[pos] = kind; deck2[j] = t; };
+    put2(1, c(H, 2), 1);
+    put2(5, c(H, 2), 2);
+    let buryView = null;
+    const dealer0 = plain({ chooseBid: once, chooseBury: (v) => { buryView = v; return [0].concat(plain().chooseBury(v).filter((id) => id !== 0)).slice(0, 8); } });
+    const counter = plain({ chooseBid: (v, opts) => { const o = opts.find((x) => x.strength === 2); return o ? { strength: o.strength, suit: o.suit } : null; } });
+    const bids = [];
+    await new Hand({
+      dealer: null, starter: 0, levels: [2, 2], presetDeck: deck2, adapters: [dealer0, counter, plain(), plain()],
+      hook: (e) => { if (e.type === 'bid') bids.push(e.seat); },
+    }).run();
+    assert.deepEqual(bids, [0, 1]);
+    assert.equal(buryView.seat, 0);
+    assert.deepEqual(buryView.shownIds, [], '反主后座位 0 的牌已收回');
+  });
+
+  await testAsync('AI 扣底从不扣自己亮在桌上的牌', async () => {
+    let withShown = 0;
+    for (let i = 0; i < 300; i++) {
+      const players = [0, 1, 2, 3].map(() => {
+        const p = AI.createPlayer({ params: { simWorlds: 0 } });
+        const bury = p.chooseBury;
+        p.chooseBury = (v) => {
+          const a = bury(v);
+          if (v.shownIds.length) withShown++;
+          assert.ok(!a.some((id) => v.shownIds.includes(id)), 'AI 扣了桌上的牌');
+          return a;
+        };
+        return p;
+      });
+      await new Hand({ dealer: null, starter: i % 4, levels: [2 + (i % 13), 2], adapters: players }).run();
+    }
+    assert.ok(withShown > 30, '庄家自己亮主的局面太少：' + withShown);
   });
 
   await testAsync('整局流程：埋牌、出完、零分庄家升三级、抠底', async () => {
@@ -356,7 +419,7 @@ function shuffled() {
     for (let i = 0; i < 6; i++) await new Hand({ dealer: null, starter: i % 4, levels: [2, 2], adapters: players }).run();
     assert.ok(views.length > 200);
     for (const v of views) {
-      assert.deepEqual(Object.keys(v).sort(), ['attackerPoints', 'bid', 'buried', 'current', 'dealer', 'dealt', 'flipped', 'hand', 'handCounts', 'level', 'levels', 'phase', 'seat', 'tricks', 'trump'].sort());
+      assert.deepEqual(Object.keys(v).sort(), ['attackerPoints', 'bid', 'buried', 'current', 'dealer', 'dealt', 'flipped', 'hand', 'handCounts', 'level', 'levels', 'phase', 'seat', 'shownIds', 'tricks', 'trump'].sort());
       assert.ok(Object.isFrozen(v) && Object.isFrozen(v.hand));
       if (v.seat !== v.dealer) assert.equal(v.buried, null, '只有庄家知道底牌');
       assert.ok(v.handCounts.every((n) => typeof n === 'number'));
@@ -486,7 +549,7 @@ function shuffled() {
   await testAsync('AI 明显强过乱打（同牌对打）', async () => {
     const dumb = {
       chooseBid: () => null,
-      chooseBury: (v) => { const h = v.hand.slice(); C.shuffle(h); return h.slice(0, 8).map((t) => t.id); },
+      chooseBury: (v) => { const h = v.hand.filter((t) => !v.shownIds.includes(t.id)); C.shuffle(h); return h.slice(0, 8).map((t) => t.id); },
       chooseLead: (v) => [v.hand[C.secureInt(v.hand.length)].id],
       chooseFollow: (v, info) => {
         const ctx = R.makeCtx(v.level, v.trump);
