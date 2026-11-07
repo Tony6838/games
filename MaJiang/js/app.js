@@ -347,7 +347,9 @@
       for (const pair of o.chi) {
         bar.appendChild(actionButton('chi', '吃', '', () => finish({ type: 'chi', chi: pair }), [pair[0], claim.kind, pair[1]].sort((a, b) => a - b)));
       }
-      bar.appendChild(actionButton('pass', '过', '', () => finish({ type: 'pass' })));
+      // 上家打的牌不要，接下来就轮到你摸牌：按钮叫「抓牌」；别家打的牌放过并不轮到你，叫「过」
+      const drawNext = (claim.from + 1) % 4 === view.seat && view.wallRemaining > 0;
+      bar.appendChild(actionButton('pass', drawNext ? '抓牌' : '过', '', () => finish({ type: 'pass' })));
       bar.hidden = false;
       setHint(NAMES[claim.from] + ' 打出 ' + T.name(claim.kind));
     });
