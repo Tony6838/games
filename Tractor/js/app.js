@@ -231,8 +231,8 @@
         scene.keyGroup = (k) => state.ctx.cls[k];
         scene.sorter = (a, b) => R.sortKey(a, state.ctx) - R.sortKey(b, state.ctx);
         scene.sortHuman();
-        // 闲家赢到的分牌摊在一家面前：对手是闲家就放右手，我们是闲家就放对家
-        scene.wonSeat = e.dealer % 2 === 0 ? 1 : 2;
+        // 闲家赢到的分牌摊开：对手是闲家放在右手面前，我们是闲家放在你的左前方
+        scene.wonSeat = e.dealer % 2 === 0 ? 1 : 0;
         scene.setConsole({ trump: e.trump, level: e.level, dealer: e.dealer });
         refreshHud();
         await Promise.all([0, 1, 2, 3].map((s) => scene.layoutHand(s, 380)));

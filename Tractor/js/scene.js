@@ -45,11 +45,12 @@
   // 赢来的牌堆放在四个角，底牌放在对家右手边
   const PILES = [[21.5, 5.6], [21.5, -13.6], [-21.5, -13.6], [-21.5, 5.6]];
   const KITTY_SPOT = [13.2, -12.4];
-  // 闲家赢到的分牌正面朝上摊在一家盖着的手牌前面：右手是一列（牌多分两列），对家是一行。
+  // 闲家赢到的分牌正面朝上摊开。对手是闲家：摊在右手盖着的手牌前，一列（牌多分两列）。
+  // 我们是闲家：摊在你的左前方，一行（牌多分两行），离镜头近、牌也大，看得清；按钮栏为它往右让。
   // 范围避开出牌位置、四角的牌堆和底牌堆。
   const WON_SCALE = 2.4;
   const WON_RIGHT = { cols: [18.9, 21.7], z0: -11, z1: 3.3, perCol: 12 };
-  const WON_TOP = { z: -9.8, span: 18 };
+  const WON_MINE = { scale: 3, x0: -19, x1: -4.5, z: 5.5, rowsZ: [4.7, 6.3], perRow: 12 };
   // 右手一次出好几张时会摊到分牌上：分牌贴着桌面叠得很薄，出的牌整体抬高一点，总是压在分牌上面
   const WON_LAYER = 0.005;
   const PLAY_LIFT = 0.16;
@@ -550,14 +551,21 @@
         return Cards.rankOf(k) * 4 + Cards.suitOf(k);
       };
       const list = this.won.slice().sort((a, b) => key(a) - key(b) || a - b);
+      if (this.wonSeat === 0) {
+        const M = WON_MINE;
+        const w = CW * M.scale;
+        const rows = list.length > M.perRow ? 2 : 1;
+        const per = Math.ceil(list.length / rows);
+        const step = per > 1 ? Math.min(w * 0.6, (M.x1 - M.x0 - w) / (per - 1)) : 0;
+        // 第二行压住第一行的下半截，第一行仍露出左上角的点数
+        return list.map((id, i) => ({
+          id,
+          pos: [M.x0 + w / 2 + step * (i % per), CT + i * WON_LAYER, rows === 1 ? M.z : M.rowsZ[Math.floor(i / per)]],
+          s: M.scale,
+        }));
+      }
       const s = WON_SCALE;
       const h = CH * s;
-      if (this.wonSeat === 2) {
-        const n = list.length;
-        const step = n > 1 ? Math.min(CW * s * 0.55, WON_TOP.span / (n - 1)) : 0;
-        const x0 = -step * (n - 1) / 2;
-        return list.map((id, i) => ({ id, pos: [x0 + step * i, CT + i * WON_LAYER, WON_TOP.z], s }));
-      }
       const R = WON_RIGHT;
       const cols = list.length > R.perCol ? 2 : 1;
       const per = Math.ceil(list.length / cols);
@@ -586,12 +594,14 @@
       return c;
     }
 
-    /** 亮底牌。 */
+    /** 亮底牌。我们赚的分牌摊在左前方时，底牌从它右边排起，不盖住分牌。 */
     async revealKitty(ids, kinds) {
+      const left = this.wonSeat === 0 && this.won.length ? WON_MINE.x1 + 1.5 + 3.75 / 2 : -14.7;
+      const step = (14.7 - left) / Math.max(1, ids.length - 1);
       const ps = ids.map((id, i) => {
         this.setKind(id, kinds[i]);
         return this.tween(this.cards[id], {
-          pos: [-14.7 + i * 4.2, 0.03, 6.2],
+          pos: [left + i * step, 0.03 + i * 0.01, 6.2],
           q: FLAT_UP,
           s: 3.75,
         }, { dur: 560, delay: i * 75, arc: 2.4, ease: easeInOut });

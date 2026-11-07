@@ -15,6 +15,7 @@
   --serif: "Noto Serif SC", "Source Han Serif SC", "STSong", "SimSun", serif;
   --sans: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   --kai: "KaiTi", "STKaiti", var(--serif);
+  --act-shift: 70px; /* 按钮栏和提示偏右，左边留给我们赚到的分牌（scene.js 的 WON_MINE） */
 }
 
 * { box-sizing: border-box; }
@@ -211,7 +212,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 /* 操作栏 */
 #actions {
   position: fixed;
-  left: 50%;
+  left: calc(50% + var(--act-shift));
   bottom: calc(var(--lh) * 41 / 100);
   transform: translateX(-50%);
   z-index: 7;
@@ -256,7 +257,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 
 #hint {
   position: fixed;
-  left: 50%;
+  left: calc(50% + var(--act-shift));
   bottom: calc(var(--lh) * 37 / 100);
   transform: translateX(-50%);
   z-index: 4;
@@ -394,6 +395,7 @@ html.compact .score-label b { font-size: 15px; }
 html.compact .score-line { font-size: 10px; }
 html.compact .score-bar { height: 5px; margin-top: 2px; }
 html.compact #scoreRole { display: none; }
+html.compact { --act-shift: 80px; }
 html.compact #actions { bottom: calc(var(--lh) * 37 / 100); gap: 6px; padding: 4px 6px; border-radius: 9px; }
 html.compact .act { min-height: 40px; padding: 3px 13px; font-size: 15px; }
 html.compact .act.play { min-width: 92px; }
