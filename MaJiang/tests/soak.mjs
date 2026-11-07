@@ -2,6 +2,7 @@
 //   node tests/soak.mjs <输出目录> [--hands 300] [--par 6] [--w 844] [--h 390] [--dpr 2] [--speed 6]
 //                       [--throttle 1] [--gl gpu|swiftshader] [--stall 300]
 //                       [--sizes 844x390x2,667x375x2,1600x900x1]   每个页面轮流用一种屏幕
+//                       [--base https://tony6838.github.io/games/MaJiang/]   测线上的版本，不测本地文件
 //                       [--human 1]   不用电脑代打，由 tests/robot.mjs 用真实点击玩你的座位，单数页面用触摸
 // 麻将和拖拉机共用这份脚本（两边各放一份），自动识别是哪个游戏。
 import { spawn } from 'node:child_process';
@@ -27,6 +28,7 @@ const THROTTLE = +opt('throttle', 1);
 const GL = opt('gl', 'gpu');
 const STALL_S = +opt('stall', 300);
 const HUMAN = opt('human', '0') === '1';
+const BASE = opt('base', '');
 const SIZES = opt('sizes', '').split(',').filter(Boolean).map((x) => x.split('x').map(Number));
 mkdirSync(outDir, { recursive: true });
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -340,7 +342,7 @@ async function runInstance(index, shared) {
   if (HUMAN && index % 2 === 1) await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
   if (HUMAN) await send('Emulation.setFocusEmulationEnabled', { enabled: true });
   if (THROTTLE > 1) await send('Emulation.setCPUThrottlingRate', { rate: THROTTLE });
-  const url = 'file:///' + root.replace(/\\/g, '/') + '/index.html?' + (HUMAN ? '' : 'auto=1&') + 'speed=' + SPEED;
+  const url = (BASE || 'file:///' + root.replace(/\\/g, '/') + '/index.html') + '?' + (HUMAN ? '' : 'auto=1&') + 'speed=' + SPEED;
   await send('Page.navigate', { url });
   await sleep(2500);
 
