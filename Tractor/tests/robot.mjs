@@ -20,7 +20,7 @@ const STATE = `(()=>{const d=window.__mjDebug||window.__tjDebug;if(!d)return nul
  if(p&&window.__robotLast!==p){window.__robotLast=p;window.__robotSeq=(window.__robotSeq||0)+1;}
  return {mj,kind:p?p.kind:null,forbid:mj&&p&&p.opts?p.opts.forbid:null,leadLen:!mj&&p&&p.info?p.info.lead.length:0,
   acts:[...document.querySelectorAll('#actions .act')].map(b=>b.className.replace('act ','')),
-  start:!$('startScreen').hidden,result:!$('resultScreen').hidden,rules:!$('rulesScreen').hidden,log:!$('logPanel').hidden,back:!$('btnBackResult').hidden,
+  resume:!$('fsResume').hidden,start:!$('startScreen').hidden,result:!$('resultScreen').hidden,rules:!$('rulesScreen').hidden,log:!$('logPanel').hidden,back:!$('btnBackResult').hidden,
   hand:list,selected:mj?s.selectedId:[...s.selected],confirm:!mj&&$('btnConfirm')?!$('btnConfirm').disabled:false,
   w:innerWidth,h:innerHeight,tweens:s.tweens.length,speed:s.speed,seq:p?window.__robotSeq:0};})()`;
 
@@ -371,6 +371,10 @@ export async function runRobot({ send: rawSend, ev: rawEv, stats, isDone, sleep,
     trace('tick kind=' + st.kind + ' seq=' + st.seq + ' w=' + st.w + ' h=' + st.h + (st.rules ? ' rules' : '') + (st.log ? ' log' : '') + (st.start ? ' start' : '') + (st.result ? ' result' : '') + (st.back ? ' back' : ''));
     if (st.h > st.w) { // 竖屏：过一会儿转回来
       if (--portraitLeft <= 0) await metrics(home[0], home[1], home[2]);
+      continue;
+    }
+    if (st.resume) {
+      await clickSel('#btnFsResume');
       continue;
     }
     if (st.rules) {

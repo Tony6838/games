@@ -6,10 +6,16 @@
 <meta name="theme-color" content="#0f0e0d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="上海麻将">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>上海麻将 · 清混碰</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<div id="app">
 <canvas id="stage"></canvas>
 
 <header id="topbar">
@@ -20,6 +26,7 @@
     <button id="btnSound" class="ghost" title="开关声音"><span class="lbl">声音：</span>开</button>
     <button id="btnLog" class="ghost" title="显示牌局记录">记录</button>
     <button id="btnRules" class="ghost">规则</button>
+    <button id="btnFull" class="ghost" title="全屏" hidden>全屏</button>
   </div>
 </header>
 
@@ -55,6 +62,36 @@
       <p>欢迎传播和免费使用，作者对游戏的安全负责。</p>
       <p>改进意见可以发电子邮件给作者 <a href="mailto:Tony.Shen.Qiang@Gmail.Com">Tony.Shen.Qiang@Gmail.Com</a></p>
     </div>
+  </div>
+</section>
+
+<section id="fsResume" class="overlay" hidden>
+  <div class="card intro">
+    <p>已经退出全屏</p>
+    <button id="btnFsResume" class="primary big">回到全屏继续</button>
+  </div>
+</section>
+
+<section id="fsGuide" class="overlay" hidden>
+  <div class="card intro fs-guide">
+    <div id="guide-ios" hidden>
+      <h2>iPhone 请从主屏幕打开</h2>
+      <p>苹果的 Safari 不允许网页全屏。添加到主屏幕后从图标打开，就是全屏横屏，以后也不用再找网址：</p>
+      <ol>
+        <li>点 Safari 的「分享」按钮（方框带向上箭头的图标）</li>
+        <li>往下找到「添加到主屏幕」，点「添加」</li>
+        <li>回到主屏幕，点「上海麻将」图标开始玩</li>
+      </ol>
+    </div>
+    <div id="guide-wechat" hidden>
+      <h2>请在浏览器里打开</h2>
+      <p>微信里的网页不能全屏。请点右上角的「…」，选「在浏览器打开」（iPhone 选「在 Safari 中打开」）。</p>
+    </div>
+    <div id="guide-other" hidden>
+      <h2>这个浏览器不能全屏</h2>
+      <p>请换用 Chrome 或手机自带的浏览器打开这个网址。</p>
+    </div>
+    <button id="btnGuideBack" class="ghost">知道了</button>
   </div>
 </section>
 
@@ -124,10 +161,10 @@
   </div>
 </section>
 
-<div id="rotateHint"><div><span class="phone-icon"></span><p>请把手机横过来玩</p></div></div>
-
 <div id="noWebgl" class="overlay" hidden>
   <div class="card intro"><h2>浏览器不支持 WebGL2</h2><p>请用新版 Edge、Chrome、Firefox 或 Safari 打开，并开启硬件加速。</p></div>
+</div>
+
 </div>
 
 <script src="js/tiles.js"></script>

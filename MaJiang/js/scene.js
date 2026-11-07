@@ -662,11 +662,11 @@
     }
 
     // ---- 拾取 ----------------------------------------------------------------
-    pick(clientX, clientY) {
+    pick(x, y) {
+      // x, y 是横屏画面里的坐标（页面可能整个转了 90 度），按画布的布局尺寸换算
       if (!this.vpInv) return null;
-      const rect = this.canvas.getBoundingClientRect();
-      const nx = ((clientX - rect.left) / rect.width) * 2 - 1;
-      const ny = 1 - ((clientY - rect.top) / rect.height) * 2;
+      const nx = (x / this.canvas.clientWidth) * 2 - 1;
+      const ny = 1 - (y / this.canvas.clientHeight) * 2;
       const near = M4.transform(this.vpInv, [nx, ny, -1]);
       const far = M4.transform(this.vpInv, [nx, ny, 1]);
       const ro = [near[0], near[1], near[2]];
@@ -707,8 +707,7 @@
     project(pos) {
       if (!this.vp) return null;
       const p = M4.transform(this.vp, pos);
-      const rect = this.canvas.getBoundingClientRect();
-      return { x: rect.left + (p[0] * 0.5 + 0.5) * rect.width, y: rect.top + (1 - (p[1] * 0.5 + 0.5)) * rect.height };
+      return { x: (p[0] * 0.5 + 0.5) * this.canvas.clientWidth, y: (1 - (p[1] * 0.5 + 0.5)) * this.canvas.clientHeight };
     }
 
     // ---- 每帧 ----------------------------------------------------------------

@@ -1,4 +1,10 @@
 :root {
+  --lw: 100vw; /* 横屏的宽和高：手机竖拿时由 app.js 换成转过来以后的尺寸 */
+  --lh: 100vh;
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
   --ink: #f3ead6;
   --muted: #a9a290;
   --gold: #e6bd6e;
@@ -24,6 +30,29 @@ html, body {
   font-family: var(--sans);
   background: radial-gradient(ellipse at 50% 42%, #2b2a2e 0%, #141316 58%, #09090b 100%);
   user-select: none;
+}
+
+/* 所有界面都在 #app 里。手机竖着拿时整个转 90 度画成横屏（逆时针：顶栏在手机左边，手牌在右边） */
+#app {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transform-origin: 0 0;
+}
+html.rot #app {
+  width: var(--lw);
+  height: var(--lh);
+  transform: translate(0, var(--lw)) rotate(-90deg);
+}
+/* 转过来以后，横屏的上边是手机的左边，右边是手机的上边（刘海），下边是手机的右边，左边是手机的下边（横条） */
+html.rot {
+  --sat: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-right);
+  --sal: env(safe-area-inset-bottom);
 }
 
 #stage {
@@ -128,9 +157,9 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .plate .tag.att { background: rgba(70, 130, 200, .3); color: #b5d3f4; }
 .plate .tag.mate { background: rgba(230, 189, 110, .24); color: var(--gold); }
 .plate.active { border-color: var(--gold); box-shadow: 0 0 16px rgba(230, 189, 110, .4); }
-#plate0 { left: 12px; bottom: 37vh; }
+#plate0 { left: 12px; bottom: calc(var(--lh) * 37 / 100); }
 #plate1 { right: 12px; top: 18%; }
-#plate2 { right: calc(50% + 18vw); top: 46px; }
+#plate2 { right: calc(50% + calc(var(--lw) * 18 / 100)); top: 46px; }
 #plate3 { left: 12px; top: 18%; }
 
 /* 分数 */
@@ -183,7 +212,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 #actions {
   position: fixed;
   left: 50%;
-  bottom: 41vh;
+  bottom: calc(var(--lh) * 41 / 100);
   transform: translateX(-50%);
   z-index: 7;
   display: flex;
@@ -228,10 +257,10 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 #hint {
   position: fixed;
   left: 50%;
-  bottom: 37vh;
+  bottom: calc(var(--lh) * 37 / 100);
   transform: translateX(-50%);
   z-index: 4;
-  max-width: 76vw;
+  max-width: calc(var(--lw) * 76 / 100);
   padding: 4px 14px;
   border-radius: 999px;
   background: rgba(20, 22, 26, 0.76);
@@ -281,7 +310,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 
 .card {
   position: relative;
-  max-height: 92vh;
+  max-height: calc(var(--lh) * 92 / 100);
   overflow-y: auto;
   padding: 26px 30px;
   border-radius: 14px;
@@ -296,7 +325,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.intro { width: min(500px, 94vw); text-align: center; }
+.intro { width: min(500px, calc(var(--lw) * 94 / 100)); text-align: center; }
 .intro h1 { margin: 0; font-family: var(--kai); font-size: 54px; letter-spacing: 10px; color: var(--gold); }
 .intro .sub { margin: 4px 0 18px; color: var(--muted); }
 .intro ul { margin: 0 0 22px; padding: 0; list-style: none; text-align: left; font-size: 14px; line-height: 1.75; }
@@ -304,7 +333,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .intro li::before { content: "·"; position: absolute; left: 3px; color: var(--gold); font-weight: 700; }
 .intro .ghost { margin-left: 10px; }
 
-.rules { width: min(700px, 96vw); font-size: 14px; line-height: 1.7; }
+.rules { width: min(700px, calc(var(--lw) * 96 / 100)); font-size: 14px; line-height: 1.7; }
 .rules h2 { margin: 0 0 4px; font-family: var(--serif); color: var(--gold); }
 .rules h3 { margin: 16px 0 5px; font-size: 15px; color: var(--gold); font-weight: 600; }
 .rules ul { margin: 0; padding-left: 19px; }
@@ -316,7 +345,7 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .close:hover { color: var(--ink); }
 
 /* 结果 */
-.result { width: min(620px, 96vw); display: flex; flex-direction: column; overflow: hidden; }
+.result { width: min(620px, calc(var(--lw) * 96 / 100)); display: flex; flex-direction: column; overflow: hidden; }
 #resultBody { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .verdict, .result-buttons { flex-shrink: 0; }
 .verdict { font-family: var(--kai); font-size: 46px; font-weight: 700; text-align: center; letter-spacing: 4px; }
@@ -336,99 +365,68 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 #btnBackResult { position: fixed; left: 50%; top: 56px; transform: translateX(-50%); z-index: 8; }
 #btnBackResult[hidden] { display: none; }
 
-@media (max-width: 860px) {
-  .brand span { display: none; }
-  .float-word { font-size: 32px; }
-  .float-word.bid { font-size: 44px; }
-}
+  html.w860 .brand span { display: none; }
+html.w860 .float-word { font-size: 32px; }
+html.w860 .float-word.bid { font-size: 44px; }
 
-/* 竖屏的手机：提示横过来 */
-#rotateHint {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--gold);
-  background: #100f11;
-  font-size: 20px;
-}
-.phone-icon {
-  display: inline-block;
-  width: 44px;
-  height: 76px;
-  border: 3px solid var(--gold);
-  border-radius: 8px;
-  animation: tipOver 1.8s ease-in-out infinite;
-}
-@keyframes tipOver {
-  0%, 25% { transform: rotate(0); }
-  65%, 100% { transform: rotate(90deg); }
-}
-@media (orientation: portrait) and (max-width: 900px) {
-  #rotateHint { display: flex; }
-}
 
 /* 手机横屏：高度很少，界面元素都收紧，给牌让路 */
-@media (max-height: 520px) {
-  #topbar { padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); gap: 6px; }
-  .brand { display: none; }
-  .round-info { gap: 4px; font-size: 11px; }
-  .round-info .chip { padding: 1px 7px; }
-  .round-info .chip:first-child { display: none; }
-  .tools { gap: 4px; font-size: 11px; }
-  .ghost { padding: 3px 8px; border-radius: 5px; }
-  .lbl { display: none; }
-  .plate { min-width: 0; padding: 3px 7px; gap: 0; font-size: 11px; border-radius: 6px; }
-  .plate .who { font-size: 12px; gap: 3px; }
-  .plate .meta { font-size: 10px; }
-  .plate .tag { font-size: 10px; line-height: 13px; padding: 0 3px; }
-  #plate0 { left: max(6px, env(safe-area-inset-left)); bottom: 33vh; }
-  #plate0 .meta { display: none; }
-  #plate1 { right: max(6px, env(safe-area-inset-right)); }
-  #plate2 { top: 26px; right: calc(50% + 18vw); }
-  #plate3 { left: max(6px, env(safe-area-inset-left)); }
-  #scoreBox { top: 28px; right: max(6px, env(safe-area-inset-right)); width: 128px; padding: 3px 7px 5px; border-radius: 6px; }
-  .score-label { font-size: 10px; }
-  .score-label b { font-size: 15px; }
-  .score-line { font-size: 10px; }
-  .score-bar { height: 5px; margin-top: 2px; }
-  #scoreRole { display: none; }
-  #actions { bottom: 37vh; gap: 6px; padding: 4px 6px; border-radius: 9px; }
-  .act { min-height: 40px; padding: 3px 13px; font-size: 15px; }
-  .act.play { min-width: 92px; }
-  #hint { bottom: 33vh; padding: 1px 10px; font-size: 11px; }
-  body:has(#actions:not([hidden])) #hint:not(.warn) { display: none; }
-  #logPanel { top: 66px; bottom: 6px; width: 200px; padding: 6px 8px; }
-  .overlay { padding: 6px; }
-  .card { padding: 12px 16px; max-height: 97vh; border-radius: 10px; }
-  .intro h1 { font-size: 34px; letter-spacing: 6px; }
-  .intro .sub { margin: 0 0 6px; font-size: 13px; }
-  .intro ul { margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
-  .primary.big { padding: 8px 26px; font-size: 16px; }
-  .verdict { font-size: 26px; }
-  .verdict small { font-size: 12px; }
-  .result { width: min(560px, 98vw); }
-  .pay-table { margin-top: 5px; font-size: 12px; }
-  .pay-table td { padding: 1px 6px; }
-  .kitty-row { margin-top: 5px; }
-  .mini { height: 38px; }
-  .champion { margin-top: 6px; padding: 4px 8px; font-size: 12px; }
-  .result-buttons { margin-top: 7px; }
-  .rules { font-size: 12.5px; line-height: 1.55; }
-  .rules h3 { margin: 9px 0 3px; font-size: 13px; }
-  #btnBackResult { top: 30px; }
-  .float-word { font-size: 28px; }
-  .float-word.bid { font-size: 38px; }
-  .float-word.bad { font-size: 36px; }
-}
+  html.compact #topbar { padding: max(4px, var(--sat)) max(8px, var(--sar)) 0 max(8px, var(--sal)); gap: 6px; }
+html.compact .brand { display: none; }
+html.compact .round-info { gap: 4px; font-size: 11px; }
+html.compact .round-info .chip { padding: 1px 7px; }
+html.compact .round-info .chip:first-child { display: none; }
+html.compact .tools { gap: 4px; font-size: 11px; }
+html.compact .ghost { padding: 3px 8px; border-radius: 5px; }
+html.compact .lbl { display: none; }
+html.compact .plate { min-width: 0; padding: 3px 7px; gap: 0; font-size: 11px; border-radius: 6px; }
+html.compact .plate .who { font-size: 12px; gap: 3px; }
+html.compact .plate .meta { font-size: 10px; }
+html.compact .plate .tag { font-size: 10px; line-height: 13px; padding: 0 3px; }
+html.compact #plate0 { left: max(6px, var(--sal)); bottom: calc(var(--lh) * 33 / 100); }
+html.compact #plate0 .meta { display: none; }
+html.compact #plate1 { right: max(6px, var(--sar)); }
+html.compact #plate2 { top: 26px; right: calc(50% + calc(var(--lw) * 18 / 100)); }
+html.compact #plate3 { left: max(6px, var(--sal)); }
+html.compact #scoreBox { top: 28px; right: max(6px, var(--sar)); width: 128px; padding: 3px 7px 5px; border-radius: 6px; }
+html.compact .score-label { font-size: 10px; }
+html.compact .score-label b { font-size: 15px; }
+html.compact .score-line { font-size: 10px; }
+html.compact .score-bar { height: 5px; margin-top: 2px; }
+html.compact #scoreRole { display: none; }
+html.compact #actions { bottom: calc(var(--lh) * 37 / 100); gap: 6px; padding: 4px 6px; border-radius: 9px; }
+html.compact .act { min-height: 40px; padding: 3px 13px; font-size: 15px; }
+html.compact .act.play { min-width: 92px; }
+html.compact #hint { bottom: calc(var(--lh) * 33 / 100); padding: 1px 10px; font-size: 11px; }
+html.compact body:has(#actions:not([hidden])) #hint:not(.warn) { display: none; }
+html.compact #logPanel { top: 66px; bottom: 6px; width: 200px; padding: 6px 8px; }
+html.compact .overlay { padding: 6px; }
+html.compact .card { padding: 12px 16px; max-height: calc(var(--lh) * 97 / 100); border-radius: 10px; }
+html.compact .intro h1 { font-size: 34px; letter-spacing: 6px; }
+html.compact .intro .sub { margin: 0 0 6px; font-size: 13px; }
+html.compact .intro ul { margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
+html.compact .primary.big { padding: 8px 26px; font-size: 16px; }
+html.compact .verdict { font-size: 26px; }
+html.compact .verdict small { font-size: 12px; }
+html.compact .result { width: min(560px, calc(var(--lw) * 98 / 100)); }
+html.compact .pay-table { margin-top: 5px; font-size: 12px; }
+html.compact .pay-table td { padding: 1px 6px; }
+html.compact .kitty-row { margin-top: 5px; }
+html.compact .mini { height: 38px; }
+html.compact .champion { margin-top: 6px; padding: 4px 8px; font-size: 12px; }
+html.compact .result-buttons { margin-top: 7px; }
+html.compact .rules { font-size: 12.5px; line-height: 1.55; }
+html.compact .rules h3 { margin: 9px 0 3px; font-size: 13px; }
+html.compact #btnBackResult { top: 30px; }
+html.compact .float-word { font-size: 28px; }
+html.compact .float-word.bid { font-size: 38px; }
+html.compact .float-word.bad { font-size: 36px; }
+
 
 /* 16:9 的小手机上名牌相对变大，再往上提一点，不压侧边的牌 */
-@media (max-height: 520px) and (max-aspect-ratio: 19/10) {
-  #plate1, #plate3 { top: 13%; }
-}
+
+html.compact.narrow #plate1, html.compact.narrow #plate3 { top: 13%; }
+
 
 /* 开始画面上作者的话 */
 .intro .dedication {
@@ -445,8 +443,19 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 .intro .dedication p { margin: 0 0 4px; }
 .intro .dedication p:last-child { margin: 0; }
 .intro .dedication a { color: var(--gold); text-decoration: none; word-break: break-all; }
-@media (max-height: 520px) {
-  .intro { width: min(640px, 94vw); }
-  .intro .dedication { margin-top: 8px; padding: 6px 10px; font-size: 11.5px; line-height: 1.5; }
-  .intro .dedication p { margin: 0 0 2px; }
-}
+  html.compact .intro { width: min(640px, calc(var(--lw) * 94 / 100)); }
+html.compact .intro .dedication { margin-top: 8px; padding: 6px 10px; font-size: 11.5px; line-height: 1.5; }
+html.compact .intro .dedication p { margin: 0 0 2px; }
+
+
+/* 进不了全屏时的说明 */
+.fs-guide h2 { margin: 0 0 8px; font-family: "KaiTi", "STKaiti", serif; font-size: 30px; color: var(--gold); }
+.fs-guide p { margin: 0 0 8px; text-align: left; font-size: 14px; line-height: 1.6; }
+.fs-guide ol { margin: 0 0 14px; padding-left: 22px; text-align: left; font-size: 15px; line-height: 1.8; }
+.fs-guide ol li::marker { color: var(--gold); font-weight: 700; }
+.fs-guide ol li { padding-left: 2px; }
+.fs-guide ol li::before { content: none; }
+  html.compact .fs-guide h2 { font-size: 22px; margin-bottom: 4px; }
+html.compact .fs-guide p { font-size: 12px; margin-bottom: 4px; }
+html.compact .fs-guide ol { font-size: 13px; line-height: 1.6; margin-bottom: 8px; }
+

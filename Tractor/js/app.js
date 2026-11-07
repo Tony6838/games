@@ -107,12 +107,12 @@
   }
 
   function floater(seat, text, cls) {
-    const a = scene.project(scene.seatAnchor(seat)) || { x: innerWidth / 2, y: innerHeight / 2 };
+    const a = scene.project(scene.seatAnchor(seat)) || { x: viewW() / 2, y: viewH() / 2 };
     const el = document.createElement('div');
     el.className = 'float-word ' + (cls || '');
     el.textContent = text;
-    el.style.left = Math.max(90, Math.min(innerWidth - 90, a.x)) + 'px';
-    el.style.top = Math.max(innerHeight * 0.2, Math.min(innerHeight * 0.58, a.y)) + 'px';
+    el.style.left = Math.max(90, Math.min(viewW() - 90, a.x)) + 'px';
+    el.style.top = Math.max(viewH() * 0.2, Math.min(viewH() * 0.58, a.y)) + 'px';
     $('floaters').appendChild(el);
     setTimeout(() => el.remove(), 2000);
   }
@@ -560,10 +560,11 @@
   function wireStage() {
     const stage = $('stage');
     stage.addEventListener('pointermove', (ev) => {
-      scene.mouse[0] = (ev.clientX / innerWidth - 0.5) * 2;
-      scene.mouse[1] = (ev.clientY / innerHeight - 0.5) * 2;
+      const pt = viewPoint(ev);
+      scene.mouse[0] = (pt.x / viewW() - 0.5) * 2;
+      scene.mouse[1] = (pt.y / viewH() - 0.5) * 2;
       if (ev.pointerType !== 'mouse' || !scene.interactive) return;
-      const id = scene.pick(ev.clientX, ev.clientY);
+      const id = scene.pick(viewPoint(ev).x, viewPoint(ev).y);
       scene.hoverId = id;
       stage.style.cursor = id !== null ? 'pointer' : 'default';
     });
@@ -576,7 +577,7 @@
         sweep = null;
         return;
       }
-      const id = scene.pick(ev.clientX, ev.clientY);
+      const id = scene.pick(viewPoint(ev).x, viewPoint(ev).y);
       if (id === null || sweep.seen.has(id)) return;
       sweep.seen.add(id);
       if (sweep.add) scene.selected.add(id);
@@ -586,7 +587,7 @@
     };
     stage.addEventListener('pointerdown', (ev) => {
       if (!scene.interactive || ev.button !== 0) return;
-      const id = scene.pick(ev.clientX, ev.clientY);
+      const id = scene.pick(viewPoint(ev).x, viewPoint(ev).y);
       if (id === null) return;
       sweep = { add: !scene.selected.has(id), seen: new Set() };
       stage.setPointerCapture(ev.pointerId); // 滑到按钮上松手也算结束
@@ -720,6 +721,7 @@
   }
 
   function startHand() {
+    document.documentElement.classList.add('started');
     $('resultScreen').hidden = true;
     $('startScreen').hidden = true;
     $('btnBackResult').hidden = true;
@@ -749,20 +751,127 @@
     hand.run().catch(showCrash);
   }
 
-  /** 手机上开局时尽量全屏并锁定横屏。浏览器不允许时什么也不做，页面本身已经适配。 */
-  function goLandscape() {
-    if (!matchMedia('(pointer: coarse)').matches) return;
-    const el = document.documentElement;
-    if (el.requestFullscreen) {
-      el.requestFullscreen().then(() => {
-        if (screen.orientation && screen.orientation.lock) return screen.orientation.lock('landscape').catch(() => {});
-        return null;
-      }).catch(() => {});
+  // ---- 横屏 --------------------------------------------------------------------
+  // 手机竖着拿时，把整个页面转 90 度画成横屏，不提示用户转手机（iPhone 和微信都不能锁定方向）。
+  // CSS 用 --lw/--lh（横屏的宽和高）排版；触摸坐标用 viewPoint() 换成横屏里的坐标。
+  const appEl = $('app');
+  let rotated = false;
+  function applyOrientation() {
+    const W = innerWidth;
+    const H = innerHeight;
+    rotated = matchMedia('(pointer: coarse)').matches && H > W;
+    const lw = rotated ? H : W;
+    const lh = rotated ? W : H;
+    const r = document.documentElement;
+    r.classList.toggle('rot', rotated);
+    r.style.setProperty('--lw', lw + 'px');
+    r.style.setProperty('--lh', lh + 'px');
+    r.classList.toggle('compact', lh <= 520); // 原来的 @media (max-height: 520px)
+    r.classList.toggle('narrow', lh <= 520 && lw / lh <= 1.9); // 原来的 (max-aspect-ratio: 19/10)
+    r.classList.toggle('w860', lw <= 860); // 原来的 @media (max-width: 860px)
+  }
+  addEventListener('resize', applyOrientation);
+  addEventListener('orientationchange', () => {
+    applyOrientation();
+    setTimeout(applyOrientation, 300); // iOS 先发事件，过一会儿才更新 innerWidth
+  });
+  applyOrientation();
+  const viewW = () => appEl.clientWidth;
+  const viewH = () => appEl.clientHeight;
+  /** 屏幕上的触摸点 -> 横屏画面里的坐标。 */
+  function viewPoint(ev) {
+    return rotated ? { x: innerHeight - ev.clientY, y: ev.clientX } : { x: ev.clientX, y: ev.clientY };
+  }
+
+  // ---- 全屏横屏 ----------------------------------------------------------------
+  // 手机上只能全屏横屏玩：开始键是「全屏开玩」，进不了全屏就不开局。浏览器只允许在点击之后进全屏。
+  // iPhone 的 Safari 和微信不让网页全屏：iPhone 要从「添加到主屏幕」的图标打开，微信要换到浏览器打开。
+  const fsEl = document.documentElement;
+  const canFullscreen = !!(fsEl.requestFullscreen || fsEl.webkitRequestFullscreen) && document.fullscreenEnabled !== false;
+  const phone = matchMedia('(pointer: coarse)').matches;
+  const standalone = navigator.standalone === true || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+  const wechat = /MicroMessenger/i.test(navigator.userAgent);
+  const ios = /iPhone|iPod|iPad/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const mustFullscreen = phone && !standalone; // 从主屏幕图标打开的本来就是全屏
+  const isFullscreen = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  function lockLandscape() {
+    const o = screen.orientation;
+    if (!o || !o.lock) return;
+    o.lock('landscape').then(() => fsEl.classList.add('locked'), () => fsEl.classList.remove('locked'));
+  }
+  /** 进全屏并锁横屏，成功了得到 true。必须在点击里同步调用，否则浏览器不允许。 */
+  function enterFullscreen() {
+    if (isFullscreen()) {
+      lockLandscape();
+      return Promise.resolve(true);
     }
+    if (!canFullscreen) return Promise.resolve(false);
+    let p;
+    try {
+      p = (fsEl.requestFullscreen || fsEl.webkitRequestFullscreen).call(fsEl, { navigationUI: 'hide' });
+    } catch (e) {
+      return Promise.resolve(false);
+    }
+    return Promise.resolve(p)
+      .then(() => new Promise((res) => setTimeout(() => res(isFullscreen()), 150)), () => false)
+      .then((ok) => {
+        if (ok) lockLandscape();
+        return ok;
+      });
+  }
+  function exitFullscreen() {
+    const f = document.exitFullscreen || document.webkitExitFullscreen;
+    if (f && isFullscreen()) Promise.resolve(f.call(document)).catch(() => {});
+  }
+  /** 游戏中被返回手势退出了全屏：盖一层「回到全屏继续」，点了才回去（那一下不会被当成出牌）。 */
+  function checkFullscreenLost() {
+    $('fsResume').hidden = !(mustFullscreen && fsEl.classList.contains('started') && !isFullscreen());
+  }
+  /** 进不了全屏：告诉用户怎么办，不开局。 */
+  function showGuide() {
+    const kind = wechat ? 'wechat' : ios ? 'ios' : 'other';
+    for (const k of ['wechat', 'ios', 'other']) $('guide-' + k).hidden = k !== kind;
+    $('fsGuide').hidden = false;
+  }
+  function wireFullscreen() {
+    const btn = $('btnFull');
+    const onChange = () => {
+      btn.textContent = isFullscreen() ? '退出全屏' : '全屏';
+      if (!isFullscreen()) fsEl.classList.remove('locked');
+      checkFullscreenLost();
+    };
+    btn.hidden = !canFullscreen || phone; // 手机上一直全屏，不给退出按钮
+    btn.addEventListener('click', () => {
+      if (isFullscreen()) exitFullscreen();
+      else enterFullscreen();
+    });
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange);
+    $('btnFsResume').addEventListener('click', () => {
+      unlockAudio();
+      enterFullscreen().then(checkFullscreenLost);
+    });
+    onChange();
+    fsEl.classList.toggle('phone', phone);
+    if (mustFullscreen) $('btnStart').textContent = '全屏开玩';
+    $('btnGuideBack').addEventListener('click', () => { $('fsGuide').hidden = true; });
+  }
+
+  /** 开始键：手机上先进全屏横屏，进不了就不开局。 */
+  function onStartClick() {
+    unlockAudio();
+    if (!mustFullscreen) {
+      startHand();
+      return;
+    }
+    enterFullscreen().then((ok) => {
+      if (ok) startHand();
+      else showGuide();
+    });
   }
 
   function wireButtons() {
-    $('btnStart').addEventListener('click', () => { unlockAudio(); goLandscape(); startHand(); });
+    $('btnStart').addEventListener('click', onStartClick);
     $('btnNext').addEventListener('click', () => { unlockAudio(); startHand(); });
     $('btnStartRules').addEventListener('click', () => { $('rulesScreen').hidden = false; });
     $('btnRules').addEventListener('click', () => { $('rulesScreen').hidden = false; });
@@ -804,6 +913,7 @@
     if (params.get('speed')) scene.speed = Number(params.get('speed')) || 1;
     wireStage();
     wireButtons();
+    wireFullscreen();
     if (AUTO) startHand();
     else {
       scene.orbit = 0.4;

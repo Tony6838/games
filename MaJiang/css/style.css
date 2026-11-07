@@ -1,4 +1,10 @@
 :root {
+  --lw: 100vw; /* 横屏的宽和高：手机竖拿时由 app.js 换成转过来以后的尺寸 */
+  --lh: 100vh;
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
   --ink: #f3ead6;
   --muted: #a9a290;
   --gold: #e6bd6e;
@@ -25,6 +31,29 @@ html, body {
   background:
     radial-gradient(ellipse at 50% 42%, #33291f 0%, #17130f 58%, #0a0908 100%);
   user-select: none;
+}
+
+/* 所有界面都在 #app 里。手机竖着拿时整个转 90 度画成横屏（逆时针：顶栏在手机左边，手牌在右边） */
+#app {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  transform-origin: 0 0;
+}
+html.rot #app {
+  width: var(--lw);
+  height: var(--lh);
+  transform: translate(0, var(--lw)) rotate(-90deg);
+}
+/* 转过来以后，横屏的上边是手机的左边，右边是手机的上边（刘海），下边是手机的右边，左边是手机的下边（横条） */
+html.rot {
+  --sat: env(safe-area-inset-left);
+  --sar: env(safe-area-inset-top);
+  --sab: env(safe-area-inset-right);
+  --sal: env(safe-area-inset-bottom);
 }
 
 #stage {
@@ -152,9 +181,9 @@ button {
 .plate .tag.wind { background: rgba(255, 255, 255, .13); color: var(--ink); font-weight: 500; }
 .plate .tag.sankou { background: #6a4bb0; color: #fff; }
 .plate.active { border-color: var(--gold); box-shadow: 0 0 16px rgba(230, 189, 110, .4); }
-#plate0 { left: 12px; bottom: 27.5vh; }
+#plate0 { left: 12px; bottom: calc(var(--lh) * 27.5 / 100); }
 #plate1 { right: 12px; top: 27%; }
-#plate2 { left: calc(50% + 20vw); top: 46px; }
+#plate2 { left: calc(50% + calc(var(--lw) * 20 / 100)); top: 46px; }
 #plate3 { left: 12px; top: 27%; }
 
 /* 碰杠胡的大字 */
@@ -187,7 +216,7 @@ button {
 #actions {
   position: fixed;
   left: 50%;
-  bottom: 31vh;
+  bottom: calc(var(--lh) * 31 / 100);
   transform: translateX(-50%);
   z-index: 7;
   display: flex;
@@ -239,7 +268,7 @@ button {
 #hint {
   position: fixed;
   left: 50%;
-  bottom: 27.5vh;
+  bottom: calc(var(--lh) * 27.5 / 100);
   transform: translateX(-50%);
   z-index: 4;
   padding: 4px 14px;
@@ -254,7 +283,7 @@ button {
 #waitsPanel {
   position: fixed;
   right: 12px;
-  bottom: 27.5vh;
+  bottom: calc(var(--lh) * 27.5 / 100);
   z-index: 4;
   display: flex;
   align-items: center;
@@ -317,7 +346,7 @@ button {
 
 .card {
   position: relative;
-  max-height: 92vh;
+  max-height: calc(var(--lh) * 92 / 100);
   overflow-y: auto;
   padding: 26px 30px;
   border-radius: 14px;
@@ -332,7 +361,7 @@ button {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.intro { width: min(500px, 94vw); text-align: center; }
+.intro { width: min(500px, calc(var(--lw) * 94 / 100)); text-align: center; }
 .intro h1 {
   margin: 0;
   font-family: "KaiTi", "STKaiti", var(--serif);
@@ -353,7 +382,7 @@ button {
 .intro li::before { content: "·"; position: absolute; left: 3px; color: var(--gold); font-weight: 700; }
 .intro .ghost { margin-left: 10px; }
 
-.rules { width: min(680px, 96vw); font-size: 14px; line-height: 1.7; }
+.rules { width: min(680px, calc(var(--lw) * 96 / 100)); font-size: 14px; line-height: 1.7; }
 .rules h2 { margin: 0 0 4px; font-family: var(--serif); color: var(--gold); }
 .rules h3 { margin: 16px 0 5px; font-size: 15px; color: var(--gold); font-weight: 600; }
 .rules ul { margin: 0; padding-left: 19px; }
@@ -372,7 +401,7 @@ button {
 .close:hover { color: var(--ink); }
 
 /* 结果 */
-.result { width: min(780px, 96vw); display: flex; flex-direction: column; overflow: hidden; }
+.result { width: min(780px, calc(var(--lw) * 96 / 100)); display: flex; flex-direction: column; overflow: hidden; }
 #resultBody { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; }
 .verdict, .result-buttons { flex-shrink: 0; }
 .verdict {
@@ -438,118 +467,86 @@ button {
 }
 #btnBackResult[hidden] { display: none; }
 
-@media (max-width: 860px) {
-  .brand span { display: none; }
-  .call-word { font-size: 64px; }
-  .call-word.hu { font-size: 100px; }
-}
+  html.w860 .brand span { display: none; }
+html.w860 .call-word { font-size: 64px; }
+html.w860 .call-word.hu { font-size: 100px; }
 
-/* 竖屏的手机：提示横过来 */
-#rotateHint {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--gold);
-  background: #100f0e;
-  font-size: 20px;
-}
-.phone-icon {
-  display: inline-block;
-  width: 44px;
-  height: 76px;
-  border: 3px solid var(--gold);
-  border-radius: 8px;
-  animation: tipOver 1.8s ease-in-out infinite;
-}
-@keyframes tipOver {
-  0%, 25% { transform: rotate(0); }
-  65%, 100% { transform: rotate(90deg); }
-}
-@media (orientation: portrait) and (max-width: 900px) {
-  #rotateHint { display: flex; }
-}
 
 /* 手机横屏：高度很少，界面元素都收紧，给牌让路 */
-@media (max-height: 520px) {
-  #topbar { padding: max(4px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); gap: 6px; }
-  .brand { display: none; }
-  .round-info { gap: 4px; font-size: 11px; }
-  .round-info .chip { padding: 1px 7px; }
-  .tools { gap: 4px; font-size: 11px; }
-  .ghost { padding: 3px 8px; border-radius: 5px; }
-  .lbl { display: none; }
-  .plate { min-width: 0; padding: 3px 7px; gap: 0; font-size: 11px; border-radius: 6px; }
-  .plate .who { font-size: 12px; gap: 3px; }
-  .plate .meta { font-size: 10px; }
-  .plate .dis { display: none; }
-  #plate0 .meta { display: none; }
-  body:has(#actions:not([hidden])) #hint { display: none; }
-  .plate .tag { font-size: 10px; line-height: 13px; padding: 0 3px; }
-  #plate0 { left: max(6px, env(safe-area-inset-left)); bottom: 25vh; }
-  #plate1 { right: max(6px, env(safe-area-inset-right)); }
-  #plate2 { top: 26px; left: calc(50% + 15.5vw); }
-  #plate3 { left: max(6px, env(safe-area-inset-left)); }
-  #actions { bottom: 26vh; gap: 6px; padding: 5px 7px; border-radius: 9px; }
-  .act { min-height: 42px; padding: 3px 11px; font-size: 20px; }
-  .act small { font-size: 11px; }
-  .act.pass { font-size: 18px; }
-  .act img, .mini { height: 28px; }
-  #hint { bottom: 24.5vh; padding: 1px 10px; font-size: 11px; }
-  #waitsPanel { right: max(6px, env(safe-area-inset-right)); bottom: 25vh; padding: 3px 7px; gap: 4px; font-size: 11px; }
-  #waitsPanel .wait { font-size: 10px; }
-  #logPanel { top: 28px; bottom: 6px; width: 200px; padding: 6px 8px; }
-  .overlay { padding: 6px; }
-  .card { padding: 12px 16px; max-height: 97vh; border-radius: 10px; }
-  .intro h1 { font-size: 34px; letter-spacing: 5px; }
-  .intro .sub { margin: 0 0 6px; font-size: 13px; }
-  .intro ul { margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
-  .primary.big { padding: 8px 26px; font-size: 16px; }
-  .verdict { font-size: 28px; }
-  .verdict small { font-size: 12px; }
-  .win-block { margin-top: 6px; padding: 6px 9px; }
-  .win-head { font-size: 13px; }
-  .win-head .pts { font-size: 15px; }
-  .tile-row { margin: 4px 0; }
-  .tile-row .mini { height: 32px; }
-  .chips { margin: 3px 0; }
-  .detail { font-size: 11.5px; line-height: 1.5; }
-  .pay-table { margin-top: 6px; font-size: 12px; }
-  .pay-table th, .pay-table td { padding: 2px 6px; }
-  .result { width: min(740px, 98vw); }
-  .result-buttons { margin-top: 8px; }
-  .rules { font-size: 12.5px; line-height: 1.55; }
-  .rules h3 { margin: 9px 0 3px; font-size: 13px; }
-  #btnBackResult { top: 30px; }
-  .call-word { font-size: 56px; }
-  .call-word.hu { font-size: 84px; }
-}
+  html.compact #topbar { padding: max(4px, var(--sat)) max(8px, var(--sar)) 0 max(8px, var(--sal)); gap: 6px; }
+html.compact .brand { display: none; }
+html.compact .round-info { gap: 4px; font-size: 11px; }
+html.compact .round-info .chip { padding: 1px 7px; }
+html.compact .tools { gap: 4px; font-size: 11px; }
+html.compact .ghost { padding: 3px 8px; border-radius: 5px; }
+html.compact .lbl { display: none; }
+html.compact .plate { min-width: 0; padding: 3px 7px; gap: 0; font-size: 11px; border-radius: 6px; }
+html.compact .plate .who { font-size: 12px; gap: 3px; }
+html.compact .plate .meta { font-size: 10px; }
+html.compact .plate .dis { display: none; }
+html.compact #plate0 .meta { display: none; }
+html.compact body:has(#actions:not([hidden])) #hint { display: none; }
+html.compact .plate .tag { font-size: 10px; line-height: 13px; padding: 0 3px; }
+html.compact #plate0 { left: max(6px, var(--sal)); bottom: calc(var(--lh) * 25 / 100); }
+html.compact #plate1 { right: max(6px, var(--sar)); }
+html.compact #plate2 { top: 26px; left: calc(50% + calc(var(--lw) * 15.5 / 100)); }
+html.compact #plate3 { left: max(6px, var(--sal)); }
+html.compact #actions { bottom: calc(var(--lh) * 26 / 100); gap: 6px; padding: 5px 7px; border-radius: 9px; }
+html.compact .act { min-height: 42px; padding: 3px 11px; font-size: 20px; }
+html.compact .act small { font-size: 11px; }
+html.compact .act.pass { font-size: 18px; }
+html.compact .act img, html.compact .mini { height: 28px; }
+html.compact #hint { bottom: calc(var(--lh) * 24.5 / 100); padding: 1px 10px; font-size: 11px; }
+html.compact #waitsPanel { right: max(6px, var(--sar)); bottom: calc(var(--lh) * 25 / 100); padding: 3px 7px; gap: 4px; font-size: 11px; }
+html.compact #waitsPanel .wait { font-size: 10px; }
+html.compact #logPanel { top: 28px; bottom: 6px; width: 200px; padding: 6px 8px; }
+html.compact .overlay { padding: 6px; }
+html.compact .card { padding: 12px 16px; max-height: calc(var(--lh) * 97 / 100); border-radius: 10px; }
+html.compact .intro h1 { font-size: 34px; letter-spacing: 5px; }
+html.compact .intro .sub { margin: 0 0 6px; font-size: 13px; }
+html.compact .intro ul { margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
+html.compact .primary.big { padding: 8px 26px; font-size: 16px; }
+html.compact .verdict { font-size: 28px; }
+html.compact .verdict small { font-size: 12px; }
+html.compact .win-block { margin-top: 6px; padding: 6px 9px; }
+html.compact .win-head { font-size: 13px; }
+html.compact .win-head .pts { font-size: 15px; }
+html.compact .tile-row { margin: 4px 0; }
+html.compact .tile-row .mini { height: 32px; }
+html.compact .chips { margin: 3px 0; }
+html.compact .detail { font-size: 11.5px; line-height: 1.5; }
+html.compact .pay-table { margin-top: 6px; font-size: 12px; }
+html.compact .pay-table th, html.compact .pay-table td { padding: 2px 6px; }
+html.compact .result { width: min(740px, calc(var(--lw) * 98 / 100)); }
+html.compact .result-buttons { margin-top: 8px; }
+html.compact .rules { font-size: 12.5px; line-height: 1.55; }
+html.compact .rules h3 { margin: 9px 0 3px; font-size: 13px; }
+html.compact #btnBackResult { top: 30px; }
+html.compact .call-word { font-size: 56px; }
+html.compact .call-word.hu { font-size: 84px; }
 
-@media (max-height: 520px) {
-  .verdict { font-size: 24px; letter-spacing: 1px; }
-  .verdict small { margin-top: 0; font-size: 11px; }
-  .card.result { padding: 8px 14px; }
-  .win-block { margin-top: 4px; padding: 4px 8px; }
-  .chips { margin: 2px 0; }
-  .chips span { padding: 0 7px; font-size: 11px; }
-  .tile-row { margin: 3px 0; }
-  .tile-row .mini { height: 28px; }
-  .detail { font-size: 11px; line-height: 1.35; }
-  .detail li { display: inline; }
-  .detail li + li::before { content: "；"; }
-  .pay-table { margin-top: 4px; font-size: 11px; }
-  .pay-table th, .pay-table td { padding: 1px 6px; }
-  .result-buttons { margin-top: 5px; }
-  .primary.big { padding: 6px 22px; font-size: 15px; }
-}
+
+  html.compact .verdict { font-size: 24px; letter-spacing: 1px; }
+html.compact .verdict small { margin-top: 0; font-size: 11px; }
+html.compact .card.result { padding: 8px 14px; }
+html.compact .win-block { margin-top: 4px; padding: 4px 8px; }
+html.compact .chips { margin: 2px 0; }
+html.compact .chips span { padding: 0 7px; font-size: 11px; }
+html.compact .tile-row { margin: 3px 0; }
+html.compact .tile-row .mini { height: 28px; }
+html.compact .detail { font-size: 11px; line-height: 1.35; }
+html.compact .detail li { display: inline; }
+html.compact .detail li + li::before { content: "；"; }
+html.compact .pay-table { margin-top: 4px; font-size: 11px; }
+html.compact .pay-table th, html.compact .pay-table td { padding: 1px 6px; }
+html.compact .result-buttons { margin-top: 5px; }
+html.compact .primary.big { padding: 6px 22px; font-size: 15px; }
+
 
 /* 16:9 的小手机上名牌相对变大，再往上提一点，不压侧边的牌 */
-@media (max-height: 520px) and (max-aspect-ratio: 19/10) {
-  #plate1, #plate3 { top: 16%; }
-}
+
+html.compact.narrow #plate1, html.compact.narrow #plate3 { top: 16%; }
+
 
 /* 开始画面上作者的话 */
 .intro .dedication {
@@ -566,8 +563,19 @@ button {
 .intro .dedication p { margin: 0 0 4px; }
 .intro .dedication p:last-child { margin: 0; }
 .intro .dedication a { color: var(--gold); text-decoration: none; word-break: break-all; }
-@media (max-height: 520px) {
-  .intro { width: min(640px, 94vw); }
-  .intro .dedication { margin-top: 8px; padding: 6px 10px; font-size: 11.5px; line-height: 1.5; }
-  .intro .dedication p { margin: 0 0 2px; }
-}
+  html.compact .intro { width: min(640px, calc(var(--lw) * 94 / 100)); }
+html.compact .intro .dedication { margin-top: 8px; padding: 6px 10px; font-size: 11.5px; line-height: 1.5; }
+html.compact .intro .dedication p { margin: 0 0 2px; }
+
+
+/* 进不了全屏时的说明 */
+.fs-guide h2 { margin: 0 0 8px; font-family: "KaiTi", "STKaiti", serif; font-size: 30px; color: var(--gold); }
+.fs-guide p { margin: 0 0 8px; text-align: left; font-size: 14px; line-height: 1.6; }
+.fs-guide ol { margin: 0 0 14px; padding-left: 22px; text-align: left; font-size: 15px; line-height: 1.8; }
+.fs-guide ol li::marker { color: var(--gold); font-weight: 700; }
+.fs-guide ol li { padding-left: 2px; }
+.fs-guide ol li::before { content: none; }
+  html.compact .fs-guide h2 { font-size: 22px; margin-bottom: 4px; }
+html.compact .fs-guide p { font-size: 12px; margin-bottom: 4px; }
+html.compact .fs-guide ol { font-size: 13px; line-height: 1.6; margin-bottom: 8px; }
+
