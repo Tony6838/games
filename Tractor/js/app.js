@@ -9,6 +9,9 @@
   const NAMES = ['沈强', '王雷', '徐涌', '吴忠'];
   const TEAM_NAMES = ['你们队', '对手队'];
   const DEAL_MS = 62; // 每张牌的间隔；有亮主机会时会停下来等你，不靠放慢发牌
+  // 动画和电脑出牌的节奏只有一种。原来有标准/快/慢三档，试玩下来「慢」正合真人的速度。
+  // 测试工具用 ?speed= 加快。
+  const PACE = 0.7;
 
   let scene = null;
   let session = { levels: [2, 2], dealer: null, handNo: 0, starter: C.secureInt(4) };
@@ -18,7 +21,6 @@
   let bidBarKey = '';
   let declinedBids = new Set(); // 这一局你按过「不亮」的亮主选项，之后不再为它们停下来
   const bidKey = (o) => o.strength + ':' + o.suit;
-  let speedMode = 0;
   let soundOn = true;
   let lastResult = null;
   const hintAI = AI.createPlayer();
@@ -884,12 +886,6 @@
       soundOn = !soundOn;
       $('btnSound').innerHTML = '<span class="lbl">声音：</span>' + (soundOn ? '开' : '关');
     });
-    const speeds = [[1, '标准'], [1.7, '快'], [0.7, '慢']];
-    $('btnSpeed').addEventListener('click', () => {
-      speedMode = (speedMode + 1) % speeds.length;
-      scene.speed = speeds[speedMode][0];
-      $('btnSpeed').innerHTML = '<span class="lbl">速度：</span>' + speeds[speedMode][1];
-    });
     $('btnViewTable').addEventListener('click', () => {
       $('resultScreen').hidden = true;
       $('btnBackResult').hidden = false;
@@ -910,7 +906,7 @@
       return;
     }
     scene.onSound = sound;
-    if (params.get('speed')) scene.speed = Number(params.get('speed')) || 1;
+    scene.speed = Number(params.get('speed')) || PACE;
     wireStage();
     wireButtons();
     wireFullscreen();

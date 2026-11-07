@@ -353,7 +353,7 @@ async function runInstance(index, shared) {
 
   const robotTrace = [];
   const robotDone = HUMAN ? runRobot({
-    send, ev, stats: shared.robot, isDone: () => shared.done >= HANDS, sleep, touch: index % 2 === 1, speed: SPEED,
+    send, ev, stats: shared.robot, isDone: () => shared.done >= HANDS, sleep, touch: index % 2 === 1,
     home: [pageW, pageH, pageDpr], sizes: SIZES.length ? SIZES : [[pageW, pageH, pageDpr]], shot, trace: robotTrace,
   }).catch((e) => { const m = 'robot #' + index + ' ' + (e && e.stack || e); shared.errors.push(m); console.log(m); }) : null;
   const mine = [];

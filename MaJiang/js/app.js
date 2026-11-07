@@ -7,6 +7,9 @@
 
   const params = new URLSearchParams(location.search);
   const AUTO = params.get('auto') === '1'; // 测试用：你的座位也交给电脑
+  // 动画和电脑出牌的节奏只有一种。原来有标准/快/慢三档，试玩下来「慢」正合真人的速度。
+  // 测试工具用 ?speed= 加快。
+  const PACE = 0.7;
   const NAMES = ['沈强', '王雷', '徐涌', '吴忠'];
   const WIND = ['东', '南', '西', '北'];
   // 三位电脑用同一个大脑，只在冒险程度上略有不同
@@ -16,7 +19,6 @@
   let session = { dealer: T.secureInt(4), huangfan: 0, handNo: 0 };
   let state = null;
   let pending = null; // 正在等玩家操作：{ kind, view, opts, resolve }
-  let speedMode = 0;
   let soundOn = true;
   let lastResult = null;
 
@@ -769,12 +771,6 @@
       soundOn = !soundOn;
       $('btnSound').innerHTML = '<span class="lbl">声音：</span>' + (soundOn ? '开' : '关');
     });
-    const speeds = [[1, '标准'], [1.7, '快'], [0.7, '慢']];
-    $('btnSpeed').addEventListener('click', () => {
-      speedMode = (speedMode + 1) % speeds.length;
-      scene.speed = speeds[speedMode][0];
-      $('btnSpeed').innerHTML = '<span class="lbl">速度：</span>' + speeds[speedMode][1];
-    });
     $('btnViewTable').addEventListener('click', () => {
       $('resultScreen').hidden = true;
       $('btnBackResult').hidden = false;
@@ -795,7 +791,7 @@
       return;
     }
     scene.onSound = sound;
-    if (params.get('speed')) scene.speed = Number(params.get('speed')) || 1;
+    scene.speed = Number(params.get('speed')) || PACE;
     wireStage();
     wireButtons();
     wireFullscreen();

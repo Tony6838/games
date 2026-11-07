@@ -57,7 +57,7 @@ const STRIPS = `(()=>{const s=window.__tjDebug.scene;const me=s.seats[0];const v
 
 const AUDIO_STATE = `(window.__ac?window.__ac.state:'none')`;
 
-export async function runRobot({ send: rawSend, ev: rawEv, stats, isDone, sleep, touch, home, sizes, speed, shot, trace: T }) {
+export async function runRobot({ send: rawSend, ev: rawEv, stats, isDone, sleep, touch, home, sizes, shot, trace: T }) {
   const trace = (x) => { T.push(new Date().toLocaleTimeString() + ' ' + x); if (T.length > 30) T.shift(); };
   // 调试协议的调用可能因为页面卡住而不返回：记下来，不让机器人跟着挂死
   const limit = (p, what) => {
@@ -123,7 +123,7 @@ export async function runRobot({ send: rawSend, ev: rawEv, stats, isDone, sleep,
   const noise = async (st, inTurn) => {
     const kinds = inTurn
       ? ['tapTable', 'tapTable', 'doubleTap', 'resize', 'rightClick']
-      : ['tapTable', 'tapTable', 'tapHand', 'tapHand', 'doubleTap', 'rules', 'log', 'sound', 'speed', 'resize', 'portrait', 'rightClick', 'context', 'freeze'];
+      : ['tapTable', 'tapTable', 'tapHand', 'tapHand', 'doubleTap', 'rules', 'log', 'sound', 'resize', 'portrait', 'rightClick', 'context', 'freeze'];
     const k = pick(kinds);
     trace('noise ' + k);
     if (k === 'tapTable') {
@@ -141,9 +141,6 @@ export async function runRobot({ send: rawSend, ev: rawEv, stats, isDone, sleep,
       await clickSel('#btnLog');
     } else if (k === 'sound') {
       await clickSel('#btnSound');
-    } else if (k === 'speed') {
-      await clickSel('#btnSpeed');
-      await ev(`(window.__mjDebug||window.__tjDebug).scene.speed=${speed}`);
     } else if (k === 'resize') {
       const z = pick(sizes);
       stats.resizes++;
