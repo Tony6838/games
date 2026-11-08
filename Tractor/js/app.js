@@ -898,6 +898,27 @@
       $('resultScreen').hidden = false;
       $('btnBackResult').hidden = true;
     });
+    $('btnSwitch').addEventListener('click', () => switchGame('../MaJiang/'));
+    $('btnQuit').addEventListener('click', quitGame);
+  }
+
+  // ---- 结束、换游戏 --------------------------------------------------------------
+  // 换页都用 replace，不往历史里加页：返回键不会回到打完的这一局，「结束」也还能关掉网页。
+  /** 同一网站里另一页的地址。双击 index.html 打开（file:）时，目录不会自己打开 index.html，要写出来。 */
+  function pageUrl(dir) {
+    return dir + (location.protocol === 'file:' ? 'index.html' : '');
+  }
+  function switchGame(dir) {
+    location.replace(pageUrl(dir));
+  }
+  /**
+   * 「结束」：关掉网页。浏览器只允许网页关掉只打开过这一页的标签页（从桌面快捷方式打开的就是）
+   * 或从桌面图标打开的应用；肯关的话 window.closed 马上变成 true。
+   * 标签页里原来就有别的网页时浏览器不让关，就回到主菜单（网站首页）。
+   */
+  function quitGame() {
+    window.close();
+    if (!window.closed) location.replace(pageUrl('../'));
   }
 
   function boot() {

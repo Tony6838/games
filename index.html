@@ -50,5 +50,13 @@
   </div>
   <p class="foot">开源代码：<a href="https://github.com/Tony6838/games">github.com/Tony6838/games</a>（MIT 许可）</p>
 </main>
+<script>
+  // 进游戏用 replace，不往历史里加页：浏览器只让游戏里的「结束」关掉只打开过一页的标签页
+  document.querySelectorAll('.games a').forEach((a) => a.addEventListener('click', (e) => {
+    if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    location.replace(a.href);
+  }));
+</script>
 </body>
 </html>
