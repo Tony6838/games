@@ -3,7 +3,7 @@
   "short_name": "上海麻将",
   "lang": "zh-CN",
   "start_url": "./",
-  "scope": "./",
+  "scope": "../",
   "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#0f0e0d",

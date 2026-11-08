@@ -796,13 +796,21 @@
     location.replace(pageUrl(dir));
   }
   /**
-   * 「结束」：关掉网页。浏览器只允许网页关掉只打开过这一页的标签页（从桌面快捷方式打开的就是）
-   * 或从桌面图标打开的应用；肯关的话 window.closed 马上变成 true。
-   * 标签页里原来就有别的网页时浏览器不让关，就回到主菜单（网站首页）。
+   * 「结束」：关掉网页，关不掉就回主菜单（网站首页）。
+   * 浏览器只允许网页关掉只打开过这一页的标签页（从桌面快捷方式打开的就是）或从桌面图标打开的应用；
+   * 肯关的话 window.closed 马上变成 true，标签页里原来就有别的网页时不让关。
+   * iPhone/iPad 上网页不能把自己退出：Safari 嘴上答应（window.closed 也变成 true），其实不关，所以直接回主菜单。
+   * 别的浏览器答应了却过了一秒网页还在（有的应用内浏览器就这样），也回主菜单。
    */
   function quitGame() {
+    const toMenu = () => location.replace(pageUrl('../'));
+    if (ios) {
+      toMenu();
+      return;
+    }
     window.close();
-    if (!window.closed) location.replace(pageUrl('../'));
+    if (!window.closed) toMenu();
+    else setTimeout(toMenu, 1000);
   }
 
   function boot() {
