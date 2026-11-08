@@ -10,17 +10,26 @@
   const D = 0.78;
   const TABLE_X = 31.5;
   const TABLE_Z = 18.4;
-  const WALL_SCALE = 0.75;
+  const WALL_SCALE = 1;
   const WALL_PITCH = W * WALL_SCALE * 1.02; // 一墩沿牌墙方向占的宽度
   const WALL_DEPTH = H * WALL_SCALE; // 牌墙的厚度（牌平躺，长边朝向自己那一家）
-  // 每家面前那一边有几墩。桌子是横的：上下两边长、左右两边短，一圈还是 72 墩。
-  // 短边至少 13 墩，骰子最大 12 点时开牌的位置才落在这一边里。
-  const WALL_N = [22, 14, 22, 14];
-  const WALL_START = [0, 22, 36, 58]; // 每一边第一墩在一圈里的序号
-  // 每一边从中点到两头的一半长度，也就是相邻两边离中心的距离
-  const WALL_HALF = WALL_N.map((n) => (n * WALL_PITCH + WALL_DEPTH) / 2);
+
+  /** 牌墙的一种摆法。n 是每家面前那一边有几墩；half 是每一边从中点到两头的一半长度，也就是相邻两边离中心的距离。 */
+  function ringShape(n) {
+    const start = [0, n[0], n[0] + n[1], n[0] + n[1] + n[2]];
+    return { n, start, total: start[3] + n[3], half: n.map((k) => (k * WALL_PITCH + WALL_DEPTH) / 2) };
+  }
+  // 开局一圈 72 墩。桌子是横的：上下两边长、左右两边短。短边至少 13 墩，骰子最大 12 点时开牌的位置才落在这一边里。
+  const FULL_RING = ringShape([22, 14, 22, 14]);
+  // 发完牌最多剩 46 墩：收拢成贴着中控台的小一圈，牌不变小
+  const PLAY_RING = ringShape([14, 9, 14, 9]);
+
   const RIVER_S = 1.86;
-  const RIVER_V0 = [0, 1, 2, 3].map((s) => WALL_HALF[(s + 1) % 4] + 0.55); // 牌河从牌墙外面开始
+  const SIDE_RIVER_COLS = 6; // 左右两家的牌河每行几张
+  const SIDE_RIVER_HALF = (SIDE_RIVER_COLS * W * RIVER_S * 1.03) / 2;
+  // 牌河从收拢后的牌墙外面开始（开打前牌河是空的，那时大一圈的牌墙不碍事）。
+  // 上下两家的牌河还要躲开左右两家牌河的角。
+  const RIVER_V0 = [0, 1, 2, 3].map((s) => Math.max(PLAY_RING.half[(s + 1) % 4] + 0.55, s % 2 ? 0 : SIDE_RIVER_HALF + 0.2));
   const CONSOLE_TOP = 0.34;
   const HUMAN_TILT = 0.88;
   const FIT_ASPECT = 2.05; // 窄于这个宽高比时把镜头拉远，保证左右都看得到
@@ -53,14 +62,14 @@
   const rowPos = (seat, u, y, v) => seatPos(seat, u + (LOOK[seat].shift || 0), y, v);
 
   /**
-   * 牌墙一圈 72 墩摆在桌子中间：每家面前一边，四边像风车一样错开，接成一个长方框。
+   * 牌墙围着中控台摆在桌子中间：每家面前一边，四边像风车一样错开，接成一个长方框。
    * r 每加 1，沿出牌方向（往下家）走一墩；返回这一墩属于哪一边，以及在那一家坐标里的位置。
    */
-  function wallSlot(r) {
+  function wallSlot(ring, r) {
     let side = 3;
-    while (r < WALL_START[side]) side--;
-    const j = r - WALL_START[side];
-    return { side, j, u: -WALL_HALF[side] + WALL_DEPTH + (j + 0.5) * WALL_PITCH, v: WALL_HALF[(side + 1) % 4] - WALL_DEPTH / 2 };
+    while (r < ring.start[side]) side--;
+    const j = r - ring.start[side];
+    return { side, j, u: -ring.half[side] + WALL_DEPTH + (j + 0.5) * WALL_PITCH, v: ring.half[(side + 1) % 4] - WALL_DEPTH / 2 };
   }
 
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -267,7 +276,8 @@
     newHand(dealer, dice) {
       const sum = dice[0] + dice[1];
       const side = (dealer + sum - 1) % 4;
-      const breakRing = WALL_START[side] + WALL_N[side] - 1 - sum;
+      const breakRing = FULL_RING.start[side] + FULL_RING.n[side] - 1 - sum;
+      this.breakRing = breakRing;
       this.tweens.forEach((t) => { if (!t.dead) { t.dead = true; t.res(); } });
       this.tweens = [];
       this.tiles = [];
@@ -284,7 +294,7 @@
         const stack = Math.floor(id / 2);
         const level = id % 2 === 0 ? 1 : 0;
         const r = (breakRing - stack + 72 * 4) % 72;
-        const { side: wallSide, j, u, v } = wallSlot(r);
+        const { side: wallSide, j, u, v } = wallSlot(FULL_RING, r);
         const pos = seatPos(wallSide, u, (D / 2 + level * D) * WALL_SCALE, v);
         const q = seatQuat(wallSide, FLAT_DOWN);
         const tile = {
@@ -304,6 +314,38 @@
       const t = this.tiles[id];
       t.kind = kind;
       t.cell = kind === null ? null : new Float32Array(this.atlasInfo.cell(kind));
+    }
+
+    /**
+     * 发完牌、补完花以后，剩下的牌墙（最多 46 墩）往中控台收拢成小一圈：牌一样大，离中间更近，给牌河腾出地方。
+     * 墩的先后不变：下一张还从原来的牌头摸，杠和补花还从牌尾补；牌头留在原来那一边的相应位置。
+     */
+    compactWall() {
+      const gone = new Set();
+      for (const S of this.seats) {
+        for (const id of S.hand) gone.add(id);
+        for (const id of S.flowers) gone.add(id);
+        for (const id of S.discards) gone.add(id);
+        for (const m of S.melds) for (const id of m.tiles) gone.add(id);
+        if (S.drawn !== null) gone.add(S.drawn);
+      }
+      const stacks = [];
+      for (let st = 0; st < 72; st++) if (!gone.has(st * 2) || !gone.has(st * 2 + 1)) stacks.push(st);
+      if (!stacks.length || stacks.length > PLAY_RING.total) return Promise.resolve();
+      const total = PLAY_RING.total;
+      const head = wallSlot(FULL_RING, (this.breakRing - stacks[0] + 72 * 4) % 72);
+      const c0 = PLAY_RING.start[head.side] + Math.min(PLAY_RING.n[head.side] - 1, Math.floor((head.j / FULL_RING.n[head.side]) * PLAY_RING.n[head.side]));
+      const waits = [];
+      stacks.forEach((st, k) => {
+        const { side, u, v } = wallSlot(PLAY_RING, (c0 - k + total * 4) % total);
+        for (const id of [st * 2, st * 2 + 1]) {
+          if (gone.has(id)) continue;
+          const level = id % 2 === 0 ? 1 : 0;
+          const pos = seatPos(side, u, (D / 2 + level * D) * WALL_SCALE, v);
+          waits.push(this.tween(this.tiles[id], { pos, q: seatQuat(side, FLAT_DOWN) }, { dur: 520, delay: k * 8, ease: easeInOut }));
+        }
+      });
+      return Promise.all(waits);
     }
 
     /** 计算一家手牌、副露、花牌的目标位置，并动画过去。 */
@@ -458,7 +500,7 @@
 
     /** 牌河每行几张。上下两家在牌墙前后各两行；左右两家在牌墙两边，每行 6 张往外排。 */
     riverCols(seat, n) {
-      if (seat % 2) return 6;
+      if (seat % 2) return SIDE_RIVER_COLS;
       return n > 24 ? Math.ceil(n / 2) : 12;
     }
 

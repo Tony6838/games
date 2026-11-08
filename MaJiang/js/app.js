@@ -192,7 +192,8 @@
           }
           if (s === 0) S.hand.sort((a, b) => scene.tiles[a].kind - scene.tiles[b].kind || a - b);
         });
-        await Promise.all([0, 1, 2, 3].map((s) => scene.layout(s, 240)));
+        // 开打前剩下的牌墙往中间收拢：牌少了一半，可以离中控台近些，牌也不用小
+        await Promise.all([0, 1, 2, 3].map((s) => scene.layout(s, 240)).concat([scene.compactWall()]));
         break;
       case 'draw':
         state.remaining = e.remaining;
