@@ -10,7 +10,17 @@
   const D = 0.78;
   const TABLE_X = 31.5;
   const TABLE_Z = 18.4;
-  const WALL_SCALE = 0.72;
+  const WALL_SCALE = 0.75;
+  const WALL_PITCH = W * WALL_SCALE * 1.02; // 一墩沿牌墙方向占的宽度
+  const WALL_DEPTH = H * WALL_SCALE; // 牌墙的厚度（牌平躺，长边朝向自己那一家）
+  // 每家面前那一边有几墩。桌子是横的：上下两边长、左右两边短，一圈还是 72 墩。
+  // 短边至少 13 墩，骰子最大 12 点时开牌的位置才落在这一边里。
+  const WALL_N = [22, 14, 22, 14];
+  const WALL_START = [0, 22, 36, 58]; // 每一边第一墩在一圈里的序号
+  // 每一边从中点到两头的一半长度，也就是相邻两边离中心的距离
+  const WALL_HALF = WALL_N.map((n) => (n * WALL_PITCH + WALL_DEPTH) / 2);
+  const RIVER_S = 1.86;
+  const RIVER_V0 = [0, 1, 2, 3].map((s) => WALL_HALF[(s + 1) % 4] + 0.55); // 牌河从牌墙外面开始
   const CONSOLE_TOP = 0.34;
   const HUMAN_TILT = 0.88;
   const FIT_ASPECT = 2.05; // 窄于这个宽高比时把镜头拉远，保证左右都看得到
@@ -31,7 +41,7 @@
   };
   const seatQuat = (seat, local) => Quat.mul(YAW[seat], local);
 
-  // 横屏布局：手牌占满宽度，牌河排成宽而矮的几行，牌墙收在远处两个角上
+  // 横屏布局：手牌占满宽度，牌墙围在桌子中间，牌河排在牌墙外面
   const SIDE = { handScale: 1.05, handV: 21.6, meldScale: 1.4, span: 10.75, shift: -0.75, flowerV: 25.2, flowerS: 1.05, revealScale: 1.5 };
   const LOOK = [
     { handScale: 3.82, handV: 14.4, meldScale: 2.55, span: 28.6, flowerS: 1.25, revealScale: 3.82 },
@@ -42,15 +52,15 @@
   const look = (seat) => LOOK[seat];
   const rowPos = (seat, u, y, v) => seatPos(seat, u + (LOOK[seat].shift || 0), y, v);
 
-  /** 牌墙一圈 72 墩：分在远处左右两个角，各两排。 */
+  /**
+   * 牌墙一圈 72 墩摆在桌子中间：每家面前一边，四边像风车一样错开，接成一个长方框。
+   * r 每加 1，沿出牌方向（往下家）走一墩；返回这一墩属于哪一边，以及在那一家坐标里的位置。
+   */
   function wallSlot(r) {
-    const i = r % 36;
-    const block = r < 36 ? 1 : -1;
-    const far = i >= 18;
-    const j = far ? 35 - i : i;
-    const x = block * (15.4 + j * W * WALL_SCALE * 1.02);
-    const z = far ? -15.9 : -14.8;
-    return [x, z];
+    let side = 3;
+    while (r < WALL_START[side]) side--;
+    const j = r - WALL_START[side];
+    return { side, j, u: -WALL_HALF[side] + WALL_DEPTH + (j + 0.5) * WALL_PITCH, v: WALL_HALF[(side + 1) % 4] - WALL_DEPTH / 2 };
   }
 
   const easeOut = (t) => 1 - Math.pow(1 - t, 3);
@@ -257,7 +267,7 @@
     newHand(dealer, dice) {
       const sum = dice[0] + dice[1];
       const side = (dealer + sum - 1) % 4;
-      const breakRing = side * 18 + 17 - sum;
+      const breakRing = WALL_START[side] + WALL_N[side] - 1 - sum;
       this.tweens.forEach((t) => { if (!t.dead) { t.dead = true; t.res(); } });
       this.tweens = [];
       this.tiles = [];
@@ -274,11 +284,9 @@
         const stack = Math.floor(id / 2);
         const level = id % 2 === 0 ? 1 : 0;
         const r = (breakRing - stack + 72 * 4) % 72;
-        const wallSide = Math.floor(r / 18);
-        const j = r % 18;
-        const [wx, wz] = wallSlot(r);
-        const pos = [wx, (D / 2 + level * D) * WALL_SCALE, wz];
-        const q = seatQuat(0, FLAT_DOWN);
+        const { side: wallSide, j, u, v } = wallSlot(r);
+        const pos = seatPos(wallSide, u, (D / 2 + level * D) * WALL_SCALE, v);
+        const q = seatQuat(wallSide, FLAT_DOWN);
         const tile = {
           id, kind: null, pos: [pos[0], pos[1] - 2.4, pos[2]], q, s: WALL_SCALE,
           lift: 0, liftT: 0, emissive: new Float32Array(3), dim: 1,
@@ -448,14 +456,21 @@
       if (this.onSound) this.onSound('flower');
     }
 
-    discardSlot(seat, i) {
-      const s = 1.86;
-      const perRow = 10;
-      const row = Math.floor(i / perRow);
-      const col = i % perRow;
-      const u = (col - (perRow - 1) / 2) * W * s * 1.03;
-      // 上下两家的牌河紧贴中间，左右两家从更外面开始，四条牌河才不会撞在一起
-      const v = (seat % 2 === 0 ? 2.95 : 10.5) + row * H * s * 1.03 + H * s / 2;
+    /** 牌河每行几张。上下两家在牌墙前后各两行；左右两家在牌墙两边，每行 6 张往外排。 */
+    riverCols(seat, n) {
+      if (seat % 2) return 6;
+      return n > 24 ? Math.ceil(n / 2) : 12;
+    }
+
+    /** 第 i 张打出的牌放在哪里；n 是这一家打出的总张数（决定每行几张）。 */
+    discardSlot(seat, i, n) {
+      const s = RIVER_S;
+      const cols = this.riverCols(seat, n === undefined ? i + 1 : n);
+      const row = Math.floor(i / cols);
+      const col = i % cols;
+      const u = (col - (cols - 1) / 2) * W * s * 1.03;
+      // 牌河从牌墙外沿往自己这边排，四条牌河和牌墙互不相撞
+      const v = RIVER_V0[seat] + row * H * s * 1.03 + H * s / 2;
       return { pos: seatPos(seat, u, D * s / 2, v), s };
     }
 
@@ -480,7 +495,15 @@
         this.selectedId = null;
         this.hoverId = null;
       }
-      const slot = this.discardSlot(seat, S.discards.length);
+      const n = S.discards.length + 1;
+      if (this.riverCols(seat, n) !== this.riverCols(seat, n - 1)) {
+        // 牌河超过两行放不下：每行多放几张，已经打出的牌挪一下
+        S.discards.forEach((d, i) => {
+          const sl = this.discardSlot(seat, i, n);
+          this.tween(this.tiles[d], { pos: sl.pos, s: sl.s }, { dur: 260 });
+        });
+      }
+      const slot = this.discardSlot(seat, S.discards.length, n);
       S.discards.push(id);
       this.layout(seat, 220);
       const q = seatQuat(seat, FLAT_UP);
