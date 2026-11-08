@@ -489,7 +489,9 @@ html.compact body:has(#actions:not([hidden])) #hint { display: none; }
 html.compact .plate .tag { font-size: 10px; line-height: 13px; padding: 0 3px; }
 html.compact #plate0 { left: max(6px, var(--sal)); bottom: calc(var(--lh) * 25 / 100); }
 html.compact #plate1 { right: max(6px, var(--sar)); }
-html.compact #plate2 { top: 26px; left: calc(50% + calc(var(--lw) * 15.5 / 100)); }
+/* 对家的名牌放在他那一行的右边外面（局末亮牌时那一行最宽也挡不到），只留一行，不压右边那家最上面的牌 */
+html.compact #plate2 { top: 26px; left: calc(50% + calc(var(--lw) * 22.5 / 100)); }
+html.compact #plate2 .meta { display: none; }
 html.compact #plate3 { left: max(6px, var(--sal)); }
 html.compact #actions { bottom: calc(var(--lh) * 26 / 100); gap: 6px; padding: 5px 7px; border-radius: 9px; }
 html.compact .act { min-height: 42px; padding: 3px 11px; font-size: 20px; }

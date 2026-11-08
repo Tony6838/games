@@ -55,7 +55,7 @@
   const LOOK = [
     { handScale: 3.82, handV: 14.4, meldScale: 2.55, span: 28.6, flowerS: 1.25, revealScale: 3.82 },
     SIDE,
-    { handScale: 1.15, handV: 13.3, meldScale: 1.85, span: 13.6, flowerV: 16.1, flowerS: 0.8, revealScale: 1.75 },
+    { handScale: 1.15, handV: 13.3, meldScale: 1.85, span: 13.6, flowerS: 0.95, revealScale: 1.75 },
     SIDE,
   ];
   const look = (seat) => LOOK[seat];
@@ -413,7 +413,12 @@
         const row = Math.floor(i / 2);
         return { pos: [29.6 - col * step, D * s / 2, 8.2 - row * H * s * 1.06], s };
       }
-      // 电脑的放在自己外侧
+      if (seat === 2) {
+        // 对家的花排在副露的另一头（从你这边看是副露左边），和副露同一行。
+        // 放在副露后面会被杠的第四张挡住，再往后放，手机上又出了屏幕。
+        return { pos: rowPos(seat, L.span + 0.7 + (i + 0.5) * step, D * s / 2, L.handV + 0.15), s };
+      }
+      // 左右两家的放在自己外侧
       return { pos: seatPos(seat, -3.6 * step + i * step, D * s / 2, L.flowerV), s };
     }
 
