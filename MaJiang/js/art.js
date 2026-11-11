@@ -81,11 +81,10 @@
     }
   }
 
-  function stick(g, x, y, h, color, angle) {
+  function stick(g, x, y, h, color) {
     const w = 18;
     g.save();
     g.translate(x, y);
-    if (angle) g.rotate(angle);
     g.fillStyle = color;
     const rr = (px, py, pw, ph, r) => {
       g.beginPath();
@@ -202,16 +201,14 @@
           for (let i = 0; i < 3; i++) stick(g, W * (0.22 + i * 0.28), H * (0.45 + r * 0.33), h, r ? BLUE : GREEN);
         }
         break;
-      case 8: {
-        for (let i = 0; i < 2; i++) {
-          const sign = i ? 1 : -1;
-          stick(g, cx + sign * 86, H * 0.28, 112, GREEN);
-          stick(g, cx + sign * 86, H * 0.72, 112, GREEN);
-          stick(g, cx + sign * 34, H * 0.28, 112, BLUE, sign * 0.34);
-          stick(g, cx + sign * 34, H * 0.72, 112, BLUE, -sign * 0.34);
+      case 8:
+        // 上下两排、每排四根竖条，间距相等，一眼数得清；外侧两根绿、中间两根蓝
+        for (let r = 0; r < 2; r++) {
+          for (let i = 0; i < 4; i++) {
+            stick(g, cx + (i - 1.5) * 57, H * (0.28 + r * 0.44), 112, i === 0 || i === 3 ? GREEN : BLUE);
+          }
         }
         break;
-      }
       default: {
         const cols = [RED, BLUE, GREEN];
         for (let i = 0; i < 3; i++) {
