@@ -181,6 +181,11 @@ button {
 .plate .tag.wind { background: rgba(255, 255, 255, .13); color: var(--ink); font-weight: 500; }
 .plate .tag.sankou { background: #6a4bb0; color: #fff; }
 .plate.active { border-color: var(--gold); box-shadow: 0 0 16px rgba(230, 189, 110, .4); }
+/* 名字后面的总输赢。.head（名字和庄、风）和 .rest（三口和总输赢）平时不占位置，只有手机上你的名牌分成两行 */
+.plate .who .head, .plate .who .rest { display: contents; }
+.plate .total { margin-left: auto; padding-left: 4px; font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); }
+.plate .total.plus, .totals-line b.plus, .pay-table .plus { color: #e9c674; }
+.plate .total.minus, .totals-line b.minus, .pay-table .minus { color: #e88a80; }
 #plate0 { left: 12px; bottom: calc(var(--lh) * 27.5 / 100); }
 #plate1 { right: 12px; top: 27%; }
 #plate2 { left: calc(50% + calc(var(--lw) * 20 / 100)); top: 46px; }
@@ -381,6 +386,23 @@ button {
 .intro li { padding-left: 16px; position: relative; }
 .intro li::before { content: "·"; position: absolute; left: 3px; color: var(--gold); font-weight: 700; }
 .intro .ghost { margin-left: 10px; }
+/* 开始画面：已经累计的总输赢和「清零」 */
+.totals-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 2px 10px;
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+.totals-line[hidden] { display: none; }
+#totalsText { display: contents; } /* 标题、四家、「清零」排成一行，放不下时各自整块换行，仍然居中 */
+.totals-line .who { white-space: nowrap; color: var(--ink); }
+.totals-line b { font-variant-numeric: tabular-nums; color: var(--ink); }
+.intro .totals-line .ghost { min-width: 6.5em; margin-left: 0; padding: 2px 8px; font-size: 12px; }
 
 .rules { width: min(680px, calc(var(--lw) * 96 / 100)); font-size: 14px; line-height: 1.7; }
 .rules h2 { margin: 0 0 4px; font-family: var(--serif); color: var(--gold); }
@@ -452,9 +474,10 @@ button {
 .pay-table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 14px; }
 .pay-table th, .pay-table td { padding: 5px 8px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .pay-table th { color: var(--muted); font-weight: 500; font-size: 12.5px; }
-.pay-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
-.pay-table .plus { color: #e9c674; }
-.pay-table .minus { color: #e88a80; }
+.pay-table .num { text-align: right; white-space: nowrap; }
+.pay-table td.num { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pay-table td.total { font-weight: 700; }
+.pay-table th small { font-size: 11px; }
 .pay-table tr.me td { background: rgba(230, 189, 110, .08); }
 
 .result-buttons { display: flex; justify-content: center; align-items: center; gap: 12px; margin-top: 18px; }
@@ -485,6 +508,12 @@ html.compact .plate .who { font-size: 12px; gap: 3px; }
 html.compact .plate .meta { font-size: 10px; }
 html.compact .plate .dis { display: none; }
 html.compact #plate0 .meta { display: none; }
+/* 手机上你和左右两家的名牌紧挨着牌（手牌、副露）：「三口」和总输赢另起一行，名牌只多一行，不加宽。
+   对家的名牌在他那一行右边的空处，照旧一行。 */
+html.compact #plate0 .who, html.compact #plate1 .who, html.compact #plate3 .who { flex-direction: column; align-items: flex-start; gap: 1px; }
+html.compact .plate .who .head, html.compact .plate .who .rest { display: flex; align-items: center; gap: 3px; }
+html.compact #plate2 .who .head, html.compact #plate2 .who .rest { display: contents; }
+html.compact .plate .total { margin-left: 0; padding-left: 0; }
 html.compact body:has(#actions:not([hidden])) #hint { display: none; }
 html.compact .plate .tag { font-size: 10px; line-height: 13px; padding: 0 3px; }
 html.compact #plate0 { left: max(6px, var(--sal)); bottom: calc(var(--lh) * 25 / 100); }
@@ -506,6 +535,8 @@ html.compact .overlay { padding: 6px; }
 html.compact .card { padding: 12px 16px; max-height: calc(var(--lh) * 97 / 100); border-radius: 10px; }
 html.compact .intro h1 { font-size: 34px; letter-spacing: 5px; }
 html.compact .intro .sub { margin: 0 0 6px; font-size: 13px; }
+html.compact .totals-line { margin-top: 6px; font-size: 11.5px; line-height: 1.6; }
+html.compact .intro .totals-line .ghost { padding: 1px 8px; font-size: 11px; }
 html.compact .intro ul { margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
 html.compact .primary.big { padding: 8px 26px; font-size: 16px; }
 html.compact .verdict { font-size: 28px; }

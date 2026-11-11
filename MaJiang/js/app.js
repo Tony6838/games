@@ -24,6 +24,86 @@
 
   const sleep = (ms) => scene.wait(ms);
 
+  // ---- 总输赢 ----------------------------------------------------------------
+  // 每局结算（rules.js 的 settle）的输赢加进各家的总输赢。存在这台设备的浏览器里：
+  // 关掉网页、换到拖拉机再回来都接着算；开始画面可以清零。浏览器不让存时只在这一页里累计。
+  // ?auto=1（电脑代打你的座位，测试用）记在另一个键里，不混进真人打的总输赢。
+  const TOTALS_KEY = AUTO ? 'mj.totals.auto.v1' : 'mj.totals.v1';
+  let canStore = true;
+  /** 存着的总输赢；没存过、读不到或内容不对时是 null。 */
+  function readStored() {
+    try {
+      const o = JSON.parse(localStorage.getItem(TOTALS_KEY));
+      // 数值不要求是整数：rules.js 的 VALUES 改成小数时也照样累计
+      if (o && Array.isArray(o.totals) && o.totals.length === 4 && o.totals.every((x) => typeof x === 'number' && Number.isFinite(x)) &&
+          Number.isSafeInteger(o.hands) && o.hands >= 0) {
+        return { totals: o.totals.slice(), hands: o.hands };
+      }
+    } catch (e) { /* 当作没存过 */ }
+    return null;
+  }
+  const loadTotals = () => readStored() || { totals: [0, 0, 0, 0], hands: 0 };
+  function saveTotals() {
+    try {
+      localStorage.setItem(TOTALS_KEY, JSON.stringify(score));
+      canStore = true;
+    } catch (e) {
+      canStore = false; // 存不了就只在这一页里累计
+    }
+  }
+  let score = loadTotals();
+  const signed = (n) => (n > 0 ? '+' : '') + n;
+  const signClass = (n) => (n > 0 ? 'plus' : n < 0 ? 'minus' : '');
+
+  /** 一局结束：本局各家的输赢加进总输赢，马上存起来（结果框出来之前关掉网页也不丢）。 */
+  function addToTotals(deltas) {
+    // 先读一次存着的数：另一个标签页刚打完一局时，在它的基础上加，不把它覆盖掉
+    if (canStore) score = readStored() || score;
+    for (let s = 0; s < 4; s++) score.totals[s] += deltas[s];
+    score.hands++;
+    saveTotals();
+  }
+
+  /** 开始画面：有累计的话列出各家总输赢和「清零」。 */
+  function renderTotalsLine() {
+    const line = $('totalsLine');
+    line.hidden = score.hands === 0;
+    if (line.hidden) return;
+    $('totalsText').innerHTML = '总输赢（已打 ' + score.hands + ' 局）：' + NAMES.map((n, s) =>
+      '<span class="who">' + n + ' <b class="' + signClass(score.totals[s]) + '">' + signed(score.totals[s]) + '</b></span>').join('');
+  }
+
+  function wireTotals() {
+    const btn = $('btnResetTotals');
+    let armed = null;
+    let armedAt = 0;
+    // 点两下才清零，免得点「开始」时误碰；第二下要隔半秒以上，手抖连点两下不算
+    btn.addEventListener('click', () => {
+      if (!armed) {
+        btn.textContent = '确定清零？';
+        armedAt = performance.now();
+        armed = setTimeout(() => { armed = null; btn.textContent = '清零'; }, 4000);
+        return;
+      }
+      if (performance.now() - armedAt < 500) return;
+      clearTimeout(armed);
+      armed = null;
+      btn.textContent = '清零';
+      score = { totals: [0, 0, 0, 0], hands: 0 };
+      saveTotals();
+      renderTotalsLine();
+      refreshPlates();
+    });
+    // 另一个标签页里也在打（或清了零）：跟着它存的数走，下一局在它的基础上加
+    addEventListener('storage', (e) => {
+      if (e.key !== TOTALS_KEY && e.key !== null) return;
+      score = loadTotals();
+      renderTotalsLine();
+      refreshPlates();
+    });
+    renderTotalsLine();
+  }
+
   // ---- 声音（用 WebAudio 现场合成，不需要音频文件）------------------------------
   let audio = null;
   function ctx() {
@@ -138,7 +218,9 @@
         if (o !== s && R.isSankou(state.calls, s, o)) partners.push(NAMES[o]);
       }
       const sk = partners.length ? '<span class="tag sankou" title="和 ' + partners.join('、') + ' 成三口">三口</span>' : '';
-      el.innerHTML = '<div class="who">' + NAMES[s] + tags.join('') + sk + '</div>' +
+      const t = score.totals[s];
+      const total = '<span class="total ' + signClass(t) + '">' + signed(t) + '</span>';
+      el.innerHTML = '<div class="who"><span class="head">' + NAMES[s] + tags.join('') + '</span><span class="rest">' + sk + total + '</span></div>' +
         '<div class="meta">花 ' + p.flowers + ' 张<span class="dis"> · 打出 ' + p.discards + ' 张</span></div>';
       el.classList.toggle('active', state.turn === s);
     }
@@ -250,6 +332,7 @@
   async function onHandEnd(result) {
     state.turn = -1;
     lastResult = result;
+    addToTotals(result.deltas);
     clearPending();
     refreshPlates();
     if (result.type === 'draw') {
@@ -571,7 +654,8 @@
   function payTable(result) {
     const t = document.createElement('table');
     t.className = 'pay-table';
-    t.innerHTML = '<tr><th>玩家</th><th>本局明细</th><th style="text-align:right">输赢</th></tr>';
+    t.innerHTML = '<tr><th>玩家</th><th>本局明细</th><th class="num">本局</th>' +
+      '<th class="num total" title="各局输赢加起来">总输赢<small>（' + score.hands + ' 局）</small></th></tr>';
     for (let s = 0; s < 4; s++) {
       const notes = result.payments
         .filter((p) => p.from === s || p.to === s)
@@ -579,9 +663,9 @@
       const d = result.deltas[s];
       const tr = document.createElement('tr');
       if (s === 0) tr.className = 'me';
-      const cls = d > 0 ? 'plus' : d < 0 ? 'minus' : '';
       tr.innerHTML = '<td>' + NAMES[s] + '</td><td>' + (notes.join('；') || '—') + '</td>' +
-        '<td class="num ' + cls + '">' + (d > 0 ? '+' : '') + d + '</td>';
+        '<td class="num ' + signClass(d) + '">' + signed(d) + '</td>' +
+        '<td class="num total ' + signClass(score.totals[s]) + '">' + signed(score.totals[s]) + '</td>';
       t.appendChild(tr);
     }
     return t;
@@ -622,7 +706,8 @@
     $('resultScreen').hidden = true;
     $('startScreen').hidden = true;
     $('btnBackResult').hidden = true;
-    session.handNo++;
+    // 「第几局」和总输赢一起数：接着已经算进总输赢的局数往下数，清零后从第 1 局开始
+    session.handNo = score.hands + 1;
     scene.orbit = null;
     scene.moveCamera(scene.camHome, 900);
     const human = AUTO ? makeAiAdapter({}) : {
@@ -827,6 +912,7 @@
     wireStage();
     wireButtons();
     wireFullscreen();
+    wireTotals();
     if (AUTO) startHand();
     else {
       // 开始画面：牌墙升起，镜头缓慢环绕牌桌
@@ -834,7 +920,8 @@
       scene.newHand(0, [3, 4]);
     }
     // 只暴露给自动化测试看的状态，里面没有隐藏信息
-    root.__mjDebug = { get lastResult() { return lastResult; }, get scene() { return scene; }, get pendingKind() { return pending ? pending.kind : null; }, get pending() { return pending; } };
+    root.__mjDebug = { get lastResult() { return lastResult; }, get scene() { return scene; }, get pendingKind() { return pending ? pending.kind : null; }, get pending() { return pending; },
+      get totals() { return { totals: score.totals.slice(), hands: score.hands }; } };
   }
 
   boot();

@@ -7,6 +7,7 @@
 - **电脑上**：直接双击 `index.html`。
 - **手机上**：打开网址后点「全屏开玩」，游戏只在全屏横屏下进行；竖着拿手机也会按横屏显示，不用转手机。iPhone 的 Safari 不能全屏，要先「分享 → 添加到主屏幕」，再从主屏幕的图标打开；微信里要先「在浏览器打开」。
 - 鼠标：移到牌上抬起并显示「打这张听什么」，点一下打出。触屏：点一下抬起，再点一下打出。
+- 总输赢：每局的输赢累计起来，写在各家名牌上名字的后面，结果里也列出。存在浏览器的 `localStorage`（`mj.totals.v1`；`?auto=1` 电脑代打时用 `mj.totals.auto.v1`）里，关掉网页、换游戏回来都接着算；开始画面点「清零」再点「确定清零？」从 0 重新算。
 
 规则在游戏里的「规则」按钮，写的就是程序实际执行的规则。上海麻将各家打法有出入，数值都集中在 `js/rules.js` 开头的 `VALUES`，可以按自己的习惯改。
 
@@ -35,6 +36,6 @@
 | `docs/test_report.md` | 300 局实战测试报告 |
 | `tests/run_tests.js` | 规则和公平性测试：`node tests/run_tests.js 2000` |
 | `tests/browser_check.mjs` | 无头 Edge 真实打一局并截图：`node tests/browser_check.mjs 目录 844 390 4 1 play touch` |
-| `tests/soak.mjs` | 在真实界面连打多局，查错误、卡顿、内存、布局：`node tests/soak.mjs 目录 --hands 300 --par 3 --speed 10 --w 844 --h 390 --dpr 2 --gl gpu --stall 400`，结果在目录里的 `report.json` |
+| `tests/soak.mjs` | 在真实界面连打多局，查错误、卡顿、内存、布局、总输赢是否等于各局输赢之和：`node tests/soak.mjs 目录 --hands 300 --par 3 --speed 10 --w 844 --h 390 --dpr 2 --gl gpu --stall 400`，结果在目录里的 `report.json` |
 | `tests/robot.mjs` | 给 `soak.mjs` 用的「真人」：加 `--human 1` 后不再由电脑代打你的座位，而是用真实的鼠标或触摸事件来打，同时乱点、连点、转屏、切后台、丢失 WebGL 上下文。`--sizes 844x390x2,667x375x2,1600x900x1` 让各个页面用不同屏幕 |
 | `tests/audit.js` | 逐局查电脑的失误：`node tests/audit.js 300` |

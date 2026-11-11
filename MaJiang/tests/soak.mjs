@@ -204,6 +204,26 @@ const PAGE_MONITOR = `(() => {
         rs.melds.forEach((m) => m.ids.forEach((id, j) => { if (sc.tiles[id].kind !== m.kinds[j]) problems.push('座位' + i + ' 副露牌面不一致'); }));
       });
       if (sc.consoleState.remaining !== res.remaining) problems.push('中控台张数 ' + sc.consoleState.remaining + ' != ' + res.remaining);
+      // 总输赢：四家加起来是 0，比上一局多出来的正好是本局的输赢，名牌和结果表上写的也是这个数
+      const tot = d.totals;
+      if (tot) {
+        const sum = tot.totals.reduce((a, x) => a + x, 0);
+        if (sum !== 0) problems.push('总输赢加起来 ' + sum + ' != 0');
+        const prev = S.prevTotals;
+        if (prev && tot.hands === prev.hands + 1) {
+          tot.totals.forEach((x, i) => { if (x - prev.totals[i] !== res.deltas[i]) problems.push('座位' + i + ' 总输赢多了 ' + (x - prev.totals[i]) + '，本局是 ' + res.deltas[i]); });
+        } else if (prev) {
+          problems.push('总输赢的局数从 ' + prev.hands + ' 跳到 ' + tot.hands + '（监视漏看了一局，或者一局算了不止一次）');
+        }
+        S.prevTotals = tot;
+        const fmt = (n) => (n > 0 ? '+' : '') + n;
+        const rows = document.querySelectorAll('#resultBody .pay-table td.total');
+        for (let i = 0; i < 4; i++) {
+          const el = document.querySelector('#plate' + i + ' .total');
+          if (!el || el.textContent !== fmt(tot.totals[i])) problems.push('座位' + i + ' 名牌上的总输赢 ' + (el && el.textContent) + ' != ' + fmt(tot.totals[i]));
+          if (!rows[i] || rows[i].textContent !== fmt(tot.totals[i])) problems.push('座位' + i + ' 结果表的总输赢 ' + (rows[i] && rows[i].textContent) + ' != ' + fmt(tot.totals[i]));
+        }
+      }
     } else {
       let piles = 0;
       sc.seats.forEach((s, i) => {
@@ -363,6 +383,7 @@ async function runInstance(index, shared) {
   const mine = [];
   const memory = [];
   let lastHandAt = Date.now();
+  let reloads = 0;
   let nextMem = 0;
   while (shared.done < HANDS) {
     await sleep(1500);
@@ -403,11 +424,30 @@ async function runInstance(index, shared) {
         console.log(await ev(`(()=>{const d=window.__mjDebug||window.__tjDebug;const s=d.scene;const me=s.seats[0];const list=window.__mjDebug&&me.drawn!==null?me.hand.concat([me.drawn]):me.hand;return JSON.stringify({drawn:me.drawn,interactive:s.interactive,hint:document.getElementById('hint').textContent,hintHidden:document.getElementById('hint').hidden,acts:[...document.querySelectorAll('#actions .act')].map(b=>b.className),viewHand:d.pending&&d.pending.view?d.pending.view.hand.map(t=>t.id):null,hand:list.map(id=>{const t=(s.tiles||s.cards)[id];const c=s.project(t.pos);return [id,t.kind,Math.round(c.x),Math.round(c.y),s.pick(c.x,c.y),(document.elementFromPoint(c.x,c.y)||{}).id]})})})()`));
       }
       await send('Page.reload');
+      reloads++;
       await sleep(2500);
       lastHandAt = Date.now();
     }
   }
   shared.memory[index] = memory;
+  // 麻将：页面上的总输赢 = 这一页打完的各局输赢加起来（最后一局可能刚结算、结果框还没出来，用 lastResult 补上）
+  const fin = await ev(`(()=>{const d=window.__mjDebug;const s=window.__soak;if(!d||!d.totals||!s)return null;
+    return {h:s.hands.splice(0),t:d.totals,last:d.lastResult?d.lastResult.deltas:null}})()`);
+  if (fin) {
+    mine.push(...fin.h);
+    shared.done += fin.h.length;
+    for (const h of fin.h) shared.hands.push({ ...h, instance: index, size: sizeName });
+  }
+  // 卡住重开过的页面不比：卡在结算之后、结果框出来之前的那一局算进了总输赢，却没被收到
+  if (fin && reloads) shared.totals.push({ instance: index, page: fin.t, skipped: '重开过 ' + reloads + ' 次，不比' });
+  else if (fin) {
+    const sums = [0, 0, 0, 0];
+    for (const h of mine) h.s.deltas.forEach((x, i) => { sums[i] += x; });
+    if (fin.t.hands === mine.length + 1 && fin.last) fin.last.forEach((x, i) => { sums[i] += x; });
+    const match = sums.every((x, i) => x === fin.t.totals[i]) && fin.t.hands - mine.length <= 1;
+    shared.totals.push({ instance: index, page: fin.t, handsCollected: mine.length, sumOfHands: sums, match });
+    if (!match) shared.errors.push('#' + index + ' 总输赢 ' + JSON.stringify(fin.t) + ' != 各局加起来 ' + JSON.stringify(sums) + '（收到 ' + mine.length + ' 局）');
+  }
   if (robotDone) await Promise.race([robotDone, sleep(8000)]);
   ws.close();
   proc.kill();
@@ -415,7 +455,7 @@ async function runInstance(index, shared) {
   try { rmSync(profile, { recursive: true, force: true }); } catch { /* ignore */ }
 }
 
-const shared = { done: 0, hands: [], errors: [], stalls: [], layout: {}, memory: {}, shots: new Set(), renderer: '', robot: HUMAN ? newRobotStats() : null };
+const shared = { done: 0, hands: [], errors: [], stalls: [], layout: {}, memory: {}, shots: new Set(), renderer: '', robot: HUMAN ? newRobotStats() : null, totals: [] };
 const t0 = Date.now();
 await Promise.all(Array.from({ length: PAR }, (_, i) => sleep(i * 700).then(() => runInstance(i, shared))));
 
@@ -481,6 +521,7 @@ const report = {
   }])),
   shots: [...shared.shots],
   robot: shared.robot,
+  totals: shared.totals,
 };
 writeFileSync(join(outDir, 'report.json'), JSON.stringify(report, null, 1));
 writeFileSync(join(outDir, 'hands.json'), JSON.stringify(hands.map((h) => ({ ms: h.ms, s: h.s, overflow: h.overflow, problems: h.problems, i: h.instance, size: h.size, lt: h.longTasks.filter((x) => x >= 100), fn: h.frames.n, f33: h.frames.over33, fmax: Math.round(h.frames.max), dom: h.dom }))));
