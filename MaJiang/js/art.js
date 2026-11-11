@@ -106,20 +106,36 @@
     g.restore();
   }
 
-  /** 一条：一只站着的小鸟，自己画的造型。 */
+  /**
+   * 一条：一只站着的小鸟，自己画的造型。
+   * 整只鸟在自己的坐标里占 x -60..122、y -130..89，中心在 (31, -20.5)：放大 1.04 倍后把这个中心对准牌面中心，
+   * 左右、上下留白一样多。左下的尾巴和右边的头、嘴分量相当，所以鸟身、脚和墨色的重心也都在正中附近。
+   * 改了鸟的形状要按画出来的像素重新量外框，再改这里的数。
+   */
   function drawBird(g) {
-    const cx = CELL_W / 2;
-    const cy = CELL_H / 2;
     g.save();
-    g.translate(cx, cy + 6);
-    // 尾羽
-    const fan = [[-1.15, RED], [-0.85, BLUE], [-0.55, GREEN], [-0.25, RED]];
-    for (const [a, c] of fan) {
+    g.translate(CELL_W / 2, CELL_H / 2);
+    g.scale(1.04, 1.04);
+    g.translate(-31, 20.5);
+    // 尾巴：两根短羽往左下方伸出
+    for (const [a, c, len, w] of [[-0.35, RED, 24, 8], [-0.7, BLUE, 26, 9]]) {
+      g.save();
+      g.translate(-14, 18);
+      g.rotate(a);
+      g.fillStyle = c;
+      g.beginPath();
+      g.ellipse(-len, 0, len, w, 0, 0, Math.PI * 2);
+      g.fill();
+      g.restore();
+    }
+    // 背上的长羽：四根往右上方展开，根部都在离原点 26 处；最右边那根短一些，不伸出鸟嘴
+    const fan = [[-1.15, RED, 58], [-0.85, BLUE, 58], [-0.55, GREEN, 58], [-0.25, RED, 47]];
+    for (const [a, c, len] of fan) {
       g.save();
       g.rotate(a + Math.PI / 2);
       g.fillStyle = c;
       g.beginPath();
-      g.ellipse(0, -84, 15, 58, 0, 0, Math.PI * 2);
+      g.ellipse(0, -(26 + len), 15, len, 0, 0, Math.PI * 2);
       g.fill();
       g.restore();
     }
