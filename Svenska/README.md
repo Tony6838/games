@@ -99,6 +99,29 @@ SR 每个节目都有一个 Atom 新闻源 `https://api.sr.se/api/rss/program/<�
 
 ## 朗读
 
+两种声音，默认用云端的：
+
+- **云端自然语音**（`js/cloudtts.js`）：微软 Azure 语音服务的瑞典语神经语音 Sofie、Hillevi（女）和 Mattias（男），就是 Edge 浏览器里的那几个。电脑、iPhone、Mac、安卓、任何浏览器听起来都一样（Tony 定的：他平时用 iPhone 和 MacBook 的 Safari，上班用 Windows 的 Edge）。要联网，要设置好令牌服务（见下面「云端语音」）。
+- **这台设备自己的声音**（`js/speech.js`）：浏览器的 Web Speech API。云端没设置、出错、或者在「设置 → 声音来源」里选了它时用。每台设备不一样，iPhone 和 Mac 的 Safari 只给网页几个基础的声音，听起来机械（苹果不让网页用 Siri 的声音，另外下载的增强版声音 Safari 一般也拿不到）。
+
+### 云端自然语音
+
+- 网页向 Tony 的 Cloudflare Worker（`tools/tts-worker/worker.js`）要一个 10 分钟有效的临时令牌，再用微软官方的 Speech SDK（`microsoft-cognitiveservices-speech-sdk@1.53.0`，从 jsDelivr 加载，带 `integrity` 完整性校验，打开文章时才下载）直接向 Azure 合成。**Azure 的密钥只在 Worker 里**（Cloudflare 的机密变量），不在网页、也不在这个仓库里。Worker 的地址写在 `js/config.js` 的 `ttsUrl`；空着时只用本机的声音。
+- **一次合成一整段**（一个段落），拿到 MP3 和每个词的音频时间，用普通的 `<audio>` 播放，按播放进度高亮正在读的词，所以 iPhone 上也能跟着高亮单词。读的时候顺便合成下一段，段与段之间不等。
+- **暂停**就是暂停播放；**继续**、**「从这里读」**在已经合成的这一段里直接跳到那个词，不再合成；**语速**直接改播放速度（音调不变），也不再合成。合成过的段落按「声音 + 文字」留在内存里（最多 200 段），读第二遍不花额度。
+- **iPhone 的 Safari** 只让用户点过的 `<audio>` 播放：每次点「朗读」或喇叭时，先在两个 `<audio>` 上各播一小段静音（只做一次）。
+- **出错时**（令牌服务不给令牌、免费额度用完、连不上），提示原因，这次打开的页面里改用本机的声音，点「继续」接着读；刷新网页再试云端。
+- **额度和费用**：Azure 语音资源用免费档（F0），神经语音每月约 50 万个字符（大约 200 篇文章），用完就停到下个月，不扣钱。Worker 只发令牌，Cloudflare 的免费额度足够。
+- **SR 的条款**：朗读时文章的文字发给微软合成声音，不保存、不改动文章，和 Edge 浏览器的在线声音（本来就把文字发给微软）是一回事。
+
+**设置步骤**（Tony 的账号；注册、验证身份、登录只能本人做）：
+
+1. Azure：用 Microsoft 账号登录 <https://portal.azure.com>（要有一个订阅），建一个「语音服务」（Speech service）资源，定价层选 **Free F0**，区域选 North Europe（或者 West Europe、Sweden Central）。也可以用命令行：`az login` 后 `az cognitiveservices account create --kind SpeechServices --sku F0 --location northeurope --name <名字> --resource-group <资源组> --yes`。
+2. Cloudflare：在 Workers 里新建一个 Worker（名字例如 `svenska-tts`），把 `tools/tts-worker/worker.js` 贴进去部署；在 Settings → Variables and Secrets 里加机密 `AZURE_SPEECH_KEY`（Azure 资源的「密钥 1」）和变量 `AZURE_SPEECH_REGION`（例如 `northeurope`）。也可以用命令行：在 `tools/tts-worker` 里 `npx wrangler login`、`npx wrangler deploy`，密钥用 `npx wrangler secret put AZURE_SPEECH_KEY`（`az cognitiveservices account keys list ... --query key1 -o tsv` 直接接进去，密钥不显示出来）。
+3. 把 Worker 的地址（`https://svenska-tts.<你的子域名>.workers.dev`）填进 `js/config.js` 的 `ttsUrl`，提交。试一下：`curl -H "Origin: https://tony6838.github.io" <地址>/token` 应该回 `{"token":"…","region":"northeurope"}`。
+
+### 这台设备自己的声音
+
 用浏览器的 Web Speech API（`speechSynthesis`），瑞典语（`sv-SE`）声音，声音是设备自带的：
 
 | 设备 | 女声 | 男声 |
@@ -118,11 +141,11 @@ SR 每个节目都有一个 Atom 新闻源 `https://api.sr.se/api/rss/program/<�
 
 ## 隐私
 
-不用 Cookie，不统计，不收集任何数据。页面只连三个地方：本站、`api.sr.se`（取新闻）、`api.mymemory.translated.net`（在线翻译，只在需要时）。浏览器里存的东西：
+不用 Cookie，不统计，不收集任何数据。页面只连这些地方：本站、`api.sr.se`（取新闻）、`api.mymemory.translated.net`（在线翻译，只在需要时），以及用云端语音时的 `cdn.jsdelivr.net`（微软的 Speech SDK）、Tony 的令牌服务（Cloudflare Worker）和微软 Azure 的语音服务（`<区域>.tts.speech.microsoft.com`，合成声音，发过去的只有要读的文字）。浏览器里存的东西：
 
 | 键 | 存在哪 | 内容 |
 |---|---|---|
-| `sv.settings.v1` | localStorage | 字号、语速、男女声、选的声音、在线翻译开关（默认开）、上次的话题、设置的版本 |
+| `sv.settings.v1` | localStorage | 字号、语速、男女声、选的声音、声音来源（云端 / 本机）和云端选的声音、在线翻译开关（默认开）、上次的话题、设置的版本 |
 | `sv.shown.v1`、`sv.read.v1` | localStorage | 每个话题列过的文章编号、读过的文章编号 |
 | `sv.trw.v1` | localStorage | 单词的译文 |
 | `sv.mm.v1` | localStorage | 今天用了多少在线翻译（只用来提醒） |
@@ -135,7 +158,8 @@ SR 每个节目都有一个 Atom 新闻源 `https://api.sr.se/api/rss/program/<�
 - 只有 SR 一个来源（见上面「看过但没用的」）。SR 的接口已经不维护，哪天关掉了，就得换来源。
 - 每个节目的新闻源只有最新的约 20 篇，冷门话题（电动车、移民）有时只有一两篇或没有。
 - SR 的服务器（Akamai）会暂时拒绝很密集的请求（我们测试时一分钟里发了一百多个请求就被拒绝了一两分钟）。所以页面同时最多取 2 个源，取过的源 10 分钟内不重取。一个人正常使用碰不到；很多人共用一个出口 IP 时有可能碰到，页面会说明并让人过一会儿再试。
-- 朗读的效果取决于设备上的瑞典语声音；Chrome 在 Windows 上如果没装瑞典语语音，就没有瑞典语声音（Edge 有）。
+- 云端语音要联网；免费额度每月约 50 万个字符，用完就改用本机的声音到下个月。iPhone、Mac 上的云端语音还没有在真机上试过（测试用的是无头 Edge 和假的 SDK）。
+- 用本机的声音时，效果取决于设备上的瑞典语声音；Chrome 在 Windows 上如果没装瑞典语语音，就没有瑞典语声音（Edge 有）。
 - 没有内置翻译的浏览器（Safari、iPhone、iPad、手机上的浏览器、Firefox）没有「全文翻译」按钮，要用浏览器自己的整页翻译；查词用 MyMemory，每天约 5000 个字符的免费额度按网络地址算，很多人共用一个出口地址时（公司网络、苹果的 iCloud 专用代理）可能更早用完，用完时页面会说明。
 - 小词典按词尾推原形，标了「按词形推测」的不一定对。
 
@@ -146,11 +170,14 @@ SR 每个节目都有一个 Atom 新闻源 `https://api.sr.se/api/rss/program/<�
 | `index.html` | 页面、设置和说明对话框 |
 | `css/style.css` | 样式（浅色、深色跟随系统；电脑和手机） |
 | `js/util.js` | 存储（try/catch）、瑞典时间、DOM 小工具 |
+| `js/config.js` | 站点设置：云端语音令牌服务的地址 `ttsUrl` |
 | `js/sources.js` | SR 新闻源：限流取源、解析、清理正文、话题关键词和打分、分批 |
 | `js/text.js` | 分句、分词，生成可以高亮、可以点的句子和单词 |
 | `js/glossary.js` | 常用词小词典和按词尾推原形 |
 | `js/translate.js` | 浏览器内置翻译、MyMemory、缓存 |
-| `js/speech.js` | 声音列表、认男女、一句一句地朗读、暂停和继续 |
+| `js/speech.js` | 本机的声音：声音列表、认男女、一句一句地朗读、暂停和继续 |
+| `js/cloudtts.js` | 云端自然语音：令牌、微软 Speech SDK、一段一段地合成和播放、按播放进度高亮、缓存 |
+| `tools/tts-worker/` | 云端语音的令牌服务（Cloudflare Worker）和 `wrangler.toml` |
 | `js/app.js` | 界面：话题、列表、文章、高亮、弹出框、全文翻译、设置 |
 | `tools/make_icons.mjs` | 用无头 Edge 的 canvas 画 `icons/` 里的图标 |
 | `tools/topic_report.mjs` | 列出每个话题的候选文章和得分，调关键词用 |
@@ -164,13 +191,14 @@ node tests/browser_check.mjs <截图目录>                                     
 node tests/browser_check.mjs <截图目录> https://tony6838.github.io/games/Svenska/  # 线上
 ```
 
-用无头 Edge 和真实的鼠标、触摸、键盘事件，打开三次页面：
+用无头 Edge 和真实的鼠标、触摸、键盘事件，打开几次页面。前三次一律用本机的声音（不管 `js/config.js` 里填了什么），第四次用云端语音，但用的是假的 SDK 和假的令牌服务，不花 Azure 的额度：
 
-1. 电脑 1600×900、真实的声音和内置翻译：朗读按钮组紧跟在「简易瑞典语」后面、同一行、是立体的样子；有内置翻译时显示「全文翻译」、不显示整页翻译的提示；每个话题列出文章、再点一次换一批（不重复）；打开文章、顶栏标题旁边的「← 返回列表」、浏览器后退、「下一篇」；列表和正文用满宽度、没有横向滚动；鼠标悬停查词、弹出框在屏幕内；鼠标停在顶栏标题上出现「怎么用」、移到话题按钮上就消失；列表页、文章页和查词弹出框里每个按钮都有瑞典文提示（`title` 第一行是瑞典文，第二行中文），21 个话题各有自己的瑞典文名字；真实的瑞典语声音朗读 6 秒，看有没有词的 boundary 事件；空格暂停；内置翻译下载模型并翻译全文。
+1. 电脑 1600×900、真实的声音和内置翻译：朗读按钮组紧跟在「简易瑞典语」后面、同一行、是立体的样子；有内置翻译时显示「全文翻译」、不显示整页翻译的提示；每个话题列出文章、再点一次换一批（不重复）；打开文章、顶栏标题旁边的「← 返回列表」、浏览器后退、「下一篇」；列表和正文用满宽度、没有横向滚动；鼠标悬停查词、弹出框在屏幕内；鼠标停在顶栏标题上出现「怎么用」、移到话题按钮上就消失；列表页、文章页和查词弹出框里每个按钮都有瑞典文提示（`title` 第一行是瑞典文，第二行中文），21 个话题各有自己的瑞典文名字；云端语音用的微软 Speech SDK 真的能从 CDN 加载、完整性校验通过；真实的瑞典语声音朗读 6 秒，看有没有词的 boundary 事件；空格暂停；内置翻译下载模型并翻译全文。
 2. 电脑 1600×900、模拟的声音（假的 Sofie / Mattias，按词发 boundary 事件）、没有内置翻译、MyMemory 由测试代答（不占真实额度）：不显示「全文翻译」，列表和文章上提示整页翻译；朗读高亮、深色（夜间）模式下正在读的词是黄色下划线而不是整块黄底（暂停时暗黄）、朗读按钮的瑞典文提示跟着变（Pausa、Fortsätt）、空格暂停和继续（从停下的词接着读）、点文章暂停并弹出这个词、「从这里读」、喇叭、换男女声、语速；「本句译文」走 MyMemory，发给它的每段不超过 500 个字符、只有 `q` 和 `langpair` 两个参数；选中几个词翻译。
 3. 手机 390×844 触摸、安卓 Chrome 的用户代理：列表一列、话题条横着滑、朗读按钮不出屏不截字、按住按钮半秒显示瑞典文提示且松手不算点击（顶上的「女声」和设置对话框里的「试听」，对话框里的提示显示在对话框上面）、再点话题换一批、点词弹出框不出屏（包括最右边的词）、点屏幕暂停、继续；没有「全文翻译」，提示「点右上角 ⋮ →『翻译…』」；滚到文章底下时朗读按钮还粘在顶上、点得到；「← 列表」和标题在同一行；点标题打开「怎么用」、点别处关上；返回列表、设置对话框。
+4. 电脑 1600×900、云端语音（假的微软 SDK：每个词 220 毫秒，返回同样长的静音和每个词的时间；假的令牌服务 `svtts.test`）：设了云端时默认用它（Sofie）；点「朗读」先合成标题这一段，用令牌服务发的令牌、不直接播放；跟着播放进度高亮单词，没有用本机的声音；一段读完接着读下一段（已经提前合成好）；空格暂停停在那个词上，再按空格从那个词接着读、不再合成；换语速不再合成；换成男声 Mattias 接着读；弹出框的喇叭用云端的声音；设置里有「声音来源」和三个云端声音，可以改用本机的声音再改回来；令牌服务回 403 时说明原因、改用本机的声音，点「继续」接着读。
 
-最后检查页面只连了本站、SR 和 MyMemory，控制台没有错误。
+最后检查页面只连了本站、SR、MyMemory，以及云端语音的 SDK 和令牌服务，控制台没有错误。
 
 Safari、iPhone、iPad 和 Firefox 用 Playwright 检查（Windows 上也能跑；先在任意目录 `npm i playwright && npx playwright install webkit firefox`，再把那个目录设成环境变量 `PLAYWRIGHT_DIR`）：
 

@@ -321,6 +321,8 @@ dialog:not([open]) { display: none; } /* 老的 Safari（iOS 15.4 以前）不�
 .dlg input[type="range"] { flex: 1 1 160px; }
 .dlg .row button, .dlg section > button { height: 40px; padding: 0 14px; }
 .dlg .check { display: flex; gap: 8px; align-items: flex-start; }
+.dlg .engine { margin: 2px 0 10px; }
+.dlg .engine .check { margin: 4px 0; }
 .dlg .check input { margin-top: 5px; }
 .dlg .note { color: var(--muted); font-size: 14px; margin: 6px 0; }
 .dlg .help li { margin-bottom: 8px; }

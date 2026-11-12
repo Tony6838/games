@@ -77,6 +77,10 @@
     <h2 id="setTitle">设置</h2>
     <section>
       <h3>朗读的声音</h3>
+      <div id="engineRow" class="engine" role="radiogroup" aria-label="声音来源" hidden>
+        <label class="check"><input type="radio" name="engine" value="cloud"> 云端自然语音（推荐：电脑、手机、任何浏览器都一样自然）</label>
+        <label class="check"><input type="radio" name="engine" value="device"> 这台设备自己的声音（每台设备不一样）</label>
+      </div>
       <div class="row">
         <select id="selVoice" aria-label="声音"></select>
         <button type="button" id="btnTryVoice">试听</button>
@@ -119,7 +123,7 @@
       <li><b>全文翻译</b>：每段下面显示中文，先看懂大意再读原文；在列表里这个按钮翻译所有标题。<b>只有 Chrome、Edge 的电脑版有这个按钮</b>，用的是浏览器内置的翻译（在本机翻译，不限量）。别的浏览器在这个位置有一行提示，告诉你怎么用浏览器自己的整页翻译：Safari、iPhone、iPad 点地址栏「aA → 翻译成中文」；安卓的 Chrome 点右上角 ⋮ →「翻译…」；Firefox 用地址栏的翻译图标。</li>
       <li><b>在线翻译</b>：浏览器没有内置翻译时，查词和「本句译文」自动用 MyMemory 在线翻译（默认开着）；不想用可以在顶部齿轮按钮「设置」里关掉。</li>
       <li><b>简易瑞典语</b>：最后一个话题，是 SR 专门用简单的瑞典语写的新闻；别的话题都是普通的瑞典新闻。</li>
-      <li><b>声音</b>：点「女声 / 男声」切换；在「设置」里可以选具体的声音和语速。声音是你的设备自带的：Edge 浏览器有微软的瑞典语在线声音（Sofie 女声、Mattias 男声），苹果设备有 Alva、Klara、Oskar。</li>
+      <li><b>声音</b>：点「女声 / 男声」切换；在「设置」里可以选具体的声音和语速。默认用云端自然语音（微软的 Sofie、Hillevi 女声，Mattias 男声），电脑、手机、任何浏览器上都一样，要联网；云端不通时自动改用设备自带的声音（Edge 浏览器有微软的 Sofie、Mattias，苹果设备有 Alva、Klara、Oskar）。在「设置」里也可以自己选用设备的声音。</li>
       <li><b>字号</b>：右上角的 A− 和 A+。</li>
       <li><b>按钮的瑞典文</b>：鼠标停在任何一个按钮上（手机上按住按钮半秒），显示这个按钮的瑞典文说法和中文说明，顺便学几个词。手机上按住看提示，松手不算点了按钮。</li>
     </ul>
@@ -129,11 +133,13 @@
 </dialog>
 
 <script src="js/util.js"></script>
+<script src="js/config.js"></script>
 <script src="js/sources.js"></script>
 <script src="js/text.js"></script>
 <script src="js/glossary.js"></script>
 <script src="js/translate.js"></script>
 <script src="js/speech.js"></script>
+<script src="js/cloudtts.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -67,6 +67,8 @@ const pendingMsgs = new Map();
 const problems = [];
 const hosts = new Map();
 let mock = null; // MyMemory 代答
+let ttsWorkerMode = 'ok'; // 假的云端语音令牌服务：'ok' 或 'forbidden'
+let ttsTokenCalls = 0;
 const mmRequests = [];
 ws.addEventListener('message', async (m) => {
   const msg = JSON.parse(m.data);
@@ -92,6 +94,15 @@ ws.addEventListener('message', async (m) => {
       if (p.responseStatusCode === 200 && b.result) writeFileSync(file, Buffer.from(b.result.body, b.result.base64Encoded ? 'base64' : 'utf8'));
       send('Fetch.continueRequest', { requestId: p.requestId });
     }
+  } else if (msg.method === 'Fetch.requestPaused' && /svtts\.test/.test(p.request.url)) {
+    // 假的云端语音令牌服务（Tony 的 Cloudflare Worker 的替身）：ok 发令牌，forbidden 回 403
+    ttsTokenCalls++;
+    const ok = ttsWorkerMode === 'ok';
+    send('Fetch.fulfillRequest', {
+      requestId: p.requestId, responseCode: ok ? 200 : 403,
+      responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: '*' }],
+      body: Buffer.from(JSON.stringify(ok ? { token: 'tok-' + ttsTokenCalls, region: 'northeurope' } : { error: 'origin not allowed' })).toString('base64'),
+    });
   } else if (msg.method === 'Fetch.requestPaused') {
     const u = new URL(p.request.url);
     const q = u.searchParams.get('q') || '';
@@ -201,14 +212,51 @@ const FAKE_SPEECH = `(() => {
 })();`;
 const NO_BUILTIN = `(() => { try { delete window.Translator; } catch (e) {} if (typeof window.Translator !== 'undefined') Object.defineProperty(window, 'Translator', { value: undefined, configurable: true }); })();`;
 
+// 假的微软 Speech SDK：不联网，每个词 220 毫秒，返回同样长的静音 WAV 和每个词的时间（和真的 SDK 一样的事件和字段）。
+// 记下每次合成的声音、文字、令牌，看缓存和换声音对不对。
+const FAKE_AZURE = `(() => {
+  window.__ttsLog = [];
+  const WORD = /[\\p{L}\\p{N}]+(?:[-'’:][\\p{L}\\p{N}]+|[.,]\\p{N}+)*/gu;
+  function wav(ms) {
+    const rate = 8000, n = Math.round(rate * ms / 1000), buf = new ArrayBuffer(44 + n), v = new DataView(buf);
+    const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    s(0, 'RIFF'); v.setUint32(4, 36 + n, true); s(8, 'WAVE'); s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); s(36, 'data'); v.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+    return buf;
+  }
+  class SpeechSynthesizer {
+    constructor(conf, audioConfig) { this.conf = conf; this.audioConfig = audioConfig; this.wordBoundary = null; }
+    speakTextAsync(text, ok) {
+      const ws = [...text.matchAll(WORD)];
+      window.__ttsLog.push({ voice: this.conf.speechSynthesisVoiceName, text, token: this.conf.token, audioConfig: this.audioConfig });
+      setTimeout(() => {
+        ws.forEach((m, i) => this.wordBoundary && this.wordBoundary(this, { audioOffset: (100 + i * 220) * 10000, duration: 200 * 10000, text: m[0], wordLength: m[0].length, textOffset: m.index, boundaryType: 'WordBoundary' }));
+        ok({ reason: 'done', audioData: wav(150 + ws.length * 220) });
+      }, 80);
+    }
+    close() {}
+  }
+  window.SpeechSDK = {
+    SpeechConfig: { fromAuthorizationToken: (token, region) => ({ token, region }) },
+    SpeechSynthesisOutputFormat: { Audio24Khz48KBitRateMonoMp3: 'mp3' },
+    ResultReason: { SynthesizingAudioCompleted: 'done' },
+    SpeechSynthesizer,
+  };
+})();`;
+
 let scriptIds = [];
 const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36';
-async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, query = '', ua = '' }) {
+// cloud：用云端语音（假的 SDK 和假的令牌服务 svtts.test）；不设时一律用本机的声音，不管 js/config.js 里填了什么
+async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, cloud = false, query = '', ua = '' }) {
   for (const id of scriptIds) await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: id });
   scriptIds = [];
+  scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.SV_CONFIG = { ttsUrl: ${JSON.stringify(cloud ? 'https://svtts.test' : '')} };` })).result.identifier);
+  if (cloud) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_AZURE })).result.identifier);
   if (fakeSpeech) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_SPEECH })).result.identifier);
   if (noBuiltin) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: NO_BUILTIN })).result.identifier);
   const patterns = [];
+  if (cloud) patterns.push({ urlPattern: '*svtts.test/*', requestStage: 'Request' });
   if (mockMM) patterns.push({ urlPattern: '*api.mymemory.translated.net*', requestStage: 'Request' });
   if (feedCache) patterns.push({ urlPattern: '*api.sr.se/api/rss/program/*', requestStage: 'Request' }, { urlPattern: '*api.sr.se/api/rss/program/*', requestStage: 'Response' });
   if (patterns.length) await send('Fetch.enable', { patterns });
@@ -311,6 +359,10 @@ try {
   check('21 个话题按钮各有自己的瑞典文名字', chipTips.length === 21 && new Set(chipTips).size === 21, chipTips.join('、'));
   const iconTip = await evalJs(`document.querySelector('#btnSettings').title`);
   check('提示是两行：瑞典文，然后是中文说明', /^Inställningar\n设置/.test(iconTip), JSON.stringify(iconTip));
+  // 云端语音用的微软 Speech SDK：固定版本，完整性校验（integrity）对得上，真的能从 CDN 加载
+  const sdkOk = await evalJs(`SV.cloud.loadSdk().then((s) => !!(s && s.SpeechSynthesizer && s.SpeechConfig && s.SpeechConfig.fromAuthorizationToken && s.ResultReason && s.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3 !== undefined), (e) => 'ERR ' + e.message)`);
+  check('云端语音的微软 SDK 能从 CDN 加载，完整性校验通过', sdkOk === true, String(sdkOk));
+  check('没有设置云端语音时用本机的声音', (await state()).engine === 'device', (await state()).engine);
   // 朗读按钮组紧跟在最后一个话题「简易瑞典语」后面，同一行，样子是立体按键，和话题按钮不一样
   await waitFor(`!document.querySelector('#btnTranslate').hidden || document.body.classList.contains('no-builtin')`, 8000);
   const ctl = await evalJs(`(() => {
@@ -680,14 +732,106 @@ try {
   check('手机上对话框里按住按钮，提示显示在对话框上面', lp2 && /Provlyssna/.test(lp2.text) && lp2.inDialog && lp2.inView, JSON.stringify(lp2));
   check('手机上按住「试听」看提示，松手不试听', (await evalJs('__speechLog.length')) === spoken0);
   await evalJs(`document.querySelector('#dlgSettings').close()`);
+
+  // ================= 4. 云端自然语音（假的微软 SDK 和假的令牌服务） =================
+  console.log('\n== 4. 电脑 1600×900：云端自然语音');
+  ttsWorkerMode = 'ok';
+  check('云端语音：页面打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true }));
+  st = await state();
+  check('设了云端语音时默认用它，女声是 Sofie', st.engine === 'cloud' && st.voice === 'sv-SE-SofieNeural', `${st.engine} ${st.voice}`);
+  check('云端：打开一篇文章', await openFirstCard(0));
+  const blocksC = await evalJs(`(() => { const ss = [...document.querySelectorAll('#article .s')]; const byBlock = []; for (const el of document.querySelectorAll('#article h1, #article .body > p, #article .body li, #article .body h2, #article .body blockquote')) { const s = [...el.querySelectorAll('.s')]; if (s.length) byBlock.push({ first: +s[0].dataset.si, text: s.map((x) => x.textContent).join(' ') }); } return byBlock; })()`);
+  const pcC = await center('#btnPlay');
+  await tap(pcC.x, pcC.y);
+  await waitFor(`window.__ttsLog.length >= 1 && SVApp.state().reader === 'speaking'`, 8000);
+  await sleep(700);
+  let tl = await evalJs('window.__ttsLog');
+  let cw = await evalJs(`document.querySelector('#article .w.current')?.textContent || ''`);
+  check('云端：点「朗读」合成第一段（标题），用 Sofie、Worker 发的令牌，不直接播放（audioConfig = null）',
+    tl[0] && tl[0].text === blocksC[0].text && tl[0].voice === 'sv-SE-SofieNeural' && /^tok-/.test(tl[0].token) && tl[0].audioConfig === null, JSON.stringify(tl[0]));
+  check('云端：跟着播放进度高亮单词', !!cw, `「${cw}」`);
+  check('云端：没有用本机的声音', (await evalJs('__speechLog.length')) === 0);
+  await waitFor(`SVApp.state().si >= ${blocksC[1].first}`, 15000);
+  st = await state();
+  tl = await evalJs('window.__ttsLog');
+  check('云端：一段读完自动接着读下一段（下一段已经提前合成好）', st.reader === 'speaking' && st.si >= blocksC[1].first && tl.some((x) => x.text === blocksC[1].text), `第 ${st.si} 句；合成过 ${tl.length} 段`);
+  await sleep(500);
+  await space();
+  st = await state();
+  const pausedC = { si: st.si, wi: st.wi };
+  const wordC = await evalJs(`document.querySelector('#article .w.current')?.textContent || ''`);
+  await sleep(700);
+  st = await state();
+  check('云端：空格暂停，停在那个词上', st.reader === 'paused' && st.si === pausedC.si && st.wi === pausedC.wi, `「${wordC}」 ${JSON.stringify(pausedC)}`);
+  const synthBefore = (await evalJs('window.__ttsLog')).length;
+  await space();
+  await sleep(120);
+  st = await state();
+  check('云端：再按空格从停下的词接着读，不再合成', st.reader === 'speaking' && st.si === pausedC.si && st.wi >= pausedC.wi && (await evalJs('window.__ttsLog')).length === synthBefore, `${JSON.stringify({ si: st.si, wi: st.wi })} 合成 ${synthBefore} → ${(await evalJs('window.__ttsLog')).length}`);
+  const rateC = await center('#btnRate');
+  await tap(rateC.x, rateC.y);
+  await sleep(300);
+  check('云端：换语速不重新合成，接着读', (await evalJs('window.__ttsLog')).length === synthBefore && (await state()).reader === 'speaking');
+  const vcC = await center('#btnVoice');
+  await tap(vcC.x, vcC.y);
+  await waitFor(`window.__ttsLog.some((x) => x.voice === 'sv-SE-MattiasNeural')`, 5000);
+  st = await state();
+  check('云端：点「女声」换成男声 Mattias，从当前的词接着读', st.voice === 'sv-SE-MattiasNeural' && st.reader === 'speaking' && (await evalJs(`window.__ttsLog.some((x) => x.voice === 'sv-SE-MattiasNeural')`)), st.voice);
+  await space();
+  // 查词弹出框的喇叭：用云端的声音读这个词
+  await evalJs('window.scrollTo(0, 0)');
+  await sleep(300);
+  const wiC = await evalJs(`[...document.querySelectorAll('#article .body .w')].findIndex((w) => w.textContent.length >= 5)`);
+  const wpC = await center('#article .body .w', Math.max(0, wiC));
+  await hover(wpC.x, wpC.y);
+  await sleep(1300);
+  const spk = await evalJs(`(() => { const b = document.querySelector('#popup .acts button'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  if (spk) { await tap(spk.x, spk.y); await sleep(500); }
+  tl = await evalJs('window.__ttsLog');
+  check('云端：弹出框的喇叭用云端的声音读这个词', !!spk && tl[tl.length - 1].text === wpC.text && tl[tl.length - 1].voice === 'sv-SE-MattiasNeural', tl.length ? JSON.stringify(tl[tl.length - 1]) : '');
+  await hover(5, 880);
+  await sleep(800);
+  // 设置：声音来源两项，云端的三个声音；改用本机的声音再改回来
+  const sbC = await center('#btnSettings');
+  await tap(sbC.x, sbC.y);
+  await sleep(400);
+  const setC = await evalJs(`({ row: !document.querySelector('#engineRow').hidden, cloud: document.querySelector('#engineRow input[value="cloud"]').checked, opts: [...document.querySelectorAll('#selVoice option')].map((o) => o.value), note: document.querySelector('#voiceNote').textContent.slice(0, 12) })`);
+  check('云端：设置里有「声音来源」，列出 Sofie、Hillevi、Mattias', setC.row && setC.cloud && setC.opts.join() === 'sv-SE-SofieNeural,sv-SE-HilleviNeural,sv-SE-MattiasNeural', JSON.stringify(setC));
+  await shot('desktop-cloud-settings');
+  await evalJs(`(() => { const r = document.querySelector('#engineRow input[value="device"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  st = await state();
+  check('云端：设置里改用这台设备自己的声音', st.engine === 'device' && /Sofie|Mattias/.test(st.voice || ''), `${st.engine} ${st.voice}`);
+  await evalJs(`(() => { const r = document.querySelector('#engineRow input[value="cloud"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  check('云端：再改回云端自然语音', (await state()).engine === 'cloud');
+  await evalJs(`document.querySelector('#dlgSettings').close()`);
+  ta = await tipAudit();
+  check('云端：每个按钮仍然都有瑞典文提示', !ta.bad.length, ta.bad.join('、'));
+
+  // 令牌服务不给令牌（比如 Worker 的设置不对）：说清楚，改用本机的声音，点「继续」接着读
+  ttsWorkerMode = 'forbidden';
+  check('云端出错：页面打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true }));
+  await openFirstCard(0);
+  const pcF = await center('#btnPlay');
+  await tap(pcF.x, pcF.y);
+  await waitFor(`SVApp.state().engine === 'device'`, 8000);
+  st = await state();
+  const toastF = await evalJs(`document.querySelector('#toast').hidden ? '' : document.querySelector('#toast').textContent`);
+  check('云端出错：提示原因，改用本机的声音，停在「继续」上', st.engine === 'device' && st.reader === 'paused' && /云端语音的设置有问题/.test(toastF), `${st.engine} ${st.reader}「${toastF}」`);
+  await tap(pcF.x, pcF.y);
+  await sleep(1200);
+  check('云端出错：点「继续」用本机的声音接着读', (await state()).reader === 'speaking' && (await evalJs('__speechLog.length')) > 0);
+  await space();
+  ttsWorkerMode = 'ok';
 } catch (e) {
   check('测试脚本没有出错', false, e.stack || String(e));
 }
 
-const allowed = (h) => /^127\.0\.0\.1(:\d+)?$/.test(h) || h === 'api.sr.se' || h === 'api.mymemory.translated.net' || h === new URL(baseUrl).host;
+// 云端语音另外连：微软 SDK 的 CDN（cdn.jsdelivr.net）、令牌服务（测试里是假的 svtts.test）；合成走 WebSocket，不在这个列表里
+const allowed = (h) => /^127\.0\.0\.1(:\d+)?$/.test(h) || h === 'api.sr.se' || h === 'api.mymemory.translated.net' || h === 'cdn.jsdelivr.net' || h === 'svtts.test' || h === new URL(baseUrl).host;
 summary.hosts = Object.fromEntries(hosts);
-check('页面只连了本站、SR 和 MyMemory', [...hosts.keys()].every(allowed), [...hosts.entries()].map(([h, n]) => `${h}×${n}`).join(' '));
-const realProblems = problems.filter((p) => !/favicon/.test(p));
+check('页面只连了本站、SR、MyMemory，以及云端语音的 SDK 和令牌服务', [...hosts.keys()].every(allowed), [...hosts.entries()].map(([h, n]) => `${h}×${n}`).join(' '));
+// 第 4 轮故意让假的令牌服务回 403（测试改用本机声音），浏览器自己会记一条网络错误，不算
+const realProblems = problems.filter((p) => !/favicon/.test(p) && !p.includes('403 (Forbidden) https://svtts.test/token'));
 check('控制台没有错误', !realProblems.length, realProblems.slice(0, 8).join(' | '));
 summary.problems = problems;
 summary.results = results;

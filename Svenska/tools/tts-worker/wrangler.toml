@@ -1,0 +1,9 @@
+# 用命令行部署时用（npx wrangler deploy）；在 Cloudflare 网页控制台里贴代码部署的，用不到这个文件。
+# 密钥 AZURE_SPEECH_KEY 不写在这里：在控制台里加成机密（Secret），或者 npx wrangler secret put AZURE_SPEECH_KEY。
+name = "svenska-tts"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[vars]
+AZURE_SPEECH_REGION = "northeurope"
+ALLOWED_ORIGINS = "https://tony6838.github.io"

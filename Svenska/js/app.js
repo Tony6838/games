@@ -8,7 +8,8 @@
   // ---------- 设置 ----------
   const SET_KEY = 'sv.settings.v1';
   // online：浏览器没有内置翻译时用 MyMemory 在线翻译。默认开着，只有在「设置」里取消勾选才关（false）。
-  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', online: true, tip: true, topic: 'idag' };
+  // engine：'cloud' 云端自然语音（js/config.js 设了 ttsUrl 才有）或 'device' 这台设备自己的声音；cloudVoice：云端选的声音
+  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', online: true, tip: true, topic: 'idag' };
   const S = Object.assign({}, DEFAULTS, SV.store.get(SET_KEY, {}));
   delete S.level; // 旧版本的「简易优先」设置，不再用
   // 设置的版本：第一版在说明框里点「不用」会把在线翻译一直关着（Safari 上点词只看到「在线翻译已关闭」）。
@@ -18,6 +19,7 @@
   S.scale = SV.clamp(+S.scale || 1, 0.8, 1.8);
   S.rate = SV.clamp(+S.rate || 0.9, 0.5, 1.3);
   if (!['f', 'm'].includes(S.gender)) S.gender = 'f';
+  if (!['cloud', 'device'].includes(S.engine)) S.engine = 'cloud';
   if (S.online !== false) S.online = true;
   const save = () => SV.store.set(SET_KEY, S);
 
@@ -130,10 +132,16 @@
   window.addEventListener('scroll', hideTip, { passive: true });
 
   // ---------- 朗读 ----------
+  // 两种声音，接口一样：云端自然语音（js/cloudtts.js，微软 Azure，电脑、手机、任何浏览器都一样自然；
+  // js/config.js 设了 ttsUrl 才有）和这台设备自己的声音（js/speech.js）。默认用云端；云端出错时，
+  // 这次打开的页面里改用本机的声音（刷新再试云端）。「设置」里也可以自己选。
   let voiceInfo = { voice: null, gender: '?', exact: false };
-  const reader = new SV.speech.Reader({
+  let cloudDown = false;
+  const hooks = {
     sentences: () => (cur.view === 'article' && cur.model ? cur.model.sentences : []),
+    blocks: () => (cur.view === 'article' && cur.model ? cur.model.blocks : []),
     voice: () => voiceInfo.voice,
+    voiceName: () => cloudVoice().name,
     rate: () => S.rate,
     onState: (st) => {
       document.body.classList.toggle('speaking', st === 'speaking');
@@ -142,15 +150,61 @@
     },
     onPosition: (si, wi, byWord) => highlight(si, wi, byWord),
     onError: (msg) => toast(msg),
-  });
+    onFail: (e) => cloudFailed(e),
+  };
+  const deviceReader = new SV.speech.Reader(hooks);
+  const cloudReader = SV.cloud && SV.cloud.configured ? new SV.cloud.Reader(hooks) : null;
+  const useCloud = () => !!cloudReader && S.engine === 'cloud' && !cloudDown;
+  let reader = useCloud() ? cloudReader : deviceReader;
+
+  // 云端选的声音：设置里选过、而且和「女声 / 男声」一致的，否则这个性别的第一个（Sofie、Mattias）
+  function cloudVoice() {
+    const chosen = SV.cloud ? SV.cloud.voiceByName(S.cloudVoice) : null;
+    if (chosen && chosen.gender === S.gender) return chosen;
+    const V = SV.cloud ? SV.cloud.VOICES : [{ name: '', label: '', gender: 'f' }];
+    return V.find((v) => v.gender === S.gender) || V[0];
+  }
+
+  // 换用另一种声音：从同一个地方接着读（朗读中或暂停的，停在「继续」上）
+  function switchReader() {
+    const next = useCloud() ? cloudReader : deviceReader;
+    if (next === reader) return;
+    const { si, wi, state: was } = reader;
+    reader.stop();
+    reader = next;
+    reader.si = si;
+    reader.wi = wi;
+    if (was !== 'idle') reader.setState('paused');
+  }
+
+  function cloudFailed(e) {
+    const was = reader.state;
+    cloudDown = true;
+    const why = e && e.code === 'quota' ? '云端语音这个月的免费额度用完了'
+      : e && (e.code === 'forbidden' || e.code === 'auth') ? '云端语音的设置有问题（令牌服务或 Azure 密钥）'
+        : e && e.code === 'network' ? '连不上云端语音'
+          : '云端语音这次没成功';
+    toast(why + '，先改用这台设备自己的声音' + (was !== 'idle' ? '，点「继续」接着读。' : '。'), 6000);
+    switchReader();
+    refreshVoice();
+  }
 
   function refreshVoice() {
     voiceInfo = SV.speech.pickVoice({ gender: S.gender, voiceURI: S.voiceURI });
-    const g = voiceInfo.voice ? voiceInfo.gender : S.gender;
+    let g;
+    let name;
+    if (useCloud()) {
+      const v = cloudVoice();
+      g = v.gender;
+      name = v.label + '（微软云端自然语音）';
+    } else {
+      g = voiceInfo.voice ? voiceInfo.gender : S.gender;
+      name = voiceInfo.voice ? voiceInfo.voice.name : '';
+    }
     els.voice.querySelector('b').textContent = g === 'm' ? '男' : g === 'f' ? '女' : '声';
     els.voice.querySelector('.lbl').textContent = g === 'm' ? '男声' : g === 'f' ? '女声' : '声音';
     tip(els.voice, g === 'm' ? 'Manlig röst' : g === 'f' ? 'Kvinnlig röst' : 'Röst',
-      voiceInfo.voice ? '现在的声音：' + voiceInfo.voice.name + '（点一下切换男声、女声）' : '这台设备没有瑞典语声音');
+      name ? '现在的声音：' + name + '（点一下切换男声、女声）' : '这台设备没有瑞典语声音');
   }
 
   let hlS = null;
@@ -192,9 +246,11 @@
 
   function startReading() {
     if (cur.view !== 'article' || !cur.model) return;
-    if (!SV.speech.supported) { toast('这个浏览器不支持朗读'); return; }
-    if (reader.state === 'idle' && !SV.speech.voices().length) {
-      toast('这台设备上没有瑞典语声音，发音可能不对。用 Edge 浏览器可以用微软的瑞典语声音，详见「设置」。', 6000);
+    if (!useCloud()) {
+      if (!SV.speech.supported) { toast('这个浏览器不支持朗读'); return; }
+      if (reader.state === 'idle' && !SV.speech.voices().length) {
+        toast('这台设备上没有瑞典语声音，发音可能不对。用 Edge 浏览器可以用微软的瑞典语声音，详见「设置」。', 6000);
+      }
     }
     hidePopup();
     reader.toggle();
@@ -463,6 +519,7 @@
     cur.translating = false;
     cur.zhShown = true;
     SV.sources.markRead(item.id);
+    if (useCloud()) SV.cloud.warm(); // 先下载语音 SDK、拿令牌（不花额度），点「朗读」时快一点
     const topic = cur.topic;
     const art = els.article;
     art.textContent = '';
@@ -923,11 +980,13 @@
     els.voice.blur();
     S.gender = S.gender === 'f' ? 'm' : 'f';
     S.voiceURI = '';
+    S.cloudVoice = '';
     save();
     refreshVoice();
     syncSettingsForm();
     const want = S.gender === 'm' ? '男声' : '女声';
-    if (!voiceInfo.voice) toast('这台设备上没有瑞典语声音（详见「设置」）');
+    if (useCloud()) toast(`${want}：${cloudVoice().label}（云端自然语音）`, 2500);
+    else if (!voiceInfo.voice) toast('这台设备上没有瑞典语声音（详见「设置」）');
     else if (!voiceInfo.exact) toast(`这台设备没有瑞典语${want}，现在用的是 ${voiceInfo.voice.name}`, 5000);
     else toast(`${want}：${voiceInfo.voice.name}`, 2500);
     if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
@@ -946,7 +1005,9 @@
     save();
     els.rate.querySelector('b').textContent = fmtRate(S.rate);
     syncSettingsForm();
-    if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
+    // 云端的声音直接改播放速度；本机的声音要从当前的词重新读
+    if (reader.rateChanged) reader.rateChanged();
+    else if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
   }
   function setScale(v) {
     S.scale = SV.clamp(Math.round(v * 10) / 10, 0.8, 1.8);
@@ -986,27 +1047,59 @@
 
   // ---------- 设置对话框 ----------
   const selVoice = $('#selVoice');
+  const CLOUD_NOTE = '云端自然语音：微软 Azure 的瑞典语神经语音，电脑、手机、任何浏览器上都一样。朗读时文章的文字发给微软的语音服务合成声音（Edge 浏览器的在线声音也是这样），要联网。';
   function fillVoiceSelect() {
-    const list = SV.speech.voices();
+    // 声音来源：只有设了云端语音（js/config.js 的 ttsUrl）才显示
+    $('#engineRow').hidden = !cloudReader;
+    const eng = cloudReader && S.engine === 'cloud' ? 'cloud' : 'device';
+    for (const r of document.querySelectorAll('#engineRow input[name="engine"]')) r.checked = r.value === eng;
     selVoice.textContent = '';
+    const note = $('#voiceNote');
+    if (useCloud()) {
+      for (const v of SV.cloud.VOICES) selVoice.append(h('option', { value: v.name }, `${v.label}（${v.gender === 'm' ? '男' : '女'}，云端）`));
+      selVoice.value = cloudVoice().name;
+      note.textContent = CLOUD_NOTE;
+      return;
+    }
+    const list = SV.speech.voices();
     selVoice.append(h('option', { value: '' }, `自动（${S.gender === 'm' ? '男声' : '女声'}优先）`));
     for (const x of list) {
       const g = x.gender === 'f' ? '女' : x.gender === 'm' ? '男' : '性别不明';
       selVoice.append(h('option', { value: x.v.voiceURI }, `${x.v.name}（${g}）`));
     }
     selVoice.value = list.some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '';
-    const note = $('#voiceNote');
-    if (!SV.speech.supported) note.textContent = '这个浏览器不支持朗读。';
-    else if (!list.length) note.textContent = '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 → 时间和语言 → 语音」里添加瑞典语语音；iPhone / iPad 在「设置 → 辅助功能 → 朗读内容 → 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。';
-    else note.textContent = `这台设备有 ${list.length} 个瑞典语声音。认不出男女的标为「性别不明」，可以试听后自己选。`;
+    let t;
+    if (!SV.speech.supported) t = '这个浏览器不支持朗读。';
+    else if (!list.length) t = '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 → 时间和语言 → 语音」里添加瑞典语语音；iPhone / iPad 在「设置 → 辅助功能 → 朗读内容 → 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。';
+    else t = `这台设备有 ${list.length} 个瑞典语声音。认不出男女的标为「性别不明」，可以试听后自己选。`;
+    if (cloudReader && S.engine === 'cloud' && cloudDown) t = '云端语音这次没成功，现在用的是这台设备自己的声音；刷新网页会再试云端。' + t;
+    note.textContent = t;
   }
   selVoice.addEventListener('change', () => {
-    S.voiceURI = selVoice.value;
-    const x = SV.speech.voices().find((v) => v.v.voiceURI === S.voiceURI);
-    if (x && x.gender !== '?') S.gender = x.gender;
+    if (useCloud()) {
+      const v = SV.cloud.voiceByName(selVoice.value);
+      if (v) { S.cloudVoice = v.name; S.gender = v.gender; }
+    } else {
+      S.voiceURI = selVoice.value;
+      const x = SV.speech.voices().find((v) => v.v.voiceURI === S.voiceURI);
+      if (x && x.gender !== '?') S.gender = x.gender;
+    }
     save();
     refreshVoice();
+    if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
   });
+  // 声音来源：云端自然语音 / 这台设备自己的声音。选回云端时，之前出过的错不算，再试一次
+  for (const r of document.querySelectorAll('#engineRow input[name="engine"]')) {
+    r.addEventListener('change', () => {
+      if (!r.checked) return;
+      S.engine = r.value;
+      if (r.value === 'cloud') cloudDown = false;
+      save();
+      switchReader();
+      refreshVoice();
+      fillVoiceSelect();
+    });
+  }
   $('#btnTryVoice').addEventListener('click', () => reader.speakText('Hej! Välkommen. Här kan du läsa nyheter på svenska.'));
   const rngRate = $('#rngRate');
   const rngFont = $('#rngFont');
@@ -1024,7 +1117,9 @@
     rngFont.value = S.scale;
     $('#outFont').textContent = Math.round(S.scale * 100) + '%';
     $('#chkOnline').checked = S.online !== false;
-    if (selVoice.options.length) selVoice.value = SV.speech.voices().some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '';
+    if (!selVoice.options.length) return;
+    if (useCloud()) selVoice.value = cloudVoice().name;
+    else selVoice.value = SV.speech.voices().some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '';
   }
   async function updateTrNote() {
     const a = await SV.tr.builtinAvailability();
@@ -1095,8 +1190,9 @@
       translated: cur.model ? cur.model.blocks.filter((b) => b.zhEl).length : 0,
       translating: cur.translating,
       listZh: els.list.querySelectorAll('.card .zh').length,
-      voice: voiceInfo.voice ? voiceInfo.voice.name : null,
-      voiceGender: voiceInfo.gender,
+      engine: useCloud() ? 'cloud' : 'device',
+      voice: useCloud() ? cloudVoice().name : voiceInfo.voice ? voiceInfo.voice.name : null,
+      voiceGender: useCloud() ? cloudVoice().gender : voiceInfo.gender,
       popup: pop.open ? { pinned: pop.pinned, text: pop.text } : null,
       settings: Object.assign({}, S),
     }),
