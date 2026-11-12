@@ -16,7 +16,21 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand">瑞典语读报<span class="tagline">今天的瑞典新闻 · 朗读 · 点词看中文</span></div>
+  <div class="brand-row">
+    <div class="brand" id="brand" tabindex="0" aria-describedby="guide">瑞典语读报<span class="tagline">今天的瑞典新闻 · 朗读 · 点词看中文</span></div>
+    <button type="button" id="btnBack" class="back-btn" hidden><span class="long">← 返回列表</span><span class="short">← 列表</span></button>
+  </div>
+  <div id="guide" class="guide" role="tooltip" hidden>
+    <b>怎么用</b>
+    <ol>
+      <li>点一个话题，在列表里选一篇文章；再点一次同一个话题，换一批。</li>
+      <li>点「朗读」听文章，正在读的词会高亮；按<kbd>空格</kbd>或点一下文章暂停，再按一次接着读。</li>
+      <li>鼠标停在词上（手机上点一下词），显示中文；喇叭读这个词。</li>
+      <li>「全文翻译」（Chrome、Edge 电脑版）：每段下面显示中文；别的浏览器用它自带的整页翻译。</li>
+      <li>「女声 / 男声」切换声音；声音、语速、字号和在线翻译在右上角的齿轮按钮「设置」里。</li>
+    </ol>
+    <span class="more">更多说明：右上角的「?」</span>
+  </div>
   <div class="tools">
     <button type="button" id="btnSmaller" class="icon-btn" title="字小一点" aria-label="字小一点">A<small>−</small></button>
     <button type="button" id="btnBigger" class="icon-btn" title="字大一点" aria-label="字大一点">A<small>+</small></button>
@@ -27,7 +41,21 @@
   </div>
 </header>
 
-<nav id="topics" class="topics" aria-label="话题"></nav>
+<nav id="topbar" class="topbar" aria-label="话题和朗读">
+  <div id="topics" class="topics" role="group" aria-label="话题"></div>
+  <div id="player" class="player" role="group" aria-label="朗读和翻译">
+    <button type="button" id="btnPlay" class="play" aria-label="朗读">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h4.2v15H6zM13.8 4.5H18v15h-4.2z" fill="currentColor"/></svg>
+      <span class="lbl">朗读</span>
+    </button>
+    <button type="button" id="btnRate" title="语速"><b>0.9×</b><span class="lbl">语速</span></button>
+    <button type="button" id="btnVoice" title="切换男声、女声"><b>女</b><span class="lbl">女声</span></button>
+    <button type="button" id="btnTranslate" title="把整篇文章翻译成中文"><b>译</b><span class="lbl">全文翻译</span></button>
+    <button type="button" id="btnNext" title="下一篇"><b>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span class="lbl">下一篇</span></button>
+  </div>
+</nav>
 
 <main id="main">
   <div id="tip" class="tip" hidden>
@@ -42,18 +70,6 @@
 <div id="popup" class="popup" hidden></div>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
-<footer id="player" class="player">
-  <button type="button" id="btnPlay" class="play" aria-label="朗读">
-    <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>
-    <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h4.2v15H6zM13.8 4.5H18v15h-4.2z" fill="currentColor"/></svg>
-    <span class="lbl">朗读</span>
-  </button>
-  <button type="button" id="btnRate" title="语速"><b>0.9×</b><span class="lbl">语速</span></button>
-  <button type="button" id="btnVoice" title="切换男声、女声"><b>女</b><span class="lbl">女声</span></button>
-  <button type="button" id="btnTranslate" title="把整篇文章翻译成中文"><b>译</b><span class="lbl">全文翻译</span></button>
-  <button type="button" id="btnNext" title="下一篇"><b>
-    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span class="lbl">下一篇</span></button>
-</footer>
 
 <dialog id="dlgSettings" class="dlg" aria-labelledby="setTitle">
   <form method="dialog" class="dlg-body">
@@ -74,7 +90,7 @@
     <section>
       <h3>翻译</h3>
       <p id="trNote" class="note"></p>
-      <label class="check"><input id="chkOnline" type="checkbox"> 允许用 MyMemory 在线翻译（浏览器没有内置翻译时）</label>
+      <label class="check"><input id="chkOnline" type="checkbox"> 用 MyMemory 在线翻译（浏览器没有内置翻译时用，默认开着；取消勾选就关掉）</label>
       <p class="note">在线翻译会把要翻译的词句发给 MyMemory（意大利 Translated 公司）的服务器，它会保存收到的句子；不发送任何个人信息。免费额度约每天 5000 个字符，大约三四篇文章。</p>
     </section>
     <section>
@@ -91,32 +107,16 @@
   </form>
 </dialog>
 
-<dialog id="dlgConsent" class="dlg" aria-labelledby="conTitle">
-  <form method="dialog" class="dlg-body">
-    <h2 id="conTitle">使用在线翻译？</h2>
-    <p>这个浏览器没有内置的翻译功能（Chrome 和 Edge 的电脑版有）。可以改用 <b>MyMemory</b> 的免费在线翻译：</p>
-    <ul>
-      <li>文章会一句一句地发到 MyMemory（意大利 Translated 公司）的服务器，它会保存收到的句子。</li>
-      <li>不发送任何个人信息。</li>
-      <li>免费额度约每天 5000 个字符，大约三四篇文章。</li>
-    </ul>
-    <p class="note">以后可以在「设置」里改。</p>
-    <div class="dlg-actions">
-      <button value="no">不用</button>
-      <button value="yes" class="primary">使用在线翻译</button>
-    </div>
-  </form>
-</dialog>
-
 <dialog id="dlgHelp" class="dlg" aria-labelledby="helpTitle">
   <form method="dialog" class="dlg-body">
     <h2 id="helpTitle">怎么用</h2>
     <ul class="help">
       <li><b>选话题</b>：点上面的话题，下面列出这个话题今天的几篇新闻（今天还没有的，列最近的），点一篇来读。<b>再点一次同一个话题，换一批</b>，列过的不会再列。读完点「← 返回列表」回到列表，或者点「下一篇」读列表里的下一篇。</li>
-      <li><b>朗读</b>：点下面的「朗读」。正在读的句子和单词会高亮，跟着往下走。</li>
+      <li><b>朗读</b>：点话题按钮后面那组立体按钮里的「朗读」（手机上在话题下面一行，往下滚时一直在顶上）。正在读的句子和单词会高亮，跟着往下走。</li>
       <li><b>暂停</b>：按<kbd>空格</kbd>，或者点一下文章。再按空格或点「继续」，从停下的地方接着读。</li>
       <li><b>查词</b>：鼠标停在词上，或者点一下词，就显示中文。喇叭读这个词，「从这里读」从这个词开始朗读，「本句译文」翻译这一整句。电脑上用鼠标选中几个词，也会翻译选中的部分。</li>
-      <li><b>全文翻译</b>：每段下面显示中文，先看懂大意再读原文。在列表里这个按钮翻译所有标题。</li>
+      <li><b>全文翻译</b>：每段下面显示中文，先看懂大意再读原文；在列表里这个按钮翻译所有标题。<b>只有 Chrome、Edge 的电脑版有这个按钮</b>，用的是浏览器内置的翻译（在本机翻译，不限量）。别的浏览器在这个位置有一行提示，告诉你怎么用浏览器自己的整页翻译：Safari、iPhone、iPad 点地址栏「aA → 翻译成中文」；安卓的 Chrome 点右上角 ⋮ →「翻译…」；Firefox 用地址栏的翻译图标。</li>
+      <li><b>在线翻译</b>：浏览器没有内置翻译时，查词和「本句译文」自动用 MyMemory 在线翻译（默认开着）；不想用可以在顶部齿轮按钮「设置」里关掉。</li>
       <li><b>简易瑞典语</b>：最后一个话题，是 SR 专门用简单的瑞典语写的新闻；别的话题都是普通的瑞典新闻。</li>
       <li><b>声音</b>：点「女声 / 男声」切换；在「设置」里可以选具体的声音和语速。声音是你的设备自带的：Edge 浏览器有微软的瑞典语在线声音（Sofie 女声、Mattias 男声），苹果设备有 Alva、Klara、Oskar。</li>
       <li><b>字号</b>：右上角的 A− 和 A+。</li>

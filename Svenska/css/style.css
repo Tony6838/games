@@ -20,7 +20,10 @@
   --pad: clamp(16px, 4vw, 72px);
   --fs-base: clamp(18px, 0.75vw + 12px, 24px);
   --scale: 1;
-  --player-h: 64px;
+  --key-top: #ffffff;
+  --key-bottom: #e4e9f0;
+  --key-edge: #aab5c3;
+  --key-shine: rgba(255, 255, 255, .95);
   --ui-font: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
   --zh-font: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif;
   color-scheme: light dark;
@@ -43,10 +46,15 @@
     --easy-bg: #1d3323;
     --easy-ink: #8fd49b;
     --shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    --key-top: #3a434f;
+    --key-bottom: #262d36;
+    --key-edge: #11161c;
+    --key-shine: rgba(255, 255, 255, .12);
   }
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   margin: 0;
@@ -75,24 +83,41 @@ kbd {
 
 /* ---------- 顶栏 ---------- */
 .top {
+  position: relative;
   display: flex; align-items: center; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap;
   padding: 10px var(--pad) 6px;
 }
-.brand { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--accent); white-space: nowrap; }
+.brand-row { display: flex; align-items: center; gap: 6px 14px; flex-wrap: wrap; min-width: 0; }
+.brand { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--accent); white-space: nowrap; cursor: help; border-radius: 6px; }
 .tagline { margin-left: 12px; font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+.brand-row .back-btn .short { display: none; }
+/* 「怎么用」：鼠标停在标题上（或手机上点标题）时出现在标题下面 */
+.guide {
+  position: absolute; z-index: 25; left: var(--pad); top: calc(100% - 2px);
+  width: max-content; max-width: min(480px, calc(100vw - 24px));
+  padding: 12px 16px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--card); color: var(--ink); box-shadow: var(--shadow);
+  font-size: 14px; line-height: 1.65;
+}
+.guide ol { margin: 6px 0 6px; padding-left: 1.3em; }
+.guide li { margin: 2px 0; }
+.guide .more { color: var(--muted); font-size: 13px; }
 .tools { display: flex; align-items: center; gap: 6px; }
 .icon-btn { min-width: 40px; height: 38px; padding: 0 8px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .icon-btn small { font-size: .75em; margin-left: 1px; }
 .icon-btn svg { width: 20px; height: 20px; }
 
-/* ---------- 话题 ---------- */
-.topics {
+/* ---------- 话题和朗读按钮：一起粘在顶上 ---------- */
+/* 电脑上话题按钮和朗读按钮排在一行里自动折行，朗读按钮组紧跟在最后一个话题「简易瑞典语」后面；
+   手机上话题一行横着滑，朗读按钮另起一行。 */
+.topbar {
   position: sticky; top: 0; z-index: 5;
-  display: flex; flex-wrap: wrap; gap: 8px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   padding: 8px var(--pad) 10px;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
+.topics { display: contents; }
 .chip {
   flex: none; height: 38px; padding: 0 16px; border-radius: 999px; font-size: 16px; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 6px;
@@ -129,12 +154,11 @@ kbd {
 .badge.done { background: var(--line); color: var(--muted); }
 .list-foot { margin: 18px 0 8px; }
 .list-foot button { height: 44px; padding: 0 18px; font-size: 16px; }
-.art-top { margin: 12px 0 0; }
 .back-btn { height: 38px; padding: 0 14px; font-size: 15px; color: var(--accent); }
 .next-row { display: flex; flex-wrap: wrap; gap: 10px; }
 
 /* ---------- 正文 ---------- */
-main { padding: 6px var(--pad) calc(var(--player-h) + 40px + env(safe-area-inset-bottom)); }
+main { padding: 6px var(--pad) calc(40px + env(safe-area-inset-bottom)); }
 .tip, .notice {
   font-size: 15px; line-height: 1.6; padding: 10px 14px; border-radius: 10px; margin: 10px 0;
   background: var(--accent-soft); color: var(--ink);
@@ -188,6 +212,13 @@ body.paused .article .w.current { background: var(--word-paused); box-shadow: 0 
   color: var(--zh); border-left: 3px solid var(--sun); padding: 2px 0 2px .7em; margin: .3em 0 .2em;
 }
 .zh.err { color: var(--muted); border-left-color: var(--line); }
+.zh.wait { color: var(--muted); }
+.tr-problem {
+  margin: 10px 0 4px; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0b252; background: rgba(245, 197, 24, .12);
+  font-family: var(--ui-font); font-size: 15px; line-height: 1.6; color: var(--ink);
+}
+.tr-problem p { margin: 0 0 8px; }
+.tr-problem button { height: 38px; padding: 0 14px; font-size: 14px; }
 h1 .zh { font-size: .62em; }
 li .zh { margin-bottom: .1em; }
 
@@ -213,30 +244,38 @@ li .zh { margin-bottom: .1em; }
 .popup .sent { margin-top: 8px; padding-top: 6px; border-top: 1px dashed var(--line); font-family: var(--zh-font); font-size: 15px; color: var(--zh); }
 .popup .eng { margin-top: 6px; font-size: 11px; color: var(--muted); }
 
-/* ---------- 底部播放栏 ---------- */
-.player {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-  display: flex; justify-content: center; gap: 8px;
-  padding: 8px max(8px, var(--pad)) calc(8px + env(safe-area-inset-bottom));
-  background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(0, 0, 0, .06);
-}
+/* ---------- 朗读按钮组：立体的按键样子，和扁平的话题按钮区分开 ---------- */
+.player { display: flex; align-items: center; gap: 8px; flex: none; margin-left: 10px; }
 .player button {
-  flex: 1 1 0; max-width: 180px; min-width: 0; height: 52px; padding: 0 6px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; min-width: 0; padding: 0 14px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   font-size: 15px; white-space: nowrap;
+  border-radius: 9px; border: 1px solid var(--key-edge); border-bottom-width: 4px;
+  background: linear-gradient(180deg, var(--key-top), var(--key-bottom));
+  box-shadow: 0 2px 4px rgba(0, 0, 0, .14), inset 0 1px 0 var(--key-shine);
+  transition: transform .06s, box-shadow .06s, border-bottom-width .06s;
 }
-.player button b { font-size: 17px; display: inline-flex; align-items: center; }
-.player button svg { width: 22px; height: 22px; }
-.player .play { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.player button:hover:not(:disabled) { filter: brightness(1.04); }
+.player button:active:not(:disabled), .player button.on {
+  transform: translateY(2px); border-bottom-width: 2px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .18);
+}
+.player button b { font-size: 16px; display: inline-flex; align-items: center; }
+.player button svg { width: 20px; height: 20px; }
+.player .play {
+  color: #fff; font-weight: 700; border-color: #08427e;
+  background: linear-gradient(180deg, #3d8be0, #0b5cad); box-shadow: 0 2px 4px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+body.speaking .player .play { transform: translateY(2px); border-bottom-width: 2px; box-shadow: inset 0 2px 5px rgba(0, 0, 0, .35); }
 .player .play .i-pause { display: none; }
 body.speaking .player .play .i-play { display: none; }
 body.speaking .player .play .i-pause { display: inline; }
-.player button.on { border-color: var(--accent); color: var(--accent); }
+.player button.on { color: var(--accent); }
 
 /* ---------- 提示 ---------- */
 .toast {
   position: fixed; z-index: 40; left: 50%; transform: translateX(-50%);
-  bottom: calc(var(--player-h) + 16px + env(safe-area-inset-bottom));
+  bottom: calc(16px + env(safe-area-inset-bottom));
   max-width: min(560px, calc(100vw - 24px)); padding: 10px 16px; border-radius: 12px;
   background: #222a33; color: #fff; font-size: 15px; line-height: 1.5; box-shadow: var(--shadow); text-align: center;
 }
@@ -246,6 +285,7 @@ body.speaking .player .play .i-pause { display: inline; }
   border: 0; padding: 0; border-radius: 16px; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px);
   background: var(--card); color: var(--ink); box-shadow: var(--shadow);
 }
+dialog:not([open]) { display: none; } /* 老的 Safari（iOS 15.4 以前）不认识 <dialog>，别让对话框直接显示在页面里 */
 .dlg::backdrop { background: rgba(10, 14, 20, .45); }
 .dlg-body { padding: 18px 20px 16px; overflow: auto; max-height: calc(100vh - 32px); font-size: 15px; line-height: 1.65; }
 .dlg h2 { margin: 0 0 10px; font-size: 20px; }
@@ -267,6 +307,11 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
 /* ---------- 窄屏（手机竖着） ---------- */
 @media (max-width: 760px) {
   .tagline { display: none; }
+  .brand-row { gap: 6px 10px; }
+  .brand-row .back-btn { height: 36px; padding: 0 10px; font-size: 14px; }
+  .brand-row .back-btn .long { display: none; }
+  .brand-row .back-btn .short { display: inline; }
+  .guide { left: 12px; }
   .list-head h2 { font-size: 19px; }
   .card { padding: 12px 14px; }
   .card .c-title { font-size: calc(17px * var(--scale)); }
@@ -274,15 +319,22 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   .brand { font-size: 19px; }
   .top { padding-top: 8px; }
   .icon-btn { min-width: 36px; height: 36px; padding: 0 6px; }
-  .topics { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-top: 6px; padding-bottom: 8px; }
+  .topbar { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px; padding-top: 6px; padding-bottom: 8px; }
+  .topics { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
   .topics::-webkit-scrollbar { display: none; }
   .chip { height: 36px; padding: 0 13px; font-size: 15px; }
-  .player { gap: 5px; padding-left: 6px; padding-right: 6px; }
-  .player button { flex-direction: column; gap: 1px; height: 54px; font-size: 12px; padding: 0 2px; }
-  .player button b { font-size: 16px; line-height: 1.1; }
-  .player button svg { width: 20px; height: 20px; }
+  .player { margin-left: 0; gap: 6px; }
+  .player button { flex: 1 1 0; flex-direction: column; gap: 0; height: 48px; font-size: 12px; padding: 0 2px; }
+  .player button b { font-size: 15px; line-height: 1.15; }
+  .player button svg { width: 18px; height: 18px; }
   .popup { font-size: 15px; }
 }
 @media (max-width: 360px) {
   .tools { gap: 4px; }
 }
+.safari-hint { margin: 4px 0 0; font-family: var(--ui-font); font-size: 14px; color: var(--muted); }
+.popup .on-btn { margin-top: 6px; height: 34px; padding: 0 12px; font-size: 14px; }
+/* 「整篇翻译：……」只在没有浏览器内置翻译时显示（app.js 给 body 加 no-builtin） */
+.page-tr-hint { display: none; }
+body.no-builtin .page-tr-hint { display: block; }
+.list .page-tr-hint { margin: -6px 0 12px; }

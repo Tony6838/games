@@ -9,8 +9,9 @@
 //      试内置翻译。
 //   2. 电脑 1600×900、模拟的朗读（假的 Sofie / Mattias，按词发 boundary 事件）、没有内置翻译、
 //      MyMemory 由测试代答（不占真实额度）：朗读高亮、空格暂停继续、点文章暂停、从这里读、换男女声、
-//      在线翻译前先征求同意、列表里翻译标题、全文翻译、发给 MyMemory 的内容（不超过 500 字节、不带电子邮件）。
-//   3. 手机 390×844 触摸：列表和文章不横向溢出、再点话题换一批、点词弹框不出屏、点屏幕暂停、全文翻译、返回列表。
+//      没有内置翻译时不显示「全文翻译」而提示整页翻译、本句译文走 MyMemory、发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）。
+//   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：列表和文章不横向溢出、再点话题换一批、点词弹框不出屏、点屏幕暂停、
+//      没有「全文翻译」按钮而有整页翻译的提示、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」。
 // 只连 SR、MyMemory 和本机；页面连了别的地方算失败。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -150,7 +151,7 @@ async function center(selector, index = 0) {
     const el = document.querySelectorAll(${JSON.stringify(selector)})[${index}];
     if (!el) return null;
     const r0 = el.getBoundingClientRect();
-    const band = { top: document.querySelector('#topics').getBoundingClientRect().bottom, bottom: document.querySelector('#player').getBoundingClientRect().top };
+    const band = { top: Math.max(0, document.querySelector('#topbar').getBoundingClientRect().bottom), bottom: innerHeight };
     if (r0.top < band.top + 20 || r0.bottom > band.bottom - 20) window.scrollBy(0, r0.top - (band.top + 120));
     const r = el.getBoundingClientRect();
     return { x: Math.round(r.left + Math.min(r.width / 2, 30)), y: Math.round(r.top + r.height / 2), text: el.textContent };
@@ -201,7 +202,8 @@ const FAKE_SPEECH = `(() => {
 const NO_BUILTIN = `(() => { try { delete window.Translator; } catch (e) {} if (typeof window.Translator !== 'undefined') Object.defineProperty(window, 'Translator', { value: undefined, configurable: true }); })();`;
 
 let scriptIds = [];
-async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, query = '' }) {
+const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36';
+async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, query = '', ua = '' }) {
   for (const id of scriptIds) await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: id });
   scriptIds = [];
   if (fakeSpeech) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_SPEECH })).result.identifier);
@@ -216,6 +218,7 @@ async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, 
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: mobile ? 2 : 1, mobile });
   await send('Emulation.setTouchEmulationEnabled', { enabled: mobile, maxTouchPoints: mobile ? 5 : 0 });
   await send('Emulation.setEmitTouchEventsForMouse', { enabled: false });
+  await send('Emulation.setUserAgentOverride', { userAgent: ua || (await send('Browser.getVersion')).result.userAgent });
   await send('Page.navigate', { url: baseUrl + query });
   await sleep(800);
   const ok = await waitFor("window.SVApp && !SVApp.state().loading && SVApp.state().view === 'list'", 40000);
@@ -284,6 +287,20 @@ try {
   check('电脑上列表用满宽度', lay.boxW >= lay.vw * 0.85, `列表 ${lay.boxW}px / 视口 ${lay.vw}px，${lay.columns} 列`);
   check('电脑上没有横向滚动', lay.scrollW <= lay.vw, `${lay.scrollW} <= ${lay.vw}`);
   await shot('desktop-list');
+  // 朗读按钮组紧跟在最后一个话题「简易瑞典语」后面，同一行，样子是立体按键，和话题按钮不一样
+  await waitFor(`!document.querySelector('#btnTranslate').hidden || document.body.classList.contains('no-builtin')`, 8000);
+  const ctl = await evalJs(`(() => {
+    const last = document.querySelector('#topics .chip:last-child').getBoundingClientRect();
+    const play = document.querySelector('#btnPlay').getBoundingClientRect();
+    const chipCss = getComputedStyle(document.querySelector('#topics .chip'));
+    const keyCss = getComputedStyle(document.querySelector('#btnRate'));
+    return { sameRow: Math.abs((last.top + last.bottom) / 2 - (play.top + play.bottom) / 2) < 6, after: play.left > last.right,
+      chipBottom: chipCss.borderBottomWidth, keyBottom: keyCss.borderBottomWidth, keyBg: keyCss.backgroundImage.slice(0, 15),
+      translateBtn: !document.querySelector('#btnTranslate').hidden, hint: !!document.querySelector('#list .page-tr-hint').offsetParent };
+  })()`);
+  check('电脑上朗读按钮组紧跟在「简易瑞典语」后面、同一行', ctl.sameRow && ctl.after, JSON.stringify(ctl));
+  check('朗读按钮是立体的样子（渐变、加厚的下边），和话题按钮不同', parseFloat(ctl.keyBottom) >= 3 && parseFloat(ctl.chipBottom) <= 1 && /gradient/.test(ctl.keyBg), JSON.stringify(ctl));
+  check('有内置翻译时显示「全文翻译」按钮，不显示整页翻译的提示', ctl.translateBtn && !ctl.hint, JSON.stringify(ctl));
   const topicKeys = await evalJs('SV.sources.TOPICS.map((t) => t.key)');
   for (let i = 0; i < topicKeys.length; i++) {
     const key = topicKeys[i];
@@ -320,8 +337,10 @@ try {
   summary.desktopArticleLayout = lay2;
   check('电脑上正文用满宽度', lay2.boxW >= lay2.vw * 0.85, `正文 ${lay2.boxW}px / 视口 ${lay2.vw}px，字号 ${lay2.fontPx}px`);
   await shot('desktop-article');
+  const hdrD = await evalJs(`(() => { const b = document.querySelector('#btnBack'); const br = document.querySelector('#brand'); const t = document.querySelector('.tools'); if (!b || b.hidden) return null; const rb = b.getBoundingClientRect(), rr = br.getBoundingClientRect(), rt = t.getBoundingClientRect(); const de = document.documentElement; return { text: b.innerText.trim(), sameRow: Math.abs((rb.top + rb.bottom) / 2 - (rr.top + rr.bottom) / 2) < 8 && Math.abs((rt.top + rt.bottom) / 2 - (rr.top + rr.bottom) / 2) < 8, h: Math.round(rb.height), w: Math.round(rb.width), inView: rb.left >= 0 && rb.right <= de.clientWidth, clipped: b.scrollWidth > b.clientWidth + 1 }; })()`);
+  check('电脑上「← 返回列表」在顶栏标题旁边、同一行', hdrD && hdrD.sameRow && hdrD.inView && !hdrD.clipped && /返回「今日要闻」列表/.test(hdrD.text), JSON.stringify(hdrD));
   const firstId = (await state()).id;
-  await clickButtonText('#article .back-btn', '返回');
+  await clickButtonText('#btnBack', '返回');
   await waitFor(`SVApp.state().view === 'list'`, 5000);
   st = await state();
   check('「← 返回列表」回到原来的列表，标上「已读」', st.view === 'list' && await evalJs(`!!document.querySelector('#list .card.read[data-id=${JSON.stringify(firstId)}]')`), st.view);
@@ -349,6 +368,19 @@ try {
   await hover(5, 880);
   await sleep(900);
   check('鼠标移开后弹出框消失', !(await popupReport()));
+  // 「怎么用」：鼠标停在标题上出现，移开就消失，不挡话题按钮
+  await evalJs('window.scrollTo(0, 0)');
+  await sleep(200);
+  const br = await center('#brand');
+  await hover(br.x, br.y);
+  await sleep(300);
+  const g = await evalJs(`(() => { const g = document.querySelector('#guide'); if (g.hidden) return null; const r = g.getBoundingClientRect(); return { on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight, lines: g.querySelectorAll('li').length }; })()`);
+  check('鼠标停在顶栏标题上，出现「怎么用」，在屏幕内', g && g.on && g.lines >= 4, JSON.stringify(g));
+  await shot('desktop-guide');
+  const chipC = await center('#topics .chip[data-topic="sverige"]');
+  await hover(chipC.x, chipC.y);
+  await sleep(200);
+  check('鼠标移到话题按钮上，「怎么用」马上消失', await evalJs(`document.querySelector('#guide').hidden`));
   // 真实声音
   const voices = await evalJs(`speechSynthesis.getVoices().filter((v) => /^sv/i.test(v.lang)).map((v) => v.name)`);
   summary.realVoices = voices;
@@ -360,9 +392,15 @@ try {
   const curWord = await evalJs(`document.querySelector('#article .w.current')?.textContent || ''`);
   summary.realSpeech = { reader: sr.reader, si: sr.si, wi: sr.wi, wordEvents: sr.wordEvents, voice: sr.voice, curWord };
   console.log('  真实朗读 6 秒后：', JSON.stringify(summary.realSpeech));
-  await space();
-  await sleep(200);
-  check('真实朗读：空格暂停', (await state()).reader === 'paused', (await state()).reader);
+  if (sr.reader === 'speaking') {
+    await space();
+    await sleep(200);
+    check('真实朗读：空格暂停', (await state()).reader === 'paused', (await state()).reader);
+  } else {
+    // 微软的在线声音偶尔在无头浏览器里出错：页面应当停下（不卡住），并提示过
+    console.log('  真实的在线声音这次没读出来（语音服务出错），页面状态：', sr.reader);
+    check('真实朗读出错时停下，不卡住', sr.reader === 'paused' || sr.reader === 'idle', sr.reader);
+  }
   // 内置翻译（第一次要下载模型，无头里不一定成）
   const avail = await evalJs('SV.tr.builtinAvailability()');
   const tc = await center('#btnTranslate');
@@ -377,16 +415,12 @@ try {
   // ================= 2. 电脑、模拟朗读、MyMemory 代答 =================
   console.log('\n== 2. 电脑 1600×900：模拟朗读、空格和点击暂停、男女声、在线翻译');
   check('页面重新打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true }));
-  // 列表里翻译标题（要先同意用在线翻译）
-  const tl = await center('#btnTranslate');
-  await tap(tl.x, tl.y);
-  await sleep(500);
-  check('没有内置翻译时，先问要不要用在线翻译', await evalJs(`document.querySelector('#dlgConsent').open`));
-  await shot('desktop-consent');
-  await clickButtonText('#dlgConsent button', '使用在线翻译');
-  const titlesDone = await waitFor(`SVApp.state().listZh === SVApp.state().batch.length`, 30000, 300);
-  check('列表里「翻译标题」：每个标题下面有中文', titlesDone, `${(await state()).listZh}/${(await state()).batch.length}`);
-  await shot('desktop-list-translated');
+  // 没有内置翻译：不显示「全文翻译」按钮，在它的位置提示用浏览器自己的整页翻译
+  await waitFor(`document.body.classList.contains('no-builtin')`, 5000);
+  const noBi = await evalJs(`({ btn: !document.querySelector('#btnTranslate').hidden, hint: [...document.querySelectorAll('#list .page-tr-hint')].filter((x) => x.offsetParent).map((x) => x.textContent).join('') })`);
+  check('没有内置翻译时不显示「全文翻译」按钮', !noBi.btn);
+  check('列表上提示用浏览器自带的整页翻译', /整篇翻译：用浏览器自带的翻译功能/.test(noBi.hint), noBi.hint);
+  await shot('desktop-no-builtin-list');
   check('打开一篇文章', await openFirstCard(0));
   const pc2 = await center('#btnPlay');
   await tap(pc2.x, pc2.y);
@@ -448,22 +482,20 @@ try {
   await tap(rc.x, rc.y);
   s = await state();
   check('点「语速」改变语速', Math.abs(s.settings.rate - 1) < 0.01, String(s.settings.rate));
-  // 全文翻译（已经同意过在线翻译）
+  // 「本句译文」用 MyMemory（测试代答）
   await evalJs(`document.querySelector('#popup').hidden || document.querySelector('#main').click()`);
-  const tc2 = await center('#btnTranslate');
-  await tap(tc2.x, tc2.y);
-  const allDone = await waitFor('SVApp.state().translated > 0 && SVApp.state().translated === SVApp.state().blocks', 60000, 300);
-  s = await state();
-  check('全文翻译：每段下面都有中文', allDone, `${s.translated}/${s.blocks} 段`);
-  check('发给 MyMemory 的每段不超过 500 字节', mmRequests.length > 0 && mmRequests.every((r) => r.bytes <= 500), `${mmRequests.length} 次，最长 ${Math.max(0, ...mmRequests.map((r) => r.bytes))} 字节`);
+  check('文章页上也有整页翻译的提示', await evalJs(`!!document.querySelector('#article .page-tr-hint').offsetParent`));
+  const ws5 = await center('#article .body .w', 4);
+  await tap(ws5.x, ws5.y);
+  await sleep(400);
+  await clickButtonText('#popup .acts button', '本句译文');
+  await sleep(800);
+  const sentT = await evalJs(`document.querySelector('#popup .sent')?.textContent || ''`);
+  check('「本句译文」用在线翻译', /【译】/.test(sentT), sentT.slice(0, 40));
+  check('发给 MyMemory 的每段不超过 500 个字符', mmRequests.length > 0 && mmRequests.every((r) => r.q.length <= 500), `${mmRequests.length} 次，最长 ${Math.max(0, ...mmRequests.map((r) => r.q.length))} 字符 / ${Math.max(0, ...mmRequests.map((r) => r.bytes))} 字节`);
   check('发给 MyMemory 的请求不带电子邮件等参数', mmRequests.every((r) => r.params.every((k) => k === 'q' || k === 'langpair')), [...new Set(mmRequests.flatMap((r) => r.params))].join(','));
-  await evalJs('window.scrollTo(0, 0)');
-  await sleep(200);
-  await shot('desktop-translated');
-  const tbLabel = await evalJs(`document.querySelector('#btnTranslate .lbl').textContent`);
-  await tap(tc2.x, tc2.y);
-  const hiddenZh = await evalJs(`[...document.querySelectorAll('#article .zh')].every((z) => z.hidden)`);
-  check('再点「隐藏译文」把中文收起来', tbLabel === '隐藏译文' && hiddenZh, tbLabel);
+  await shot('desktop-sentence');
+  await evalJs(`document.querySelector('#main').click()`);
   const nonGl = await evalJs(`(() => { const ws = [...document.querySelectorAll('#article .body .w')]; return ws.findIndex((w) => w.textContent.length > 6 && !SV.glossary.lookup(w.textContent)); })()`);
   const wc4 = await center('#article .body .w', Math.max(0, nonGl));
   await tap(wc4.x, wc4.y);
@@ -485,12 +517,12 @@ try {
 
   // ================= 3. 手机 390×844 触摸 =================
   console.log('\n== 3. 手机 390×844 触摸');
-  check('手机上打开页面', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true }));
+  check('手机上打开页面（安卓 Chrome 的用户代理）', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA }));
   const ml = await layoutReport('#list');
   summary.phoneListLayout = ml;
   check('手机上列表没有横向溢出', ml.scrollW <= ml.vw, `${ml.scrollW} <= ${ml.vw}`);
   check('手机上列表用满宽度、一列', ml.boxW >= ml.vw - 40 && ml.columns === 1, `列表 ${ml.boxW}px / 视口 ${ml.vw}px，${ml.columns} 列`);
-  check('手机上播放栏的按钮都在屏幕内、字没有被截断', ml.playerFits && !ml.cutText.length, ml.cutText.join(','));
+  check('手机上朗读按钮都在屏幕内、字没有被截断', ml.playerFits && !ml.cutText.length, ml.cutText.join(','));
   check('手机上话题一行，可以横着滑', ml.chipsScrollable, `话题条宽 ${ml.chipsW}px`);
   await shot('phone-list');
   // 再点当前话题：换一批
@@ -519,7 +551,8 @@ try {
   await sleep(700);
   pr = await popupReport();
   check('手机上点最右边的词，弹出框也不出屏', pr && pr.onScreen, pr ? `${pr.word} ${pr.left}-${pr.right}/${pr.vw}` : '');
-  if (await popupReport()) { await tap(Math.round(ml.vw / 2), 40); await sleep(250); }
+  // 点文章开头的节目和时间那一行（不是词）关上弹出框；别点顶栏，那里有「← 列表」
+  if (await popupReport()) { const mt = await center('#article .meta'); await tap(mt.x, mt.y); await sleep(250); }
   if (await popupReport()) await evalJs(`document.querySelector('#main').click()`);
   const pp = await center('#btnPlay');
   await tap(pp.x, pp.y);
@@ -535,18 +568,38 @@ try {
   await sleep(300);
   check('手机上点「继续」接着读', (await state()).reader === 'speaking');
   await space();
-  const tp = await center('#btnTranslate');
-  await tap(tp.x, tp.y);
+  // 没有内置翻译：不显示「全文翻译」按钮，提示安卓 Chrome 自己的整页翻译
+  const hintP = await evalJs(`({ btn: !document.querySelector('#btnTranslate').hidden, hint: document.querySelector('#article .page-tr-hint')?.offsetParent ? document.querySelector('#article .page-tr-hint').textContent : '' })`);
+  check('手机上没有「全文翻译」按钮，提示安卓 Chrome 的「⋮ → 翻译…」', !hintP.btn && /点右上角 ⋮ →「翻译…」/.test(hintP.hint), JSON.stringify(hintP));
+  // 往下滚：话题和朗读按钮粘在顶上，还点得到
+  await evalJs('window.scrollTo(0, document.documentElement.scrollHeight)');
   await sleep(400);
-  if (await evalJs(`document.querySelector('#dlgConsent').open`)) await clickButtonText('#dlgConsent button', '使用在线翻译');
-  const phoneTr = await waitFor('SVApp.state().translated > 0 && SVApp.state().translated === SVApp.state().blocks', 60000, 300);
-  check('手机上全文翻译', phoneTr, `${(await state()).translated}/${(await state()).blocks}`);
+  const stick = await evalJs(`(() => { const bar = document.querySelector('#topbar').getBoundingClientRect(); const p = document.querySelector('#btnPlay').getBoundingClientRect(); return { barTop: Math.round(bar.top), playTop: Math.round(p.top), playBottom: Math.round(p.bottom), scrolled: Math.round(scrollY) }; })()`);
+  check('手机上往下滚以后，朗读按钮还粘在顶上', stick.scrolled > 200 && stick.barTop === 0 && stick.playTop >= 0 && stick.playBottom < 130, JSON.stringify(stick));
+  const pp2 = await evalJs(`(() => { const r = document.querySelector('#btnPlay').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  await tap(pp2.x, pp2.y);
+  await sleep(500);
+  check('手机上滚到下面也能点「朗读」', (await state()).reader === 'speaking');
+  await space();
+  await shot('phone-sticky-controls');
   await evalJs('window.scrollTo(0, 0)');
   await sleep(200);
-  await shot('phone-translated');
   const ml2 = await layoutReport('#article');
-  check('手机上翻译后也没有横向溢出', ml2.scrollW <= ml2.vw, `${ml2.scrollW} <= ${ml2.vw}`);
-  await clickButtonText('#article .back-btn', '返回');
+  check('手机上滚动以后也没有横向溢出', ml2.scrollW <= ml2.vw, `${ml2.scrollW} <= ${ml2.vw}`);
+  const hdrP = await evalJs(`(() => { const b = document.querySelector('#btnBack'); const br = document.querySelector('#brand'); const t = document.querySelector('.tools'); if (!b || b.hidden) return null; const rb = b.getBoundingClientRect(), rr = br.getBoundingClientRect(), rt = t.getBoundingClientRect(); const de = document.documentElement; return { text: b.innerText.trim(), sameRow: Math.abs((rb.top + rb.bottom) / 2 - (rr.top + rr.bottom) / 2) < 8 && Math.abs((rt.top + rt.bottom) / 2 - (rr.top + rr.bottom) / 2) < 8, h: Math.round(rb.height), w: Math.round(rb.width), inView: rb.left >= 0 && rb.right <= de.clientWidth, clipped: b.scrollWidth > b.clientWidth + 1 }; })()`);
+  check('手机上「← 列表」和标题、工具按钮在同一行，不截字，好点', hdrP && hdrP.sameRow && hdrP.inView && !hdrP.clipped && hdrP.h >= 36, JSON.stringify(hdrP));
+  // 点标题：打开「怎么用」，点别处关上
+  const brP = await center('#brand');
+  await tap(brP.x, brP.y);
+  await sleep(300);
+  const gP = await evalJs(`(() => { const g = document.querySelector('#guide'); if (g.hidden) return null; const r = g.getBoundingClientRect(); return { on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight, text: g.innerText.slice(0, 20) }; })()`);
+  check('手机上点标题打开「怎么用」，在屏幕内', gP && gP.on && /怎么用/.test(gP.text), JSON.stringify(gP));
+  await shot('phone-guide');
+  const metaP = await center('#article .meta');
+  await tap(metaP.x, metaP.y);
+  await sleep(300);
+  check('手机上点别处关上「怎么用」', await evalJs(`document.querySelector('#guide').hidden`));
+  await clickButtonText('#btnBack', '列表');
   await waitFor(`SVApp.state().view === 'list'`, 5000);
   check('手机上「← 返回列表」', (await state()).view === 'list');
   const hb = await center('#btnSettings');

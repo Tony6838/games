@@ -7,21 +7,45 @@
 
   // ---------- 设置 ----------
   const SET_KEY = 'sv.settings.v1';
-  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', online: null, tip: true, topic: 'idag' };
+  // online：浏览器没有内置翻译时用 MyMemory 在线翻译。默认开着，只有在「设置」里取消勾选才关（false）。
+  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', online: true, tip: true, topic: 'idag' };
   const S = Object.assign({}, DEFAULTS, SV.store.get(SET_KEY, {}));
   delete S.level; // 旧版本的「简易优先」设置，不再用
+  // 设置的版本：第一版在说明框里点「不用」会把在线翻译一直关着（Safari 上点词只看到「在线翻译已关闭」）。
+  // 现在在线翻译默认开着、不再先问，所以旧版本留下的状态一律改回默认一次；
+  // 这个版本以后在「设置」里自己关掉的（v = 3），照样保留。
+  if (S.v !== 3) { S.online = true; S.v = 3; }
   S.scale = SV.clamp(+S.scale || 1, 0.8, 1.8);
   S.rate = SV.clamp(+S.rate || 0.9, 0.5, 1.3);
   if (!['f', 'm'].includes(S.gender)) S.gender = 'f';
-  if (S.online !== true && S.online !== false) S.online = null;
+  if (S.online !== false) S.online = true;
   const save = () => SV.store.set(SET_KEY, S);
 
   const TOPICS = SV.sources.TOPICS;
+  // 「全文翻译」按钮只在浏览器有内置翻译（Translator API，今天是 Chrome、Edge 电脑版 138 起）时显示，
+  // 按功能检测，不看浏览器的名字：哪个浏览器以后有了这个接口，按钮就自动出现。整篇文章不再交给 MyMemory
+  // （Tony 定的，免费额度留给查词和本句译文）；没有内置翻译时，在按钮的位置提示用浏览器自己的整页翻译。
+  const UA = navigator.userAgent || '';
+  const IS_IOS = /iP(hone|ad|od)/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1); // iPadOS 默认报成 Mac
+  const IS_SAFARI = !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|MicroMessenger|YaBrowser|Mercury/i.test(UA) &&
+    (IS_IOS || (/AppleWebKit/.test(UA) && /Safari\//.test(UA) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(UA)));
+  const PAGE_TR_HINT = IS_SAFARI ? '整篇翻译：点地址栏「aA → 翻译成中文」'
+    : /Firefox\/|FxiOS/.test(UA) ? '整篇翻译：用地址栏的翻译图标'
+      : /Android/.test(UA) && /Chrome\//.test(UA) && !/EdgA|SamsungBrowser|OPR|YaBrowser|MicroMessenger/.test(UA) ? '整篇翻译：点右上角 ⋮ →「翻译…」'
+        : '整篇翻译：用浏览器自带的翻译功能';
+  let builtinOk = false; // 内置翻译能不能用（瑞典语→中文），开始时查一次
+  const noWholeTranslate = () => !builtinOk;
+  function setBuiltin(ok) {
+    builtinOk = ok;
+    document.body.classList.toggle('no-builtin', !ok); // 提示一行跟着这个 class 显示或隐藏
+    updateButtons();
+  }
   const BATCH = 9; // 一批几篇
   const els = {
-    topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'), tip: $('#tip'),
+    topbar: $('#topbar'), topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'), tip: $('#tip'),
     popup: $('#popup'), toast: $('#toast'), player: $('#player'),
     play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), translate: $('#btnTranslate'), next: $('#btnNext'),
+    back: $('#btnBack'), brand: $('#brand'), guide: $('#guide'),
   };
 
   // view：'loading' | 'list' | 'article' | 'message'
@@ -88,9 +112,10 @@
 
   let lastUserScroll = 0;
   ['wheel', 'touchmove'].forEach((ev) => window.addEventListener(ev, () => { lastUserScroll = Date.now(); }, { passive: true }));
+  // 屏幕上看得见文章的那一段：顶上粘着的话题和朗读按钮下面，到窗口底边
   function visibleBand() {
-    const top = els.topics.getBoundingClientRect().bottom + 10;
-    const bottom = els.player.getBoundingClientRect().top - 10;
+    const top = Math.max(0, els.topbar.getBoundingClientRect().bottom) + 10;
+    const bottom = window.innerHeight - 10;
     return { top, bottom };
   }
   function ensureVisible(el) {
@@ -125,6 +150,7 @@
     els.play.title = inArticle ? '朗读这篇文章（空格键也可以）' : '先在列表里选一篇文章';
     // 翻译
     const tl = els.translate.querySelector('.lbl');
+    els.translate.hidden = noWholeTranslate();
     els.translate.disabled = !(inArticle || inList);
     if (inList) {
       els.translate.title = '把列表里的标题翻译成中文';
@@ -173,6 +199,7 @@
     cur.view = view;
     els.list.hidden = view !== 'list';
     els.article.hidden = view === 'list';
+    els.back.hidden = view !== 'article';
     document.body.dataset.view = view;
     updateButtons();
   }
@@ -280,6 +307,7 @@
     els.list.append(h('div', { class: 'list-head' },
       h('h2', null, topic.zh),
       h('span', null, `第 ${cur.batchNo} 批 · ${cur.batch.length} 篇 · 选一篇来读；再点一次「${topic.zh}」换一批`)));
+    els.list.append(h('p', { class: 'safari-hint page-tr-hint', lang: 'zh-CN' }, PAGE_TR_HINT));
     const ol = h('ol', { class: 'cards' });
     for (const it of cur.batch) {
       const a = h('a', { class: 'card' + (read.has(it.id) ? ' read' : ''), href: '?topic=' + topic.key + '&a=' + encodeURIComponent(it.id), 'data-id': it.id },
@@ -360,13 +388,16 @@
     art.dataset.id = item.id;
     const today = SV.stockholmDay(new Date()) === item.day;
     const back = () => h('button', { type: 'button', class: 'back-btn', lang: 'zh-CN', onclick: (e) => { e.currentTarget.blur(); backToList(false); } }, `← 返回「${topic.zh}」列表`);
-    art.append(h('div', { class: 'art-top', lang: 'zh-CN' }, back()));
+    // 文章开头的「返回列表」放在顶栏标题旁边（setView 显示它），省一行
+    els.back.querySelector('.long').textContent = `← 返回「${topic.zh}」列表`;
+    els.back.title = `返回「${topic.zh}」列表`;
     art.append(h('div', { class: 'meta', lang: 'zh-CN' },
       item.easy ? h('span', { class: 'badge', title: '这篇是用简易瑞典语写的' }, '简易瑞典语') : null,
       today ? h('span', { class: 'badge today' }, '今天') : null,
       h('span', { lang: 'sv' }, item.program),
       h('span', null, when(item, true)),
       h('a', { href: item.link, target: '_blank', rel: 'noopener' }, '原文 ↗')));
+    art.append(h('p', { class: 'safari-hint page-tr-hint', lang: 'zh-CN' }, PAGE_TR_HINT));
     const title = h('h1');
     const body = h('div', { class: 'body' });
     art.append(title, body);
@@ -442,9 +473,10 @@
   function trErrorText(e) {
     if (!e) return '翻译失败';
     if (e.code === 'needGesture') return '点一下这个词，启用浏览器内置的翻译';
-    if (e.code === 'none') return S.online === false ? '在线翻译已关闭（可以在「设置」里打开）' : '这个浏览器没有可用的翻译';
+    if (isOffError(e)) return '在线翻译关着（开关在顶部齿轮按钮「设置」里），这个浏览器又没有内置翻译。';
+    if (e.code === 'none') return '这个浏览器没有可用的翻译';
     if (e.code === 'quota') return '今天的免费在线翻译额度用完了，明天再来，或者换 Chrome / Edge 电脑版（有内置翻译）';
-    if (e.code === 'network') return '连不上在线翻译服务，请检查网络';
+    if (e.code === 'network') return '在线翻译服务没有回应（网络不通、今天的额度用完了，或者被内容拦截器挡住了）';
     return e.message || '翻译失败';
   }
   const ENGINE = { builtin: '浏览器内置翻译', mymemory: 'MyMemory 在线翻译', cache: '' };
@@ -497,17 +529,7 @@
         const s = cur.model && cur.model.sentences[si];
         if (!s) return;
         sentBox.hidden = false;
-        sentBox.textContent = '翻译中…';
-        placePopup();
-        try {
-          const r = await translateText(s.text);
-          if (token !== pop.token) return;
-          sentBox.textContent = r ? r.zh : '没有翻译（在线翻译没有打开）';
-        } catch (err) {
-          if (token !== pop.token) return;
-          sentBox.textContent = trErrorText(err);
-        }
-        placePopup();
+        fillInto(sentBox, () => translateText(s.text), 'sent', 'sent err', null);
       });
       acts.append(bSent);
       p.append(acts, sentBox);
@@ -520,21 +542,47 @@
     placePopup();
     if (!needMt) return;
     const short = isWord || text.split(/\s+/).length <= 3;
-    const job = short
+    fillInto(mt, () => (short
       ? SV.tr.translate(text, 'word', { gesture: pinned, online: S.online !== false, onDownload })
-      : translateText(text);
-    Promise.resolve(job).then((r) => {
+      : translateText(text)), 'mt', 'mt err', eng);
+  }
+
+  // 在线翻译是不是因为被关掉才没法用
+  function isOffError(e) {
+    return !!e && (e.code === 'disabled' || (e.code === 'none' && S.online === false));
+  }
+  // 在弹出框的一个格子里放译文。在线翻译关着时，给一个「打开在线翻译」按钮：
+  // 点了先看同样的说明（同意后才打开），然后马上重新翻译。
+  function fillInto(box, run, okClass, errClass, eng) {
+    const token = pop.token;
+    box.className = errClass.replace(' err', '') + ' wait';
+    box.textContent = '翻译中…';
+    placePopup();
+    Promise.resolve().then(run).then((r) => {
       if (token !== pop.token) return;
-      if (!r) { mt.textContent = '没有翻译（在线翻译没有打开）'; mt.className = 'mt err'; } else {
-        mt.textContent = r.zh;
-        mt.className = 'mt';
-        if (ENGINE[r.engine]) eng.textContent = ENGINE[r.engine];
+      if (!r) {
+        box.textContent = '没有翻译';
+        box.className = errClass;
+      } else {
+        box.textContent = r.zh;
+        box.className = okClass;
+        if (eng && ENGINE[r.engine]) eng.textContent = ENGINE[r.engine];
       }
       placePopup();
     }, (err) => {
       if (token !== pop.token) return;
-      mt.textContent = trErrorText(err);
-      mt.className = 'mt err';
+      box.textContent = trErrorText(err);
+      box.className = errClass;
+      if (isOffError(err)) {
+        const b = h('button', { type: 'button', class: 'primary on-btn' }, '打开在线翻译');
+        b.addEventListener('click', (e) => {
+          e.stopPropagation();
+          pop.pinned = true;
+          turnOnline();
+          fillInto(box, run, okClass, errClass, eng);
+        });
+        box.append(h('br'), b);
+      }
       placePopup();
     });
   }
@@ -549,45 +597,67 @@
     openPopup({ wordEl, text: s.words[wi].text, pinned, si, wi });
   }
 
-  // 整句、整段、标题：内置翻译优先；要用 MyMemory 的，先问过用户（返回 null 表示用户不用在线翻译）
+  // 整句、整段、标题：浏览器内置翻译优先（Chrome、Edge 电脑版），没有的话用 MyMemory（默认开着）。
+  // 返回 { ok: true, online, mm } 或 { ok: false, why: 'disabled'（在「设置」里关了在线翻译） }
   async function decideOnline() {
     const avail = await SV.tr.builtinAvailability();
     const builtinOk = avail === 'ready' || avail === 'available' || avail === 'downloadable' || avail === 'downloading';
-    if (builtinOk) return { online: S.online === true };
-    if (S.online === false) return null;
-    if (S.online === null && !(await askConsent())) return null;
-    return { online: true, mm: true };
+    if (builtinOk) return { ok: true, online: S.online !== false };
+    if (S.online === false) return { ok: false, why: 'disabled' };
+    return { ok: true, online: true, mm: true };
   }
   async function translateText(text) {
     const cached = SV.tr.cachedText(text);
     if (cached) return { zh: cached, engine: 'cache' };
     const d = await decideOnline();
-    if (!d) return null;
+    if (!d.ok) { const e = new Error('在线翻译关着'); e.code = 'disabled'; throw e; }
     return SV.tr.translate(text, 'text', { gesture: true, online: d.online, onDownload });
   }
 
-  function askConsent() {
-    const dlg = $('#dlgConsent');
-    return new Promise((resolve) => {
-      if (!dlg.showModal) { resolve(window.confirm('这个浏览器没有内置翻译。要用 MyMemory 在线翻译吗？（文字会发给 MyMemory 的服务器，每天约 5000 字符的免费额度）')); return; }
-      const done = () => {
-        dlg.removeEventListener('close', done);
-        const ok = dlg.returnValue === 'yes';
-        if (dlg.returnValue === 'yes' || dlg.returnValue === 'no') {
-          S.online = ok;
-          save();
-          syncSettingsForm();
-        }
-        resolve(ok);
-      };
-      dlg.returnValue = '';
-      dlg.addEventListener('close', done);
-      dlg.showModal();
-    });
+  // 「打开在线翻译」按钮：一点就打开（关掉的开关在顶部齿轮按钮「设置」里）
+  function turnOnline() {
+    S.online = true;
+    save();
+    syncSettingsForm();
+    toast('已打开在线翻译（MyMemory）。不想用时，可以在顶部齿轮按钮「设置」里关掉。', 4000);
+  }
+
+  // ---------- 翻译出问题时，在页面上留一条说明（提示条几秒就消失，容易错过） ----------
+  // 全文翻译、翻译标题只用浏览器内置的翻译，所以这里的问题都是内置翻译的
+  function trProblemText(e) {
+    if (e && e.code === 'needGesture') return '浏览器的翻译模型还没下载好：再点一次「全文翻译」，开始下载。';
+    return '浏览器内置的翻译这次没成功' + (e && e.message ? '（' + e.message + '）' : '') + '。可以再试一次，或者用浏览器自带的「翻译成中文」（在网页上点右键）。';
+  }
+  function clearTrProblem() {
+    const old = els.article.querySelector('.tr-problem');
+    if (old) old.remove();
+  }
+  function showTrProblem(e, retry) {
+    const text = trProblemText(e);
+    const box = h('div', { class: 'tr-problem', role: 'alert', lang: 'zh-CN' }, h('p', null, text));
+    const acts = h('div', { class: 'next-row' });
+    acts.append(h('button', { type: 'button', onclick: () => retry() }, '再试一次'));
+    acts.append(h('button', { type: 'button', onclick: () => box.remove() }, '关掉'));
+    box.append(acts);
+    if (cur.view === 'list') {
+      toast(text, 6000);
+      els.notice.textContent = text;
+      els.notice.hidden = false;
+      return;
+    }
+    clearTrProblem();
+    const meta = els.article.querySelector('.meta');
+    if (meta) meta.after(box);
+    else els.article.prepend(box);
+    // 说明放在文章开头；看不见的话滚过去
+    const r = box.getBoundingClientRect();
+    const band = visibleBand();
+    if (r.top < band.top || r.bottom > band.bottom) box.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
 
   // ---------- 全文翻译（文章）/ 翻译标题（列表） ----------
   async function translateAll() {
+    if (noWholeTranslate()) return; // 没有内置翻译时按钮不显示（整篇文章不交给 MyMemory）
     if (cur.view === 'list') return translateTitles();
     if (cur.view !== 'article' || !cur.model || cur.translating) return;
     const model = cur.model;
@@ -599,31 +669,26 @@
       updateButtons();
       return;
     }
+    clearTrProblem();
     cur.zhShown = true;
     for (const b of blocks) if (b.zhEl) b.zhEl.hidden = false;
-    const d = await decideOnline();
-    if (!d) {
-      if (S.online === false) toast('这个浏览器没有内置翻译，在线翻译也关着。可以在「设置」里打开在线翻译。', 5000);
-      return;
-    }
-    if (d.mm) {
-      const u = SV.tr.mmUsage();
-      const need = todo.reduce((n, b) => n + b.text.length, 0);
-      if (u.chars + need > SV.tr.MM_LIMIT) toast(`今天已经用了约 ${u.chars} 个字符的在线翻译，这篇约 ${need} 个字符，可能超过每天约 5000 字符的免费额度。`, 6000);
-    }
-    if (cur.model !== model) return;
     cur.translating = true;
     updateButtons(0);
     let n = 0;
     let failure = null;
     for (const b of todo) {
+      // 先放一个「翻译中…」，让人看见在翻哪一段
+      const zh = h('span', { class: 'zh wait', lang: 'zh-CN' }, '翻译中…');
+      b.el.append(zh);
       try {
-        const r = await SV.tr.translate(b.text, 'text', { gesture: true, online: d.online, onDownload });
+        // online: false：整篇文章只交给浏览器内置的翻译，不交给 MyMemory
+        const r = await SV.tr.translate(b.text, 'text', { gesture: true, online: false, onDownload });
         if (cur.model !== model) return;
-        const zh = h('span', { class: 'zh', lang: 'zh-CN' }, r.zh);
-        b.el.append(zh);
+        zh.textContent = r.zh;
+        zh.className = 'zh';
         b.zhEl = zh;
       } catch (e) {
+        zh.remove();
         failure = e;
         break;
       }
@@ -633,7 +698,7 @@
     if (cur.model !== model) return;
     cur.translating = false;
     updateButtons();
-    if (failure) toast(trErrorText(failure), 6000);
+    if (failure) showTrProblem(failure, translateAll);
   }
 
   async function translateTitles() {
@@ -644,11 +709,6 @@
       cur.listZh = !cur.listZh;
       for (const c of cards) c.querySelector('.zh').hidden = !cur.listZh;
       updateButtons();
-      return;
-    }
-    const d = await decideOnline();
-    if (!d) {
-      if (S.online === false) toast('这个浏览器没有内置翻译，在线翻译也关着。可以在「设置」里打开在线翻译。', 5000);
       return;
     }
     const batch = cur.batch;
@@ -662,7 +722,7 @@
       if (c.querySelector('.zh')) { n++; continue; }
       const it = batch.find((x) => x.id === c.dataset.id);
       try {
-        const r = await SV.tr.translate(it.title, 'text', { gesture: true, online: d.online, onDownload });
+        const r = await SV.tr.translate(it.title, 'text', { gesture: true, online: false, onDownload });
         if (cur.batch !== batch) break;
         c.querySelector('.c-title').after(h('span', { class: 'zh', lang: 'zh-CN' }, r.zh));
       } catch (e) {
@@ -674,7 +734,7 @@
     }
     cur.listTranslating = false;
     updateButtons();
-    if (failure) toast(trErrorText(failure), 6000);
+    if (failure) showTrProblem(failure, translateTitles);
   }
 
   // ---------- 事件 ----------
@@ -748,7 +808,7 @@
   // 空格：暂停 / 继续；Esc：关掉弹出框
   let spaceHandled = false;
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (pop.open) hidePopup(); return; }
+    if (e.key === 'Escape') { if (pop.open) hidePopup(); if (!els.guide.hidden) hideGuide(); return; }
     if (e.code !== 'Space' && e.key !== ' ') return;
     if (document.querySelector('dialog[open]') || cur.view !== 'article') return;
     const t = e.target;
@@ -823,6 +883,23 @@
     if (d.showModal) d.showModal();
   });
   $('#btnTipClose').addEventListener('click', () => { els.tip.hidden = true; S.tip = false; save(); });
+  els.back.addEventListener('click', () => { els.back.blur(); backToList(false); });
+
+  // 「怎么用」小说明：鼠标停在顶栏标题上时出现，移开就消失（不挡住下面的话题按钮）；
+  // 手机上点一下标题打开，点别处关上（点到的按钮照常起作用）。
+  let guidePinned = false;
+  const showGuide = (pin) => { els.guide.hidden = false; guidePinned = guidePinned || !!pin; };
+  const hideGuide = () => { els.guide.hidden = true; guidePinned = false; };
+  els.brand.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') showGuide(false); });
+  els.brand.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !guidePinned) hideGuide(); });
+  els.brand.addEventListener('click', () => { if (guidePinned) hideGuide(); else showGuide(true); });
+  els.brand.addEventListener('focus', () => showGuide(false));
+  els.brand.addEventListener('blur', () => { if (!guidePinned) hideGuide(); });
+  els.brand.addEventListener('keydown', (e) => { if (e.key === 'Enter') { if (els.guide.hidden) showGuide(true); else hideGuide(); } });
+  document.addEventListener('pointerdown', (e) => {
+    if (els.guide.hidden || els.brand.contains(e.target) || els.guide.contains(e.target)) return;
+    hideGuide();
+  }, true);
 
   // ---------- 设置对话框 ----------
   const selVoice = $('#selVoice');
@@ -872,7 +949,7 @@
     let t;
     if (a === 'ready' || a === 'available') t = '浏览器内置翻译：可用（在本机翻译，文字不离开这台设备，不限量）。';
     else if (a === 'downloadable' || a === 'downloading') t = '浏览器内置翻译：可用。第一次用时浏览器要下载瑞典语→中文的翻译模型（点「全文翻译」或点一个词就开始）。';
-    else t = '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有），会用 MyMemory 在线翻译。';
+    else t = '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）。';
     if (u.chars) t += ` 今天已用在线翻译约 ${u.chars} 个字符。`;
     $('#trNote').textContent = t;
   }
@@ -887,6 +964,8 @@
     if ($('#dlgSettings').open) fillVoiceSelect();
   });
   save();
+  // 内置翻译能不能用：决定显示「全文翻译」按钮，还是显示整页翻译的提示
+  SV.tr.builtinAvailability().then((a) => setBuiltin(a !== 'unavailable'), () => setBuiltin(false));
   const params = new URLSearchParams(location.search);
   const first = TOPICS.find((t) => t.key === params.get('topic')) || TOPICS.find((t) => t.key === S.topic) || TOPICS[0];
   showTopic(first, false);

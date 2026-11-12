@@ -92,7 +92,8 @@
     return e;
   }
 
-  // q 最多 500 字节；一次只能翻一段（MyMemory 的条款）。不带 de（电子邮件）、key 等参数。
+  // q 最多 500 个字符（实测：超过时回 200，responseStatus 403「QUERY LENGTH LIMIT EXCEEDED」）；
+  // 一次只能翻一段（MyMemory 的条款）。不带 de（电子邮件）、key 等参数。
   async function myMemoryOne(text) {
     const url = 'https://api.mymemory.translated.net/get?langpair=sv%7Czh-CN&q=' + encodeURIComponent(text);
     let r;
@@ -107,6 +108,8 @@
     const out = j && j.responseData && j.responseData.translatedText;
     if (j.quotaFinished || /MYMEMORY WARNING/i.test(out || '') || String(j.responseStatus) === '429') throw err('quota', '今天的免费在线翻译额度用完了');
     if (String(j.responseStatus) !== '200' || !out) throw err('server', '在线翻译服务出错：' + (j.responseDetails || j.responseStatus));
+    // 出错时 MyMemory 也可能回 200，把英文大写的错误说明放在「译文」里：不能当译文显示
+    if (/QUERY LENGTH LIMIT|INVALID (LANGUAGE|SOURCE|TARGET|EMAIL)|PLEASE SELECT|NO QUERY SPECIFIED/.test(out)) throw err('server', '在线翻译服务出错：' + out);
     mmAdd(text.length);
     return decodeEntities(out);
   }
