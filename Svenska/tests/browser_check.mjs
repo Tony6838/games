@@ -275,6 +275,24 @@ async function clickButtonText(sel, text) {
   return true;
 }
 
+// 每个按钮都要有瑞典文提示：data-sv 是瑞典文（有拉丁字母、没有汉字），title 的第一行就是它
+async function tipAudit() {
+  return evalJs(`(() => {
+    const all = [...document.querySelectorAll('button')];
+    const bad = all.filter((b) => {
+      const sv = b.dataset.sv || '';
+      return !sv || /[\\u3400-\\u9fff]/.test(sv) || !/[A-Za-zÅÄÖåäö]/.test(sv) || !(b.title || '').startsWith(sv);
+    }).map((b) => (b.id ? '#' + b.id : '') + '「' + b.textContent.trim().slice(0, 12) + '」');
+    return { n: all.length, bad };
+  })()`);
+}
+async function longPress(x, y, ms = 800) {
+  await send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+  await sleep(ms);
+}
+const svTip = () => evalJs(`(() => { const t = document.querySelector('.svtip'); if (!t || t.hidden) return null; const r = t.getBoundingClientRect(); const de = document.documentElement;
+  return { text: t.innerText.replace(/\\n/g, ' / '), inView: r.left >= 0 && r.top >= 0 && r.right <= de.clientWidth + 0.5 && r.bottom <= innerHeight + 0.5, inDialog: !!t.closest('dialog[open]') }; })()`);
+
 const summary = { url: baseUrl, topics: [] };
 try {
   // ================= 1. 电脑、真实的朗读和翻译 =================
@@ -287,6 +305,12 @@ try {
   check('电脑上列表用满宽度', lay.boxW >= lay.vw * 0.85, `列表 ${lay.boxW}px / 视口 ${lay.vw}px，${lay.columns} 列`);
   check('电脑上没有横向滚动', lay.scrollW <= lay.vw, `${lay.scrollW} <= ${lay.vw}`);
   await shot('desktop-list');
+  let ta = await tipAudit();
+  check('列表页：每个按钮都有瑞典文提示（title 第一行是瑞典文）', ta.n >= 30 && !ta.bad.length, `${ta.n} 个按钮${ta.bad.length ? '，没有的：' + ta.bad.join('、') : ''}`);
+  const chipTips = await evalJs(`[...document.querySelectorAll('#topics .chip')].map((b) => b.dataset.sv)`);
+  check('21 个话题按钮各有自己的瑞典文名字', chipTips.length === 21 && new Set(chipTips).size === 21, chipTips.join('、'));
+  const iconTip = await evalJs(`document.querySelector('#btnSettings').title`);
+  check('提示是两行：瑞典文，然后是中文说明', /^Inställningar\n设置/.test(iconTip), JSON.stringify(iconTip));
   // 朗读按钮组紧跟在最后一个话题「简易瑞典语」后面，同一行，样子是立体按键，和话题按钮不一样
   await waitFor(`!document.querySelector('#btnTranslate').hidden || document.body.classList.contains('no-builtin')`, 8000);
   const ctl = await evalJs(`(() => {
@@ -365,6 +389,8 @@ try {
   check('鼠标悬停在词上弹出中文', !!pr && pr.word === wc.text && (pr.mt || pr.gl).length > 0 && !/翻译中/.test(pr.mt + pr.gl), pr ? `${pr.word} → ${pr.gl} ${pr.mt} ${pr.eng}` : '没有弹出');
   check('悬停弹出框在屏幕内', pr && pr.onScreen, pr ? JSON.stringify(pr) : '');
   await shot('desktop-hover');
+  ta = await tipAudit();
+  check('文章页和查词弹出框：每个按钮都有瑞典文提示', !ta.bad.length && (await evalJs(`document.querySelectorAll('#popup button[data-sv]').length`)) >= 3, `${ta.n} 个按钮${ta.bad.length ? '，没有的：' + ta.bad.join('、') : ''}`);
   await hover(5, 880);
   await sleep(900);
   check('鼠标移开后弹出框消失', !(await popupReport()));
@@ -429,6 +455,7 @@ try {
   const hl = await evalJs(`({ word: document.querySelector('#article .w.current')?.textContent || '', sent: !!document.querySelector('#article .s.reading') })`);
   check('点「朗读」开始读，句子和词高亮', s.reader === 'speaking' && hl.sent && hl.word, `${s.reader} 第 ${s.si} 句第 ${s.wi} 词「${hl.word}」，声音 ${s.voice}`);
   check('默认用女声 Sofie', /Sofie/.test(s.voice || ''), s.voice);
+  check('朗读时「暂停」按钮的瑞典文提示是 Pausa', (await evalJs(`document.querySelector('#btnPlay').dataset.sv`)) === 'Pausa');
   // 正在读的词：浅色是整块黄底；深色（夜间）是黄色下划线，没有黄底，字是正文的颜色
   const wordStyle = () => evalJs(`(() => { const w = document.querySelector('#article .w.current'); if (!w) return null;
     const c = getComputedStyle(w), a = getComputedStyle(document.querySelector('#article'));
@@ -452,6 +479,7 @@ try {
   await sleep(700);
   const s2b = await state();
   check('暂停后光标不动', s2b.si === pausedAt.si && s2b.wi === pausedAt.wi);
+  check('暂停时「继续」按钮的瑞典文提示是 Fortsätt', (await evalJs(`document.querySelector('#btnPlay').dataset.sv`)) === 'Fortsätt');
   await shot('desktop-paused');
   await darkMode(true);
   await sleep(150);
@@ -548,6 +576,16 @@ try {
   check('手机上朗读按钮都在屏幕内、字没有被截断', ml.playerFits && !ml.cutText.length, ml.cutText.join(','));
   check('手机上话题一行，可以横着滑', ml.chipsScrollable, `话题条宽 ${ml.chipsW}px`);
   await shot('phone-list');
+  // 手机上没有悬停：按住按钮半秒显示瑞典文提示，松手不算点击（男女声不变）
+  const gender0 = (await state()).settings.gender;
+  const vbP = await center('#btnVoice');
+  await longPress(vbP.x, vbP.y);
+  const lp = await svTip();
+  await shot('phone-long-press-tip');
+  await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(400);
+  check('手机上按住按钮半秒，显示瑞典文提示，在屏幕内', lp && /röst/.test(lp.text) && lp.inView, JSON.stringify(lp));
+  check('手机上按住看提示，松手不算点击', (await state()).settings.gender === gender0, `${gender0} → ${(await state()).settings.gender}`);
   // 再点当前话题：换一批
   const b1 = (await state()).batch;
   const activeChip = await center('#topics .chip.active');
@@ -631,6 +669,16 @@ try {
   const dlg = await evalJs(`(() => { const d = document.querySelector('#dlgSettings'); const r = d.getBoundingClientRect(); return { open: d.open, left: r.left, right: r.right, vw: document.documentElement.clientWidth, voices: d.querySelector('#selVoice').options.length }; })()`);
   check('手机上设置对话框在屏幕内，列出声音', dlg.open && dlg.left >= 0 && dlg.right <= dlg.vw && dlg.voices >= 3, JSON.stringify(dlg));
   await shot('phone-settings');
+  // 对话框里的按钮：提示要放进对话框（最上层）才看得见；按住「试听」不应该真的读
+  const spoken0 = await evalJs('__speechLog.length');
+  const tvP = await evalJs(`(() => { const r = document.querySelector('#btnTryVoice').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`);
+  await longPress(tvP.x, tvP.y);
+  const lp2 = await svTip();
+  await shot('phone-settings-long-press-tip');
+  await send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await sleep(400);
+  check('手机上对话框里按住按钮，提示显示在对话框上面', lp2 && /Provlyssna/.test(lp2.text) && lp2.inDialog && lp2.inView, JSON.stringify(lp2));
+  check('手机上按住「试听」看提示，松手不试听', (await evalJs('__speechLog.length')) === spoken0);
   await evalJs(`document.querySelector('#dlgSettings').close()`);
 } catch (e) {
   check('测试脚本没有出错', false, e.stack || String(e));

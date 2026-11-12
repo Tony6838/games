@@ -32,10 +32,11 @@
     <span class="more">更多说明：右上角的「?」</span>
   </div>
   <div class="tools">
-    <button type="button" id="btnSmaller" class="icon-btn" title="字小一点" aria-label="字小一点">A<small>−</small></button>
-    <button type="button" id="btnBigger" class="icon-btn" title="字大一点" aria-label="字大一点">A<small>+</small></button>
-    <button type="button" id="btnHelp" class="icon-btn" title="用法" aria-label="用法">?</button>
-    <button type="button" id="btnSettings" class="icon-btn" title="设置" aria-label="设置">
+    <!-- 每个按钮的提示（第一行瑞典文，第二行中文）在 js/app.js 里用 tip() 加 -->
+    <button type="button" id="btnSmaller" class="icon-btn" aria-label="字小一点">A<small>−</small></button>
+    <button type="button" id="btnBigger" class="icon-btn" aria-label="字大一点">A<small>+</small></button>
+    <button type="button" id="btnHelp" class="icon-btn" aria-label="用法">?</button>
+    <button type="button" id="btnSettings" class="icon-btn" aria-label="设置">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="17" r="2.6" fill="none" stroke="currentColor" stroke-width="2"/></svg>
     </button>
   </div>
@@ -49,10 +50,10 @@
       <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h4.2v15H6zM13.8 4.5H18v15h-4.2z" fill="currentColor"/></svg>
       <span class="lbl">朗读</span>
     </button>
-    <button type="button" id="btnRate" title="语速"><b>0.9×</b><span class="lbl">语速</span></button>
-    <button type="button" id="btnVoice" title="切换男声、女声"><b>女</b><span class="lbl">女声</span></button>
-    <button type="button" id="btnTranslate" title="把整篇文章翻译成中文"><b>译</b><span class="lbl">全文翻译</span></button>
-    <button type="button" id="btnNext" title="下一篇"><b>
+    <button type="button" id="btnRate"><b>0.9×</b><span class="lbl">语速</span></button>
+    <button type="button" id="btnVoice"><b>女</b><span class="lbl">女声</span></button>
+    <button type="button" id="btnTranslate"><b>译</b><span class="lbl">全文翻译</span></button>
+    <button type="button" id="btnNext"><b>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span class="lbl">下一篇</span></button>
   </div>
 </nav>
@@ -120,6 +121,7 @@
       <li><b>简易瑞典语</b>：最后一个话题，是 SR 专门用简单的瑞典语写的新闻；别的话题都是普通的瑞典新闻。</li>
       <li><b>声音</b>：点「女声 / 男声」切换；在「设置」里可以选具体的声音和语速。声音是你的设备自带的：Edge 浏览器有微软的瑞典语在线声音（Sofie 女声、Mattias 男声），苹果设备有 Alva、Klara、Oskar。</li>
       <li><b>字号</b>：右上角的 A− 和 A+。</li>
+      <li><b>按钮的瑞典文</b>：鼠标停在任何一个按钮上（手机上按住按钮半秒），显示这个按钮的瑞典文说法和中文说明，顺便学几个词。手机上按住看提示，松手不算点了按钮。</li>
     </ul>
     <p class="note">文章来自瑞典广播电台（Sveriges Radio）的开放接口，版权归 Sveriges Radio 所有。本站在你打开时从 SR 读取，不保存、不修改，每篇都附原文链接，在 SR 网站上还可以听电台的原声。</p>
     <div class="dlg-actions"><button value="close" class="primary">好</button></div>

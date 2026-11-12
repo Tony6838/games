@@ -293,6 +293,17 @@ body.speaking .player .play .i-pause { display: inline; }
   max-width: min(560px, calc(100vw - 24px)); padding: 10px 16px; border-radius: 12px;
   background: #222a33; color: #fff; font-size: 15px; line-height: 1.5; box-shadow: var(--shadow); text-align: center;
 }
+/* 按钮的瑞典文提示：手机、平板上按住按钮时显示（电脑上用浏览器自己的 title 提示） */
+.svtip {
+  position: fixed; z-index: 50; left: 8px; top: 8px; pointer-events: none;
+  max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: 10px;
+  background: #222a33; color: #fff; border: 1px solid rgba(255, 255, 255, .16); box-shadow: var(--shadow);
+  font-family: var(--ui-font); line-height: 1.4; text-align: left;
+}
+.svtip b { display: block; font-size: 17px; }
+.svtip span { display: block; margin-top: 2px; font-family: var(--zh-font); font-size: 13px; color: #c9d1da; }
+/* 按住按钮看提示时，别选中按钮上的字，也别弹出系统菜单 */
+button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 
 /* ---------- 对话框 ---------- */
 .dlg {

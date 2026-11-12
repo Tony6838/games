@@ -13,90 +13,91 @@
   const G = [83, 5526, 1637, 5335];
   const P4 = [103, 104, 96, 114]; // P4 斯德哥尔摩、哥德堡、马尔默、乌普萨拉的地方新闻
 
+  // zh：话题按钮上的中文名；sv：瑞典文名，是话题按钮的瑞典文提示（每个按钮都有瑞典文提示）。
   // 关键词写法：普通词按词头匹配（regering 也匹配 regeringen、regeringsbildning），
   // 「=」开头的必须整词相同，「_」表示词组里的空格，「+」开头的算两倍分。都用小写。
   // all：这些节目的文章不看关键词，全部属于这个话题。min：至少要几分才算（默认 3，见 score）。strict：不够分时不拿沾边的文章充数。core：「+」词至少要出现几次（标题里出现算两次）。
   // 简易瑞典语只是最后一个单独的话题，别的话题都用普通的新闻。
   const TOPICS = [
-    { key: 'idag', zh: '今日要闻', feeds: [83, 5526, 1637, 5335], all: [83, 5526, 1637, 5335], kw: '' },
+    { key: 'idag', zh: '今日要闻', sv: 'Dagens nyheter', feeds: [83, 5526, 1637, 5335], all: [83, 5526, 1637, 5335], kw: '' },
     {
-      key: 'sverige', zh: '瑞典', feeds: [83, ...P4, 5526], all: P4,
+      key: 'sverige', zh: '瑞典', sv: 'Sverige', feeds: [83, ...P4, 5526], all: P4,
       kw: '=sverige sveriges svensk stockholm göteborg malmö uppsala skåne norrland lappland skellefteå umeå luleå kiruna linköping norrköping örebro västerås jönköping gävle sundsvall gotland halland värmland dalarna småland smhi polisen kommunen kommuner regionen riksdag regering försäkringskassan migrationsverket skatteverket arbetsförmedlingen folkhälsomyndigheten',
     },
     {
-      key: 'politik', zh: '政治', feeds: [...G, 438], all: [],
+      key: 'politik', zh: '政治', sv: 'Politik', feeds: [...G, 438], all: [],
       kw: 'politik regering riksdag minister statsminister partiledar =parti =partiet =partier =partierna opposition budget socialdemokrat moderat sverigedemokrat vänsterparti centerparti liberalerna kristdemokrat miljöparti talman =val =valet valrörelse valresultat riksdagsval väljar regeringsbildning övergångsregering lagförslag proposition president presidentval parlament kongress senat premiärminister eu-kommission kommunfullmäktige demokrati diktatur sanktion',
     },
     {
-      key: 'varlden', zh: '国际', feeds: [...G, 438, 4773, 2946, 5459], all: [4773, 2946, 5459],
+      key: 'varlden', zh: '国际', sv: 'Världen', feeds: [...G, 438, 4773, 2946, 5459], all: [4773, 2946, 5459],
       kw: '=usa amerikansk trump ryssland rysk putin ukraina ukrain kiev kyiv =eu europeiska =fn =nato israel gaza palestin hamas hizbollah iran syrien libanon jemen krig konflikt vapenvila fredsavtal fredssamtal indien japan sydkorea nordkorea afrika frankrike fransk tyskland storbritannien brittisk london spanien italien polen finland norge danmark utrikes diplomat flykting terror =g7 =g20 venezuela brasilien mexiko turkiet egypten',
     },
     {
-      key: 'usa', zh: '美国', feeds: [...G, 4923, 438, 4773], all: [4923],
+      key: 'usa', zh: '美国', sv: 'USA', feeds: [...G, 4923, 438, 4773], all: [4923],
       kw: '+=usa +=usa:s +amerikansk trump vita_huset washington kongressen senaten representanthuset demokraterna republikanerna new_york kalifornien texas florida pentagon =fbi =cia biden harris vance mellanårsval',
     },
     {
-      key: 'eu', zh: '欧盟', feeds: [...G, 4941, 438, 4773], all: [4941],
+      key: 'eu', zh: '欧盟', sv: 'EU', feeds: [...G, 4941, 438, 4773], all: [4941],
       kw: '+=eu +=eu:s eu-kommission eu-parlament eu-länder europaparlament europeiska_unionen europeiska_kommissionen ministerrådet bryssel von_der_leyen =euro euron eurozon schengen strasbourg europaval eu-domstol',
     },
     {
-      key: 'kina', zh: '中国', feeds: [...G, 5386, 438, 4773], all: [5386],
+      key: 'kina', zh: '中国', sv: 'Kina', feeds: [...G, 5386, 438, 4773], all: [5386],
       kw: 'kina kines peking beijing shanghai =xi jinping hongkong taiwan tibet xinjiang uigur kommunistpartiet huawei =byd alibaba shenzhen guangzhou wuhan =yuan',
     },
     {
-      key: 'forsvar', zh: '军事国防', feeds: [...G, 438, 2946, 1300, 4773], all: [], min: 4,
+      key: 'forsvar', zh: '军事国防', sv: 'Försvar', feeds: [...G, 438, 2946, 1300, 4773], all: [], min: 4,
       kw: '+försvar +militär +=nato +nato:s soldat +armé armén +marinen +flygvapn +värnplikt +totalförsvar krigsmakt vapen vapenexport krigsmateriel ammunition missil robotar ubåt stridsvagn stridsflyg =jas gripen =saab drönare säkerhetspolitik beredskap civilförsvar hybridhot sabotage spion =must säpo kärnvapen invasion fronten anfall attack krig',
     },
     {
-      key: 'ekonomi', zh: '经济', feeds: [...G, 2778, 6679], all: [2778, 6679],
+      key: 'ekonomi', zh: '经济', sv: 'Ekonomi', feeds: [...G, 2778, 6679], all: [2778, 6679],
       kw: 'ekonomi ränta räntan riksbank inflation arbetslös =jobb =jobben konkurs varsel =lön =löner =lönen skatt budget bostadspris bolån export import =tull =tullar tullkrig handelskrig =bnp tillväxt lågkonjunktur högkonjunktur recession investering =priser =priserna prishöjning elpris matpris =hyra =hyror pension företag =bank =banken =banker',
     },
     {
-      key: 'borsen', zh: '股市', feeds: [...G, 2778, 6679], all: [], min: 4,
+      key: 'borsen', zh: '股市', sv: 'Börsen', feeds: [...G, 2778, 6679], all: [], min: 4,
       kw: '+börs +aktie +stockholmsbörsen +nasdaq +=omx +=omxs30 dow_jones wall_street index =kursen kursras kursrus +utdelning investerare fond fonder =vd vd:n bolag bolaget börsvärde marknadsvärde kvartalsrapport rapporten vinst förlust omsättning riksbank ränta nvidia tesla ericsson volvo kryptovaluta bitcoin',
     },
     {
-      key: 'teknik', zh: '科技', feeds: [...G, 4090], all: [4090],
+      key: 'teknik', zh: '科技', sv: 'Teknik', feeds: [...G, 4090], all: [4090],
       kw: '=ai artificiell_intelligens teknik techbolag techjätte =app =appen =appar internet mobiltelefon =mobilen smartphone dator datacenter robot =chip =chipet chipjätte halvledar nvidia =apple google microsoft =meta tiktok spotify ericsson samsung openai chatgpt cyber hackare hackar it-attack it-säkerhet digital bredband =5g algoritm sociala_medier instagram facebook youtube =musk drönare satellit datorspel tv-spel',
     },
     {
-      key: 'elbilar', zh: '电动车', feeds: [...G, 3345, 2778, 104, 109, 412], all: [], min: 5, strict: true, core: 2,
+      key: 'elbilar', zh: '电动车', sv: 'Elbilar', feeds: [...G, 3345, 2778, 104, 109, 412], all: [], min: 5, strict: true, core: 2,
       kw: '+elbil +elfordon +laddstolp +laddinfrastruktur +laddbox +snabbladd +laddplats +laddhybrid +tesla +polestar +=byd +xpeng +=nio +elbuss +ellastbil elektrifiering volvo_cars =volvo =batteri =batterier batterifabrik northvolt fossilfri bensin diesel drivmedel bilindustri biltillverkare bilförsäljning fordonsskatt vätgas',
     },
     {
-      key: 'vetenskap', zh: '科学', feeds: [83, 412, 406, 3345], all: [412, 406],
+      key: 'vetenskap', zh: '科学', sv: 'Vetenskap', feeds: [83, 412, 406, 3345], all: [412, 406],
       kw: 'forskare forskning forskar studie studien vetenskap universitet rymd =nasa =esa planet galax svart_hål svarta_hål astronom fysik kemi biolog arkeolog fossil =dna genetisk evolution nobelpris experiment laborator karolinska mikrob bakterie upptäckt',
     },
     {
-      key: 'halsa', zh: '健康', feeds: [...G, 1272, 412], all: [1272],
+      key: 'halsa', zh: '健康', sv: 'Hälsa', feeds: [...G, 1272, 412], all: [1272],
       kw: 'hälsa =ohälsa vård sjukvård sjukhus sjukdom läkare sjuksköterska patient cancer vaccin virus smitta covid influensa medicin läkemedel psykisk depression demens diabetes hjärt stroke tandvård folkhälsa vårdcentral akuten operation alkohol rökning narkotika sömn övervikt',
     },
     {
-      key: 'klimat', zh: '环境气候', feeds: [...G, 3345], all: [3345],
+      key: 'klimat', zh: '环境气候', sv: 'Miljö och klimat', feeds: [...G, 3345], all: [3345],
       kw: 'klimat miljö utsläpp koldioxid växthusgas fossila förnybar solenergi solcell vindkraft kärnkraft energi natur skog biologisk_mångfald utrotning =hav =havet =haven plast översvämning torka värmebölja =storm stormen oväder snöfall =snö smhi =väder vädret klimatmöte cop1 cop2 cop3 naturvård återvinning',
     },
     {
-      key: 'utbildning', zh: '教育', feeds: [...G, ...P4], all: [], min: 4,
+      key: 'utbildning', zh: '教育', sv: 'Utbildning', feeds: [...G, ...P4], all: [], min: 4,
       kw: '+skola +skolan +skolor +elev +lärare +förskola +gymnasi +högskola +universitet utbildning studenter =student betyg skolinspektionen skolverket läxor klassrum rektor =sfi svenska_för_invandrare yrkesutbildning folkhögskola =csn studielån',
     },
     {
-      key: 'migration', zh: '移民', feeds: [...G, ...P4], all: [], min: 4,
+      key: 'migration', zh: '移民', sv: 'Migration', feeds: [...G, ...P4], all: [], min: 4,
       kw: '+migration +invandr +asyl +flykting +medborgarskap +uppehållstillstånd +migrationsverket +utvisning utvisad +arbetstillstånd integration nyanländ =sfi svenska_för_invandrare gränskontroll anhöriginvandring återvandring',
     },
     {
-      key: 'brott', zh: '治安法律', feeds: [...G, ...P4, 4702, 5413], all: [4702, 5413], min: 4,
+      key: 'brott', zh: '治安法律', sv: 'Lag och ordning', feeds: [...G, ...P4, 4702, 5413], all: [4702, 5413], min: 4,
       kw: '+polis +gripen +gripna +greps +åtal +åtalad +misstänkt +misstänks +mord +dödsskjutning +skjutning +sprängning +gäng rättegång tingsrätt hovrätt fängelse =dom =domen dömd döms brott brottsling stöld rån bedrägeri bluff våldtäkt misshandel narkotika säpo',
     },
     {
-      key: 'kultur', zh: '文化', feeds: [83, 478, 5053, 5335], all: [478, 5053],
+      key: 'kultur', zh: '文化', sv: 'Kultur', feeds: [83, 478, 5053, 5335], all: [478, 5053],
       kw: 'kultur musik film =bok =boken böcker författar konst konstnär teater museum utställning konsert artist sångare sångerska roman litteratur festival opera =dans tv-serie melodifestival eurovision skådespelar regissör poesi =dikt =bio =bion biograf datorspel',
     },
     {
-      key: 'sport', zh: '体育', feeds: [83, 179, 5514, 6656, 5335, 103, 104], all: [179, 5514, 6656],
+      key: 'sport', zh: '体育', sv: 'Sport', feeds: [83, 179, 5514, 6656, 5335, 103, 104], all: [179, 5514, 6656],
       kw: 'sport fotboll hockey ishockey =os olympisk =vm =em allsvensk landslag =match =matchen =matcher tränare =spelare =spelaren =seger =segern =final =finalen tennis golf friidrott skidor längdskid skidskytte handboll parahandboll bandy basket simning cykling boxning =nhl zlatan =fifa paralympics parasport idrott =guld =silver =brons',
     },
     // 额外的一个话题：SR 专门用简易瑞典语写的新闻（句子短、词简单）
-    { key: 'latt', zh: '简易瑞典语', feeds: EASY_FEEDS, all: EASY_FEEDS, kw: '' },
+    { key: 'latt', zh: '简易瑞典语', sv: 'Lätt svenska', feeds: EASY_FEEDS, all: EASY_FEEDS, kw: '' },
   ];
 
   function compileKeywords(str) {

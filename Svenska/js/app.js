@@ -67,6 +67,68 @@
     toastTimer = setTimeout(() => { els.toast.hidden = true; }, ms);
   }
 
+  // ---------- 按钮的瑞典文提示 ----------
+  // 每个按钮都有瑞典文提示（Tony 定的，学瑞典语用）：第一行瑞典文，第二行中文说明。
+  // 电脑上是浏览器自己的 title 提示（鼠标停在按钮上）；手机、平板没有悬停，按住按钮半秒，
+  // 在按钮上方显示同样的两行，松手不算点击。新加的按钮一律用 tip() 给提示，测试会查每个按钮。
+  function tip(el, sv, zh) {
+    el.dataset.sv = sv;
+    el.dataset.zh = zh || '';
+    el.title = zh ? sv + '\n' + zh : sv;
+    return el;
+  }
+  const tipBox = h('div', { class: 'svtip', role: 'tooltip', hidden: true });
+  document.body.append(tipBox);
+  let tipTimer = 0;
+  let press = null; // { btn, x, y, timer, shown }
+  function hideTip() { clearTimeout(tipTimer); tipBox.hidden = true; }
+  function showTip(btn) {
+    // 对话框（showModal）在最上层，提示框要放进对话框里才看得见
+    const host = btn.closest('dialog[open]') || document.body;
+    if (tipBox.parentNode !== host) host.append(tipBox);
+    tipBox.textContent = '';
+    tipBox.append(h('b', { lang: 'sv' }, btn.dataset.sv));
+    if (btn.dataset.zh) tipBox.append(h('span', { lang: 'zh-CN' }, btn.dataset.zh));
+    tipBox.hidden = false;
+    const r = btn.getBoundingClientRect();
+    const w = tipBox.offsetWidth;
+    const ht = tipBox.offsetHeight;
+    const vw = document.documentElement.clientWidth;
+    tipBox.style.left = Math.round(SV.clamp(r.left + r.width / 2 - w / 2, 8, Math.max(8, vw - w - 8))) + 'px';
+    tipBox.style.top = Math.round(r.top - ht - 8 >= 8 ? r.top - ht - 8 : Math.min(r.bottom + 8, window.innerHeight - ht - 8)) + 'px';
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(hideTip, 3000);
+  }
+  document.addEventListener('touchstart', (e) => {
+    hideTip();
+    if (press) clearTimeout(press.timer);
+    press = null;
+    const t = e.touches.length === 1 ? e.touches[0] : null;
+    const btn = t && e.target.closest ? e.target.closest('button[data-sv]') : null;
+    if (!btn) return;
+    press = { btn, x: t.clientX, y: t.clientY, shown: false, timer: 0 };
+    const p = press;
+    p.timer = setTimeout(() => { p.shown = true; showTip(btn); }, 500);
+  }, { capture: true, passive: true });
+  document.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (press && !press.shown && t && (Math.abs(t.clientX - press.x) > 10 || Math.abs(t.clientY - press.y) > 10)) {
+      clearTimeout(press.timer);
+      press = null;
+    }
+  }, { capture: true, passive: true });
+  function endPress(e) {
+    if (!press) return;
+    clearTimeout(press.timer);
+    if (press.shown && e.cancelable) e.preventDefault(); // 按住是看提示，松手不算点击
+    press = null;
+  }
+  document.addEventListener('touchend', endPress, { capture: true, passive: false });
+  document.addEventListener('touchcancel', endPress, { capture: true });
+  // 安卓上长按会弹出菜单：按住按钮时不要
+  document.addEventListener('contextmenu', (e) => { if (press) e.preventDefault(); }, true);
+  window.addEventListener('scroll', hideTip, { passive: true });
+
   // ---------- 朗读 ----------
   let voiceInfo = { voice: null, gender: '?', exact: false };
   const reader = new SV.speech.Reader({
@@ -87,7 +149,8 @@
     const g = voiceInfo.voice ? voiceInfo.gender : S.gender;
     els.voice.querySelector('b').textContent = g === 'm' ? '男' : g === 'f' ? '女' : '声';
     els.voice.querySelector('.lbl').textContent = g === 'm' ? '男声' : g === 'f' ? '女声' : '声音';
-    els.voice.title = voiceInfo.voice ? '现在的声音：' + voiceInfo.voice.name + '（点一下切换男声、女声）' : '这台设备没有瑞典语声音';
+    tip(els.voice, g === 'm' ? 'Manlig röst' : g === 'f' ? 'Kvinnlig röst' : 'Röst',
+      voiceInfo.voice ? '现在的声音：' + voiceInfo.voice.name + '（点一下切换男声、女声）' : '这台设备没有瑞典语声音');
   }
 
   let hlS = null;
@@ -147,29 +210,43 @@
     els.play.querySelector('.lbl').textContent = playLbl;
     els.play.setAttribute('aria-label', playLbl);
     els.play.disabled = !inArticle;
-    els.play.title = inArticle ? '朗读这篇文章（空格键也可以）' : '先在列表里选一篇文章';
+    tip(els.play, st === 'speaking' ? 'Pausa' : st === 'paused' ? 'Fortsätt' : 'Läs upp',
+      !inArticle ? '先在列表里选一篇文章'
+        : st === 'speaking' ? '暂停（空格键也可以）'
+          : st === 'paused' ? '从停下的词接着读（空格键也可以）' : '朗读这篇文章（空格键也可以）');
     // 翻译
     const tl = els.translate.querySelector('.lbl');
     els.translate.hidden = noWholeTranslate();
     els.translate.disabled = !(inArticle || inList);
     if (inList) {
-      els.translate.title = '把列表里的标题翻译成中文';
       els.translate.classList.toggle('on', cur.listZh);
       tl.textContent = cur.listTranslating ? (progress != null ? `翻译中 ${progress}%` : '翻译中…') : cur.listZh ? '隐藏译文' : '翻译标题';
+      if (cur.listTranslating) tip(els.translate, 'Översätter …', '正在把列表里的标题翻译成中文');
+      else if (cur.listZh) tip(els.translate, 'Dölj översättningen', '隐藏标题下面的中文');
+      else tip(els.translate, 'Översätt rubrikerna', '把列表里的标题翻译成中文');
     } else {
-      els.translate.title = '把整篇文章翻译成中文';
       const blocks = inArticle ? cur.model.blocks : [];
       const done = blocks.filter((x) => x.zhEl).length;
       els.translate.classList.toggle('on', done > 0 && cur.zhShown);
-      if (cur.translating) tl.textContent = progress != null ? `翻译中 ${progress}%` : '翻译中…';
-      else if (!done) tl.textContent = '全文翻译';
-      else if (done < blocks.length) tl.textContent = '继续翻译';
-      else tl.textContent = cur.zhShown ? '隐藏译文' : '显示译文';
+      if (cur.translating) {
+        tl.textContent = progress != null ? `翻译中 ${progress}%` : '翻译中…';
+        tip(els.translate, 'Översätter …', '正在把整篇文章翻译成中文');
+      } else if (!done) {
+        tl.textContent = '全文翻译';
+        tip(els.translate, 'Översätt hela texten', '把整篇文章翻译成中文');
+      } else if (done < blocks.length) {
+        tl.textContent = '继续翻译';
+        tip(els.translate, 'Fortsätt översätta', '接着翻译还没译的段落');
+      } else {
+        tl.textContent = cur.zhShown ? '隐藏译文' : '显示译文';
+        tip(els.translate, cur.zhShown ? 'Dölj översättningen' : 'Visa översättningen', cur.zhShown ? '隐藏每段下面的中文' : '显示每段下面的中文');
+      }
     }
     // 下一篇 / 换一批
     els.next.disabled = !(inArticle || inList);
     els.next.querySelector('.lbl').textContent = inList ? '换一批' : '下一篇';
-    els.next.title = inList ? `「${cur.topic ? cur.topic.zh : ''}」的下一批文章（再点一次话题也可以）` : '列表里的下一篇';
+    if (inList) tip(els.next, 'Fler artiklar', `「${cur.topic ? cur.topic.zh : ''}」的下一批文章（再点一次话题也可以）`);
+    else tip(els.next, 'Nästa artikel', '列表里的下一篇');
   }
 
   // ---------- 话题 ----------
@@ -177,6 +254,7 @@
     els.topics.textContent = '';
     for (const t of TOPICS) {
       const b = h('button', { type: 'button', class: 'chip' + (t.key === 'latt' ? ' extra' : ''), 'data-topic': t.key }, t.zh);
+      tip(b, t.sv, `看「${t.zh}」的新闻`);
       b.addEventListener('click', () => {
         b.blur();
         showTopic(t, cur.topic === t && !loading && (cur.view === 'list' || cur.view === 'article'));
@@ -190,7 +268,8 @@
       b.classList.toggle('active', on);
       b.classList.toggle('busy', on && busy);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
-      b.title = on ? '再点一次换一批文章' : '';
+      const t = TOPICS.find((x) => x.key === b.dataset.topic);
+      if (t) tip(b, t.sv, on ? '再点一次换一批文章' : `看「${t.zh}」的新闻`);
       if (on && busy === false) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }
@@ -251,12 +330,12 @@
       if (res.error) {
         message(h('p', null, '没能从瑞典广播电台（Sveriges Radio）取到新闻。'),
           h('p', null, '可能是网络不通，或者请求太密集被 SR 的服务器暂时拒绝了。请过一两分钟再试。'),
-          h('button', { type: 'button', onclick: () => showTopic(topic) }, '再试一次'));
+          tip(h('button', { type: 'button', onclick: () => showTopic(topic) }, '再试一次'), 'Försök igen', '再从 SR 取一次新闻'));
       } else {
         const alt = TOPICS.filter((t) => t !== topic && ['idag', 'teknik', 'klimat', 'ekonomi'].includes(t.key));
         message(h('p', null, `Sveriges Radio 最近几天没有「${topic.zh}」的文章（SR 的新闻源每个节目只保留最新的 20 篇左右）。`),
           h('p', null, '先看看别的话题吧：'),
-          h('div', { class: 'next-row' }, alt.map((t) => h('button', { type: 'button', onclick: () => showTopic(t) }, t.zh))));
+          h('div', { class: 'next-row' }, alt.map((t) => tip(h('button', { type: 'button', onclick: () => showTopic(t) }, t.zh), t.sv, `看「${t.zh}」的新闻`))));
       }
       return;
     }
@@ -327,7 +406,9 @@
     }
     els.list.append(ol);
     els.list.append(h('div', { class: 'list-foot' },
-      h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); showTopic(topic, true); } }, cur.more ? '换一批 →' : '从最新的重新列 →')));
+      tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); showTopic(topic, true); } }, cur.more ? '换一批 →' : '从最新的重新列 →'),
+        cur.more ? 'Fler artiklar' : 'Börja om från de senaste',
+        cur.more ? `「${topic.zh}」的下一批文章` : '都列过了，从最新的文章重新列')));
     els.article.textContent = '';
     els.article.removeAttribute('data-id');
     cur.item = null;
@@ -387,10 +468,11 @@
     art.textContent = '';
     art.dataset.id = item.id;
     const today = SV.stockholmDay(new Date()) === item.day;
-    const back = () => h('button', { type: 'button', class: 'back-btn', lang: 'zh-CN', onclick: (e) => { e.currentTarget.blur(); backToList(false); } }, `← 返回「${topic.zh}」列表`);
+    const back = () => tip(h('button', { type: 'button', class: 'back-btn', lang: 'zh-CN', onclick: (e) => { e.currentTarget.blur(); backToList(false); } }, `← 返回「${topic.zh}」列表`),
+      'Tillbaka till listan', `返回「${topic.zh}」列表`);
     // 文章开头的「返回列表」放在顶栏标题旁边（setView 显示它），省一行
     els.back.querySelector('.long').textContent = `← 返回「${topic.zh}」列表`;
-    els.back.title = `返回「${topic.zh}」列表`;
+    tip(els.back, 'Tillbaka till listan', `返回「${topic.zh}」列表`);
     art.append(h('div', { class: 'meta', lang: 'zh-CN' },
       item.easy ? h('span', { class: 'badge', title: '这篇是用简易瑞典语写的' }, '简易瑞典语') : null,
       today ? h('span', { class: 'badge today' }, '今天') : null,
@@ -409,8 +491,9 @@
     const idx = cur.batch.indexOf(item);
     art.append(h('div', { class: 'next-row', lang: 'zh-CN' },
       back(),
-      h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); nextArticle(); } },
-        idx >= 0 && idx < cur.batch.length - 1 ? '下一篇 →' : '下一批 →')));
+      idx >= 0 && idx < cur.batch.length - 1
+        ? tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); nextArticle(); } }, '下一篇 →'), 'Nästa artikel', '列表里的下一篇')
+        : tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); nextArticle(); } }, '下一批 →'), 'Fler artiklar', '这一批读完了，列下一批')));
     els.notice.hidden = true;
     setView('article');
     window.scrollTo({ top: 0 });
@@ -513,17 +596,17 @@
     const needMt = !gl || SV.tr.builtinReady();
     if (needMt) p.append(mt);
     const acts = h('div', { class: 'acts' });
-    const bSpeak = h('button', { type: 'button', title: '读出来' });
+    const bSpeak = isWord ? tip(h('button', { type: 'button' }), 'Läs upp ordet', '读这个词') : tip(h('button', { type: 'button' }), 'Läs upp', '读选中的词句');
     bSpeak.innerHTML = ICON_SPEAK + '<span>读</span>';
     bSpeak.addEventListener('click', (e) => { e.stopPropagation(); reader.speakText(text); });
     acts.append(bSpeak);
     if (isWord) {
-      const bFrom = h('button', { type: 'button', title: '从这个词开始朗读' });
+      const bFrom = tip(h('button', { type: 'button' }), 'Läs härifrån', '从这个词开始朗读');
       bFrom.innerHTML = ICON_PLAY + '<span>从这里读</span>';
       bFrom.addEventListener('click', (e) => { e.stopPropagation(); hidePopup(); reader.play(si, wi); });
       acts.append(bFrom);
       const sentBox = h('div', { class: 'sent', hidden: true });
-      const bSent = h('button', { type: 'button', title: '翻译这个词所在的整句' }, '本句译文');
+      const bSent = tip(h('button', { type: 'button' }, '本句译文'), 'Översätt meningen', '翻译这个词所在的整句');
       bSent.addEventListener('click', async (e) => {
         e.stopPropagation();
         const s = cur.model && cur.model.sentences[si];
@@ -574,7 +657,7 @@
       box.textContent = trErrorText(err);
       box.className = errClass;
       if (isOffError(err)) {
-        const b = h('button', { type: 'button', class: 'primary on-btn' }, '打开在线翻译');
+        const b = tip(h('button', { type: 'button', class: 'primary on-btn' }, '打开在线翻译'), 'Slå på onlineöversättning', '打开 MyMemory 在线翻译，马上重新翻译');
         b.addEventListener('click', (e) => {
           e.stopPropagation();
           pop.pinned = true;
@@ -636,8 +719,8 @@
     const text = trProblemText(e);
     const box = h('div', { class: 'tr-problem', role: 'alert', lang: 'zh-CN' }, h('p', null, text));
     const acts = h('div', { class: 'next-row' });
-    acts.append(h('button', { type: 'button', onclick: () => retry() }, '再试一次'));
-    acts.append(h('button', { type: 'button', onclick: () => box.remove() }, '关掉'));
+    acts.append(tip(h('button', { type: 'button', onclick: () => retry() }, '再试一次'), 'Försök igen', '再翻译一次'));
+    acts.append(tip(h('button', { type: 'button', onclick: () => box.remove() }, '关掉'), 'Stäng', '关掉这条说明'));
     box.append(acts);
     if (cur.view === 'list') {
       toast(text, 6000);
@@ -957,6 +1040,26 @@
   // ---------- 开始 ----------
   document.documentElement.style.setProperty('--scale', S.scale);
   els.rate.querySelector('b').textContent = fmtRate(S.rate);
+  // 页面上固定的按钮的瑞典文提示。朗读、男女声、全文翻译、下一篇、返回列表随状态变，
+  // 由 updateButtons、refreshVoice、openArticle 再改；这里先给它们一个，免得哪个按钮没有提示。
+  const STATIC_TIPS = [
+    ['#btnSmaller', 'Mindre text', '字小一点'],
+    ['#btnBigger', 'Större text', '字大一点'],
+    ['#btnHelp', 'Hjälp', '怎么用'],
+    ['#btnSettings', 'Inställningar', '设置：声音、语速、字号、在线翻译'],
+    ['#btnBack', 'Tillbaka till listan', '返回列表'],
+    ['#btnPlay', 'Läs upp', '先在列表里选一篇文章'],
+    ['#btnRate', 'Talhastighet', '语速：点一下换一档'],
+    ['#btnVoice', S.gender === 'm' ? 'Manlig röst' : 'Kvinnlig röst', '切换男声、女声'],
+    ['#btnTranslate', 'Översätt hela texten', '把整篇文章翻译成中文'],
+    ['#btnNext', 'Nästa artikel', '列表里的下一篇'],
+    ['#btnTipClose', 'Jag förstår', '知道了，不再显示这条说明'],
+    ['#btnTryVoice', 'Provlyssna', '试听这个声音'],
+    ['#btnClearHistory', 'Rensa läshistoriken', '清除阅读记录'],
+    ['#dlgSettings .dlg-actions button', 'Stäng', '关闭设置'],
+    ['#dlgHelp .dlg-actions button', 'Okej', '关闭说明'],
+  ];
+  for (const [sel, sv, zh] of STATIC_TIPS) { const b = $(sel); if (b) tip(b, sv, zh); }
   renderChips();
   els.tip.hidden = !S.tip;
   SV.speech.onVoices(() => {
