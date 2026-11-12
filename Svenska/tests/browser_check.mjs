@@ -429,6 +429,22 @@ try {
   const hl = await evalJs(`({ word: document.querySelector('#article .w.current')?.textContent || '', sent: !!document.querySelector('#article .s.reading') })`);
   check('点「朗读」开始读，句子和词高亮', s.reader === 'speaking' && hl.sent && hl.word, `${s.reader} 第 ${s.si} 句第 ${s.wi} 词「${hl.word}」，声音 ${s.voice}`);
   check('默认用女声 Sofie', /Sofie/.test(s.voice || ''), s.voice);
+  // 正在读的词：浅色是整块黄底；深色（夜间）是黄色下划线，没有黄底，字是正文的颜色
+  const wordStyle = () => evalJs(`(() => { const w = document.querySelector('#article .w.current'); if (!w) return null;
+    const c = getComputedStyle(w), a = getComputedStyle(document.querySelector('#article'));
+    return { bg: c.backgroundColor, line: c.textDecorationLine, lineColor: c.textDecorationColor, color: c.color, ink: a.color }; })()`);
+  const darkMode = (on) => send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: on ? 'dark' : 'light' }] });
+  await darkMode(false);
+  const lightW = await wordStyle();
+  // 黄底有 0.12 秒的渐显，模拟的声音刚换词时读到的是 rgba(255, 216, 77, 0.9x)，所以只比颜色不比透明度
+  check('浅色：正在读的词是整块黄底', lightW && /^rgba?\(255, 216, 77\b/.test(lightW.bg) && !/underline/.test(lightW.line), JSON.stringify(lightW));
+  await darkMode(true);
+  await sleep(150);
+  const darkW = await wordStyle();
+  check('深色：正在读的词是黄色下划线，没有黄底，字是正文的颜色',
+    darkW && darkW.bg === 'rgba(0, 0, 0, 0)' && /underline/.test(darkW.line) && darkW.lineColor === 'rgb(245, 197, 24)' && darkW.color === darkW.ink, JSON.stringify(darkW));
+  await shot('desktop-dark-reading');
+  await darkMode(false);
   await space();
   s = await state();
   const pausedAt = { si: s.si, wi: s.wi };
@@ -437,6 +453,13 @@ try {
   const s2b = await state();
   check('暂停后光标不动', s2b.si === pausedAt.si && s2b.wi === pausedAt.wi);
   await shot('desktop-paused');
+  await darkMode(true);
+  await sleep(150);
+  const darkP = await wordStyle();
+  check('深色暂停：停下的词是暗一些的黄色下划线，没有黄底',
+    darkP && darkP.bg === 'rgba(0, 0, 0, 0)' && /underline/.test(darkP.line) && darkP.lineColor === 'rgb(138, 111, 20)', JSON.stringify(darkP));
+  await shot('desktop-dark-paused');
+  await darkMode(false);
   const logLen = await evalJs('__speechLog.length');
   await space();
   await sleep(100);

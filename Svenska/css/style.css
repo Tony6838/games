@@ -41,7 +41,7 @@
     --sent: rgba(94, 168, 245, 0.13);
     --word: #f5c518;
     --word-ink: #111111;
-    --word-paused: #6e5a12;
+    --word-paused: #8a6f14;
     --zh: #e2c48a;
     --easy-bg: #1d3323;
     --easy-ink: #8fd49b;
@@ -204,6 +204,20 @@ main { padding: 6px var(--pad) calc(40px + env(safe-area-inset-bottom)); }
 .article .w.current { background: var(--word); color: var(--word-ink); box-shadow: 0 0 0 2px var(--word); }
 body.paused .article .w.current { background: var(--word-paused); box-shadow: 0 0 0 2px var(--word-paused); color: inherit; }
 .article .w.picked { outline: 2px solid var(--accent); outline-offset: 1px; }
+/* 深色（夜间）：黑底上整块黄底太刺眼，正在读的词改成黄色下划线，字保持原来的颜色。
+   下划线不跳过 g、j、p、y 的下伸部分（skip-ink: none），是一整条。暂停时用暗一些的黄色。 */
+@media (prefers-color-scheme: dark) {
+  .article .w.current,
+  body.paused .article .w.current {
+    background: transparent; box-shadow: none; color: inherit;
+    text-decoration: underline;
+    text-decoration-color: var(--word);
+    text-decoration-thickness: max(2px, .12em);
+    text-underline-offset: .22em;
+    text-decoration-skip-ink: none;
+  }
+  body.paused .article .w.current { text-decoration-color: var(--word-paused); }
+}
 .article { touch-action: manipulation; }
 
 /* 中文译文 */
