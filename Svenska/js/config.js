@@ -6,6 +6,6 @@
   'use strict';
   const SV = window.SV;
   SV.config = Object.assign({
-    ttsUrl: '',
+    ttsUrl: 'https://svenska-tts.tony6838.workers.dev',
   }, window.SV_CONFIG || {});
 })();

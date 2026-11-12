@@ -110,11 +110,21 @@ SR 每个节目都有一个 Atom 新闻源 `https://api.sr.se/api/rss/program/<�
 - **一次合成一整段**（一个段落），拿到 MP3 和每个词的音频时间，用普通的 `<audio>` 播放，按播放进度高亮正在读的词，所以 iPhone 上也能跟着高亮单词。读的时候顺便合成下一段，段与段之间不等。
 - **暂停**就是暂停播放；**继续**、**「从这里读」**在已经合成的这一段里直接跳到那个词，不再合成；**语速**直接改播放速度（音调不变），也不再合成。合成过的段落按「声音 + 文字」留在内存里（最多 200 段），读第二遍不花额度。
 - **iPhone 的 Safari** 只让用户点过的 `<audio>` 播放：每次点「朗读」或喇叭时，先在两个 `<audio>` 上各播一小段静音（只做一次）。
-- **出错时**（令牌服务不给令牌、免费额度用完、连不上），提示原因，这次打开的页面里改用本机的声音，点「继续」接着读；刷新网页再试云端。
-- **额度和费用**：Azure 语音资源用免费档（F0），神经语音每月约 50 万个字符（大约 200 篇文章），用完就停到下个月，不扣钱。Worker 只发令牌，Cloudflare 的免费额度足够。
+- **出错时**（令牌服务不给令牌、免费额度用完、连不上），提示原因，这次打开的页面里改用本机的声音，点「继续」接着读；刷新网页再试云端。**免费额度用完**（Azure 拒绝合成，429）时还记下这个月（设置里的 `cloudOffMonth`），这个月里再打开网页直接用本机的声音，不再每次先试一下；下个月自动再用云端。在「设置 → 声音来源」里选回「云端自然语音」就马上再试。
+- **额度和费用**：Azure 语音资源用免费档（F0），神经语音每月约 50 万个字符（大约 200 篇文章），用完就停到下个月，**F0 不会扣钱**。Worker 只发令牌，Cloudflare 的免费额度足够。另外设了一个每月 1 克朗的预算提醒：账号里只要产生任何费用就发邮件给 Tony（预算只能提醒，不能拦住花费；F0 本来不会产生费用，这是多一道保险）。
+
+**现在的设置**（2026-11-12 建好，用真的 Azure 测过）：
+
+| 在哪里 | 什么 |
+|---|---|
+| Azure（Tony 的订阅「Azure subscription 1」） | 资源组 `svenska-rg`，语音资源 `svenska-speech`（SpeechServices，**F0**，North Europe）；预算 `svenska-any-cost`（每月 1，有任何费用就发邮件） |
+| Cloudflare（Tony 的账号） | workers.dev 子域名 `tony6838`，Worker `svenska-tts`：<https://svenska-tts.tony6838.workers.dev>，机密 `AZURE_SPEECH_KEY`、变量 `AZURE_SPEECH_REGION = northeurope`、`ALLOWED_ORIGINS = https://tony6838.github.io` |
+| 网页 | `js/config.js` 的 `ttsUrl` 是上面的 Worker 地址 |
+
+收到预算邮件时：先在 Azure 门户的「成本管理 → 成本分析」里看是什么产生了费用（不会是 F0 的语音资源）。要停掉云端语音，删掉资源组 `svenska-rg` 就行，网页会自动用本机的声音；不用停掉整个订阅。密钥要换的话：在 Azure 门户里重新生成密钥，再把新的「密钥 1」写进 Worker 的机密 `AZURE_SPEECH_KEY`。
 - **SR 的条款**：朗读时文章的文字发给微软合成声音，不保存、不改动文章，和 Edge 浏览器的在线声音（本来就把文字发给微软）是一回事。
 
-**设置步骤**（Tony 的账号；注册、验证身份、登录只能本人做）：
+**从头设置的步骤**（以后要换账号或重建时用；注册、验证身份、登录只能本人做。不在电脑旁边时：`az login --use-device-code` 在手机上输入登录码；Cloudflare 在手机上建一个用「Edit Cloudflare Workers」模板的 API 令牌，用 `CLOUDFLARE_API_TOKEN` 环境变量给 wrangler，新账号还要先建 workers.dev 子域名）：
 
 1. Azure：用 Microsoft 账号登录 <https://portal.azure.com>（要有一个订阅），建一个「语音服务」（Speech service）资源，定价层选 **Free F0**，区域选 North Europe（或者 West Europe、Sweden Central）。也可以用命令行：`az login` 后 `az cognitiveservices account create --kind SpeechServices --sku F0 --location northeurope --name <名字> --resource-group <资源组> --yes`。
 2. Cloudflare：在 Workers 里新建一个 Worker（名字例如 `svenska-tts`），把 `tools/tts-worker/worker.js` 贴进去部署；在 Settings → Variables and Secrets 里加机密 `AZURE_SPEECH_KEY`（Azure 资源的「密钥 1」）和变量 `AZURE_SPEECH_REGION`（例如 `northeurope`）。也可以用命令行：在 `tools/tts-worker` 里 `npx wrangler login`、`npx wrangler deploy`，密钥用 `npx wrangler secret put AZURE_SPEECH_KEY`（`az cognitiveservices account keys list ... --query key1 -o tsv` 直接接进去，密钥不显示出来）。
@@ -189,6 +199,7 @@ SR 每个节目都有一个 Atom 新闻源 `https://api.sr.se/api/rss/program/<�
 ```
 node tests/browser_check.mjs <截图目录>                                        # 本机（自己起静态服务器）
 node tests/browser_check.mjs <截图目录> https://tony6838.github.io/games/Svenska/  # 线上
+SV_REAL_TTS=1 node tests/browser_check.mjs <截图目录>                          # 最后再用真的云端语音读几秒（花几百个字符的额度）
 ```
 
 用无头 Edge 和真实的鼠标、触摸、键盘事件，打开几次页面。前三次一律用本机的声音（不管 `js/config.js` 里填了什么），第四次用云端语音，但用的是假的 SDK 和假的令牌服务，不花 Azure 的额度：
@@ -196,7 +207,8 @@ node tests/browser_check.mjs <截图目录> https://tony6838.github.io/games/Sve
 1. 电脑 1600×900、真实的声音和内置翻译：朗读按钮组紧跟在「简易瑞典语」后面、同一行、是立体的样子；有内置翻译时显示「全文翻译」、不显示整页翻译的提示；每个话题列出文章、再点一次换一批（不重复）；打开文章、顶栏标题旁边的「← 返回列表」、浏览器后退、「下一篇」；列表和正文用满宽度、没有横向滚动；鼠标悬停查词、弹出框在屏幕内；鼠标停在顶栏标题上出现「怎么用」、移到话题按钮上就消失；列表页、文章页和查词弹出框里每个按钮都有瑞典文提示（`title` 第一行是瑞典文，第二行中文），21 个话题各有自己的瑞典文名字；云端语音用的微软 Speech SDK 真的能从 CDN 加载、完整性校验通过；真实的瑞典语声音朗读 6 秒，看有没有词的 boundary 事件；空格暂停；内置翻译下载模型并翻译全文。
 2. 电脑 1600×900、模拟的声音（假的 Sofie / Mattias，按词发 boundary 事件）、没有内置翻译、MyMemory 由测试代答（不占真实额度）：不显示「全文翻译」，列表和文章上提示整页翻译；朗读高亮、深色（夜间）模式下正在读的词是黄色下划线而不是整块黄底（暂停时暗黄）、朗读按钮的瑞典文提示跟着变（Pausa、Fortsätt）、空格暂停和继续（从停下的词接着读）、点文章暂停并弹出这个词、「从这里读」、喇叭、换男女声、语速；「本句译文」走 MyMemory，发给它的每段不超过 500 个字符、只有 `q` 和 `langpair` 两个参数；选中几个词翻译。
 3. 手机 390×844 触摸、安卓 Chrome 的用户代理：列表一列、话题条横着滑、朗读按钮不出屏不截字、按住按钮半秒显示瑞典文提示且松手不算点击（顶上的「女声」和设置对话框里的「试听」，对话框里的提示显示在对话框上面）、再点话题换一批、点词弹出框不出屏（包括最右边的词）、点屏幕暂停、继续；没有「全文翻译」，提示「点右上角 ⋮ →『翻译…』」；滚到文章底下时朗读按钮还粘在顶上、点得到；「← 列表」和标题在同一行；点标题打开「怎么用」、点别处关上；返回列表、设置对话框。
-4. 电脑 1600×900、云端语音（假的微软 SDK：每个词 220 毫秒，返回同样长的静音和每个词的时间；假的令牌服务 `svtts.test`）：设了云端时默认用它（Sofie）；点「朗读」先合成标题这一段，用令牌服务发的令牌、不直接播放；跟着播放进度高亮单词，没有用本机的声音；一段读完接着读下一段（已经提前合成好）；空格暂停停在那个词上，再按空格从那个词接着读、不再合成；换语速不再合成；换成男声 Mattias 接着读；弹出框的喇叭用云端的声音；设置里有「声音来源」和三个云端声音，可以改用本机的声音再改回来；令牌服务回 403 时说明原因、改用本机的声音，点「继续」接着读。
+4. 电脑 1600×900、云端语音（假的微软 SDK：每个词 220 毫秒，返回同样长的静音和每个词的时间；假的令牌服务 `svtts.test`）：设了云端时默认用它（Sofie）；点「朗读」先合成标题这一段，用令牌服务发的令牌、不直接播放；跟着播放进度高亮单词，没有用本机的声音；一段读完接着读下一段（已经提前合成好）；空格暂停停在那个词上，再按空格从那个词接着读、不再合成；换语速不再合成；换成男声 Mattias 接着读；弹出框的喇叭用云端的声音；设置里有「声音来源」和三个云端声音，可以改用本机的声音再改回来；令牌服务回 403 时说明原因、改用本机的声音，点「继续」接着读；Azure 回「额度用完」（429）时说明、改用本机的声音、记住这个月，再打开网页直接用本机的声音，设置里选回云端就再试。
+5. 只在 `SV_REAL_TTS=1` 时：用 `js/config.js` 里真的令牌服务和微软 Azure，打开一篇文章点「朗读」，看微软的声音读起来、高亮往前走。
 
 最后检查页面只连了本站、SR、MyMemory，以及云端语音的 SDK 和令牌服务，控制台没有错误。
 

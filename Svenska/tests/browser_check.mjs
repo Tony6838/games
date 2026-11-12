@@ -3,7 +3,10 @@
 // 不给网址时，自己在本机起一个静态服务器（根目录是仓库的根），打开 http://127.0.0.1:<端口>/Svenska/。
 // 给网址时（比如 https://tony6838.github.io/games/Svenska/）直接测那个网址。
 //
-// 一共打开三次页面：
+// 环境变量 SV_REAL_TTS=1：最后再用真的云端语音（js/config.js 里的令牌服务和微软 Azure）读几秒，会花几百个字符的免费额度。
+//
+// 前三次一律用本机的声音（不管 js/config.js 里填了什么），第四次用假的微软 SDK 和假的令牌服务查云端语音。
+// 前三次：
 //   1. 电脑 1600×900、真实的朗读和浏览器内置翻译：每个话题列出文章、再点一次换一批；打开文章、返回列表、
 //      浏览器后退、下一篇；鼠标悬停查词；看看无头 Edge 里真实的瑞典语声音能不能读、有没有词的 boundary 事件；
 //      试内置翻译。
@@ -228,6 +231,8 @@ const FAKE_AZURE = `(() => {
   class SpeechSynthesizer {
     constructor(conf, audioConfig) { this.conf = conf; this.audioConfig = audioConfig; this.wordBoundary = null; }
     speakTextAsync(text, ok) {
+      // window.__ttsFail = 'quota'：像 Azure 的免费额度用完时一样，合成被拒绝（429）
+      if (window.__ttsFail === 'quota') { setTimeout(() => ok({ reason: 'canceled', errorDetails: 'WebSocket upgrade failed: Too many requests (429). Quota exceeded.' }), 50); return; }
       const ws = [...text.matchAll(WORD)];
       window.__ttsLog.push({ voice: this.conf.speechSynthesisVoiceName, text, token: this.conf.token, audioConfig: this.audioConfig });
       setTimeout(() => {
@@ -247,16 +252,17 @@ const FAKE_AZURE = `(() => {
 
 let scriptIds = [];
 const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36';
-// cloud：用云端语音（假的 SDK 和假的令牌服务 svtts.test）；不设时一律用本机的声音，不管 js/config.js 里填了什么
+// cloud：true 用云端语音（假的 SDK 和假的令牌服务 svtts.test）；'real' 用 js/config.js 里真的令牌服务和真的 Azure；
+// 不设时一律用本机的声音，不管 js/config.js 里填了什么
 async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, cloud = false, query = '', ua = '' }) {
   for (const id of scriptIds) await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: id });
   scriptIds = [];
-  scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.SV_CONFIG = { ttsUrl: ${JSON.stringify(cloud ? 'https://svtts.test' : '')} };` })).result.identifier);
-  if (cloud) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_AZURE })).result.identifier);
+  if (cloud !== 'real') scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.SV_CONFIG = { ttsUrl: ${JSON.stringify(cloud ? 'https://svtts.test' : '')} };` })).result.identifier);
+  if (cloud === true) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_AZURE })).result.identifier);
   if (fakeSpeech) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_SPEECH })).result.identifier);
   if (noBuiltin) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: NO_BUILTIN })).result.identifier);
   const patterns = [];
-  if (cloud) patterns.push({ urlPattern: '*svtts.test/*', requestStage: 'Request' });
+  if (cloud === true) patterns.push({ urlPattern: '*svtts.test/*', requestStage: 'Request' });
   if (mockMM) patterns.push({ urlPattern: '*api.mymemory.translated.net*', requestStage: 'Request' });
   if (feedCache) patterns.push({ urlPattern: '*api.sr.se/api/rss/program/*', requestStage: 'Request' }, { urlPattern: '*api.sr.se/api/rss/program/*', requestStage: 'Response' });
   if (patterns.length) await send('Fetch.enable', { patterns });
@@ -822,12 +828,50 @@ try {
   check('云端出错：点「继续」用本机的声音接着读', (await state()).reader === 'speaking' && (await evalJs('__speechLog.length')) > 0);
   await space();
   ttsWorkerMode = 'ok';
+
+  // 免费额度用完（Azure 回 429）：说明，改用本机的声音；这个月里再打开网页，直接用本机的声音，不再先试云端
+  check('云端额度用完：页面打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true }));
+  check('云端额度用完：一开始还是用云端', (await state()).engine === 'cloud');
+  await evalJs(`window.__ttsFail = 'quota'`);
+  await openFirstCard(0);
+  const pcQ = await center('#btnPlay');
+  await tap(pcQ.x, pcQ.y);
+  await waitFor(`SVApp.state().engine === 'device'`, 8000);
+  st = await state();
+  const toastQ = await evalJs(`document.querySelector('#toast').hidden ? '' : document.querySelector('#toast').textContent`);
+  const month = new Date().toISOString().slice(0, 7);
+  check('云端额度用完：说明额度用完了，改用本机的声音，记住这个月', st.engine === 'device' && /免费额度用完了/.test(toastQ) && st.settings.cloudOffMonth === month, `${st.engine}「${toastQ}」${st.settings.cloudOffMonth}`);
+  check('云端额度用完：再打开网页，这个月直接用本机的声音', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true }));
+  st = await state();
+  check('云端额度用完：不再先试云端', st.engine === 'device' && (await evalJs('window.__ttsLog.length')) === 0, st.engine);
+  // 在设置里选回「云端自然语音」：再试一次（测试到这里把记录清掉）
+  await evalJs(`(() => { const r = document.querySelector('#engineRow input[value="cloud"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  check('云端额度用完：设置里选回云端就再试', (await state()).engine === 'cloud' && (await state()).settings.cloudOffMonth === '');
+
+  // ================= 5. 真的云端语音（SV_REAL_TTS=1 才做） =================
+  if (process.env.SV_REAL_TTS === '1') {
+    console.log('\n== 5. 真的云端语音：js/config.js 的令牌服务和微软 Azure');
+    check('真的云端：页面打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: false, noBuiltin: true, mockMM: true, cloud: 'real' }));
+    check('真的云端：用云端语音', (await state()).engine === 'cloud', (await state()).engine);
+    await openFirstCard(0);
+    const pcR = await center('#btnPlay');
+    await tap(pcR.x, pcR.y);
+    const startedR = await waitFor(`SVApp.state().reader === 'speaking' && !!document.querySelector('#article .w.current')`, 20000);
+    const p1 = await state();
+    const w1 = await evalJs(`document.querySelector('#article .w.current')?.textContent || ''`);
+    await sleep(4000);
+    const p2 = await state();
+    const w2 = await evalJs(`document.querySelector('#article .w.current')?.textContent || ''`);
+    const toastR = await evalJs(`document.querySelector('#toast').hidden ? '' : document.querySelector('#toast').textContent`);
+    check('真的云端：微软的声音读起来，高亮跟着往前走', startedR && p2.engine === 'cloud' && p2.reader === 'speaking' && (p2.si > p1.si || p2.wi > p1.wi), `「${w1}」(${p1.si}/${p1.wi}) → 「${w2}」(${p2.si}/${p2.wi}) ${p2.voice} ${toastR}`);
+    await space();
+  }
 } catch (e) {
   check('测试脚本没有出错', false, e.stack || String(e));
 }
 
 // 云端语音另外连：微软 SDK 的 CDN（cdn.jsdelivr.net）、令牌服务（测试里是假的 svtts.test）；合成走 WebSocket，不在这个列表里
-const allowed = (h) => /^127\.0\.0\.1(:\d+)?$/.test(h) || h === 'api.sr.se' || h === 'api.mymemory.translated.net' || h === 'cdn.jsdelivr.net' || h === 'svtts.test' || h === new URL(baseUrl).host;
+const allowed = (h) => /^127\.0\.0\.1(:\d+)?$/.test(h) || h === 'api.sr.se' || h === 'api.mymemory.translated.net' || h === 'cdn.jsdelivr.net' || h === 'svtts.test' || h === 'svenska-tts.tony6838.workers.dev' || h === new URL(baseUrl).host;
 summary.hosts = Object.fromEntries(hosts);
 check('页面只连了本站、SR、MyMemory，以及云端语音的 SDK 和令牌服务', [...hosts.keys()].every(allowed), [...hosts.entries()].map(([h, n]) => `${h}×${n}`).join(' '));
 // 第 4 轮故意让假的令牌服务回 403（测试改用本机声音），浏览器自己会记一条网络错误，不算

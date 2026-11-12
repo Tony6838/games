@@ -8,8 +8,9 @@
   // ---------- 设置 ----------
   const SET_KEY = 'sv.settings.v1';
   // online：浏览器没有内置翻译时用 MyMemory 在线翻译。默认开着，只有在「设置」里取消勾选才关（false）。
-  // engine：'cloud' 云端自然语音（js/config.js 设了 ttsUrl 才有）或 'device' 这台设备自己的声音；cloudVoice：云端选的声音
-  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', online: true, tip: true, topic: 'idag' };
+  // engine：'cloud' 云端自然语音（js/config.js 设了 ttsUrl 才有）或 'device' 这台设备自己的声音；cloudVoice：云端选的声音；
+  // cloudOffMonth：云端这个月的免费额度用完了（'2026-11'），这个月里直接用本机的声音，不再每次先试云端
+  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, tip: true, topic: 'idag' };
   const S = Object.assign({}, DEFAULTS, SV.store.get(SET_KEY, {}));
   delete S.level; // 旧版本的「简易优先」设置，不再用
   // 设置的版本：第一版在说明框里点「不用」会把在线翻译一直关着（Safari 上点词只看到「在线翻译已关闭」）。
@@ -154,7 +155,9 @@
   };
   const deviceReader = new SV.speech.Reader(hooks);
   const cloudReader = SV.cloud && SV.cloud.configured ? new SV.cloud.Reader(hooks) : null;
-  const useCloud = () => !!cloudReader && S.engine === 'cloud' && !cloudDown;
+  const monthKey = () => new Date().toISOString().slice(0, 7); // Azure 的免费额度按月算
+  const quotaOut = () => S.cloudOffMonth === monthKey();
+  const useCloud = () => !!cloudReader && S.engine === 'cloud' && !cloudDown && !quotaOut();
   let reader = useCloud() ? cloudReader : deviceReader;
 
   // 云端选的声音：设置里选过、而且和「女声 / 男声」一致的，否则这个性别的第一个（Sofie、Mattias）
@@ -180,7 +183,8 @@
   function cloudFailed(e) {
     const was = reader.state;
     cloudDown = true;
-    const why = e && e.code === 'quota' ? '云端语音这个月的免费额度用完了'
+    if (e && e.code === 'quota') { S.cloudOffMonth = monthKey(); save(); } // 这个月里不再先试云端
+    const why = e && e.code === 'quota' ? '云端语音这个月的免费额度用完了，下个月自动再用'
       : e && (e.code === 'forbidden' || e.code === 'auth') ? '云端语音的设置有问题（令牌服务或 Azure 密钥）'
         : e && e.code === 'network' ? '连不上云端语音'
           : '云端语音这次没成功';
@@ -1072,7 +1076,8 @@
     if (!SV.speech.supported) t = '这个浏览器不支持朗读。';
     else if (!list.length) t = '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 → 时间和语言 → 语音」里添加瑞典语语音；iPhone / iPad 在「设置 → 辅助功能 → 朗读内容 → 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。';
     else t = `这台设备有 ${list.length} 个瑞典语声音。认不出男女的标为「性别不明」，可以试听后自己选。`;
-    if (cloudReader && S.engine === 'cloud' && cloudDown) t = '云端语音这次没成功，现在用的是这台设备自己的声音；刷新网页会再试云端。' + t;
+    if (cloudReader && S.engine === 'cloud' && quotaOut()) t = '云端语音这个月的免费额度用完了，下个月自动再用；现在用的是这台设备自己的声音。' + t;
+    else if (cloudReader && S.engine === 'cloud' && cloudDown) t = '云端语音这次没成功，现在用的是这台设备自己的声音；刷新网页会再试云端。' + t;
     note.textContent = t;
   }
   selVoice.addEventListener('change', () => {
@@ -1093,7 +1098,7 @@
     r.addEventListener('change', () => {
       if (!r.checked) return;
       S.engine = r.value;
-      if (r.value === 'cloud') cloudDown = false;
+      if (r.value === 'cloud') { cloudDown = false; S.cloudOffMonth = ''; }
       save();
       switchReader();
       refreshVoice();
