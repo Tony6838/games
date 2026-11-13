@@ -1,6 +1,10 @@
 /* 朗读：浏览器的 Web Speech API（speechSynthesis），瑞典语（sv-SE）声音。
    一次读一句（长句再按逗号切开）：
    - 每句开始时报告位置（页面滚到这一句，句子本身不标出来）；声音支持 boundary 事件的，再跟着标出正在读的词；
+   - 一句读完在 onend 里接着读下一句（不用定时器，后台标签页里定时器会被放慢到一秒一次）；整篇读完时，
+     开着循环朗读（hooks.loop()）就从头再读；
+   - 页面藏起来时不停：电脑上切到别的标签页、窗口最小化，Chrome、Edge 接着读；手机锁屏时系统会停掉 speechSynthesis，
+     回到前台时 kick() 从停下的词接着读（锁屏后继续读要用云端语音，它是普通的 audio）；
    - 暂停用 cancel() 而不是 pause()（安卓的 Chrome 不支持 pause），继续时从停下的那个词重新读；
    - iPhone 的 Safari 只允许在用户点击里开始朗读，所以 speak() 都在点击/按键的处理函数里同步调用。 */
 (function () {
@@ -90,6 +94,7 @@
       this.gen = 0;
       this.wordEvents = false; // 这个声音有没有给过词的 boundary 事件
       this.keep = null; // 保持对当前 utterance 的引用（Chrome 会提前回收，结果 onend 不来）
+      this.loops = 0; // 循环朗读从头读了几遍（给测试看）
     }
 
     available() { return !!synth; }
@@ -145,8 +150,12 @@
         if (ci + 1 < list.length) { this.speakChunk(gen, s, list, ci + 1); return; }
         this.si++;
         this.wi = 0;
-        if (this.si >= this.h.sentences().length) this.finish();
-        else this.speakSentence(gen);
+        if (this.si >= this.h.sentences().length) {
+          if (!(this.h.loop && this.h.loop())) { this.finish(); return; }
+          this.si = 0; // 循环朗读：从头再读这一篇
+          this.loops++;
+        }
+        this.speakSentence(gen);
       };
       u.onerror = (e) => {
         if (gen !== this.gen) return;
@@ -170,6 +179,13 @@
 
     resume() {
       if (this.state === 'paused') this.play(this.si, this.wi);
+    }
+
+    // 页面回到前台：系统在后台停掉了朗读（手机锁屏等）的话，从停下的词接着读
+    kick() {
+      if (this.state !== 'speaking' || !synth) return;
+      if (synth.paused) { synth.resume(); return; }
+      if (!synth.speaking && !synth.pending) this.play(this.si, this.wi);
     }
 
     toggle() {

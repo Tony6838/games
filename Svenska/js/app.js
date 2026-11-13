@@ -10,7 +10,8 @@
   // online：浏览器没有内置翻译时用 MyMemory 在线翻译。默认开着，只有在「设置」里取消勾选才关（false）。
   // engine：'cloud' 云端自然语音（js/config.js 设了 ttsUrl 才有）或 'device' 这台设备自己的声音；cloudVoice：云端选的声音；
   // cloudOffMonth：云端这个月的免费额度用完了（'2026-11'），这个月里直接用本机的声音，不再每次先试云端
-  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, tip: true, topic: 'idag' };
+  // loop：循环朗读（读完这一篇从头再读），这个浏览器记住；存不了（隐私模式等）时只在这次打开的页面里有效
+  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, tip: true, topic: 'idag', loop: false };
   const S = Object.assign({}, DEFAULTS, SV.store.get(SET_KEY, {}));
   delete S.level; // 旧版本的「简易优先」设置，不再用
   // 设置的版本：第一版在说明框里点「不用」会把在线翻译一直关着（Safari 上点词只看到「在线翻译已关闭」）。
@@ -22,6 +23,7 @@
   if (!['f', 'm'].includes(S.gender)) S.gender = 'f';
   if (!['cloud', 'device'].includes(S.engine)) S.engine = 'cloud';
   if (S.online !== false) S.online = true;
+  S.loop = S.loop === true;
   const save = () => SV.store.set(SET_KEY, S);
 
   const TOPICS = SV.sources.TOPICS;
@@ -43,7 +45,7 @@
   const els = {
     topbar: $('#topbar'), topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'), tip: $('#tip'),
     popup: $('#popup'), toast: $('#toast'), player: $('#player'),
-    play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), next: $('#btnNext'),
+    play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), loop: $('#btnLoop'), next: $('#btnNext'),
     back: $('#btnBack'), brand: $('#brand'), guide: $('#guide'),
   };
 
@@ -54,6 +56,7 @@
   };
   let loadToken = 0;
   let loading = false;
+  let lastArticleId = ''; // 云端语音合成好的段落属于哪一篇（换文章时放掉）
   let wantArticle = new URLSearchParams(location.search).get('a') || '';
 
   // ---------- 提示条 ----------
@@ -131,6 +134,31 @@
   // 两种声音，接口一样：云端自然语音（js/cloudtts.js，微软 Azure，电脑、手机、任何浏览器都一样自然；
   // js/config.js 设了 ttsUrl 才有）和这台设备自己的声音（js/speech.js）。默认用云端；云端出错时，
   // 这次打开的页面里改用本机的声音（刷新再试云端）。「设置」里也可以自己选。
+  // ---------- 锁屏界面和媒体键（Media Session） ----------
+  // 云端语音是普通的 audio：手机锁屏界面、安卓的通知栏、电脑的媒体键和系统的「正在播放」都能控制它：
+  // 播放、暂停、停止、下一篇、上一篇。本机的声音（speechSynthesis）不是 audio，系统一般不显示这些控制。
+  // 没有这个接口的浏览器什么都不做。没有「循环」这个系统按钮，循环朗读只能在页面上开关。
+  const media = (typeof navigator !== 'undefined' && navigator.mediaSession) || null;
+  function mediaMeta(item) {
+    if (!media || typeof MediaMetadata === 'undefined') return;
+    try {
+      media.metadata = item ? new MediaMetadata({
+        title: item.title,
+        artist: item.program + ' · Sveriges Radio',
+        album: '瑞典语读报',
+        artwork: [192, 512].map((n) => ({ src: new URL(`icons/icon-${n}.png`, location.href).href, sizes: `${n}x${n}`, type: 'image/png' })),
+      }) : null;
+    } catch (e) { /* 忽略 */ }
+  }
+  function mediaState(st) {
+    if (!media) return;
+    try { media.playbackState = st === 'speaking' ? 'playing' : st === 'paused' ? 'paused' : 'none'; } catch (e) { /* 忽略 */ }
+  }
+  function mediaAction(name, fn) {
+    if (!media || !media.setActionHandler) return;
+    try { media.setActionHandler(name, fn); } catch (e) { /* 这个浏览器不支持这个动作 */ }
+  }
+
   let voiceInfo = { voice: null, gender: '?', exact: false };
   let cloudDown = false;
   const hooks = {
@@ -139,9 +167,11 @@
     voice: () => voiceInfo.voice,
     voiceName: () => cloudVoice().name,
     rate: () => S.rate,
+    loop: () => S.loop === true,
     onState: (st) => {
       document.body.classList.toggle('speaking', st === 'speaking');
       document.body.classList.toggle('paused', st === 'paused');
+      mediaState(st);
       updateButtons();
     },
     onPosition: (si, wi, byWord) => highlight(si, wi, byWord),
@@ -232,7 +262,8 @@
     return { top, bottom };
   }
   function ensureVisible(el) {
-    if (Date.now() - lastUserScroll < 2500) return;
+    // 页面藏着时不滚（回到前台时再滚到正在读的词）；用户刚自己滚过时也不滚
+    if (document.hidden || Date.now() - lastUserScroll < 2500) return;
     const r = el.getBoundingClientRect();
     const band = visibleBand();
     if (r.top >= band.top && r.bottom <= band.bottom) return;
@@ -266,11 +297,16 @@
       !inArticle ? '先在列表里选一篇文章'
         : st === 'speaking' ? '暂停（空格键也可以）'
           : st === 'paused' ? '从停下的词接着读（空格键也可以）' : '朗读这篇文章（空格键也可以）');
+    // 循环朗读：开关，任何时候都能按
+    els.loop.classList.toggle('on', S.loop);
+    els.loop.setAttribute('aria-pressed', S.loop ? 'true' : 'false');
+    tip(els.loop, S.loop ? 'Upprepa: på' : 'Upprepa',
+      S.loop ? '循环朗读开着：读完这一篇从头再读（点一下关掉）' : '循环朗读：读完这一篇从头再读，一遍又一遍（点一下打开）');
     // 下一篇 / 换一批
     els.next.disabled = !(inArticle || inList);
     els.next.querySelector('.lbl').textContent = inList ? '换一批' : '下一篇';
     if (inList) tip(els.next, 'Fler artiklar', `「${cur.topic ? cur.topic.zh : ''}」的下一批文章（再点一次话题也可以）`);
-    else tip(els.next, 'Nästa artikel', '列表里的下一篇');
+    else tip(els.next, 'Nästa artikel', st === 'speaking' ? '列表里的下一篇，接着朗读' : '列表里的下一篇');
   }
 
   // ---------- 话题 ----------
@@ -484,6 +520,10 @@
     }
     cur.item = item;
     SV.sources.markRead(item.id);
+    // 换了一篇文章：上一篇合成好的云端语音放掉（同一篇再打开时还留着；循环朗读重读时不再花额度）
+    if (SV.cloud && SV.cloud.forget && lastArticleId !== item.id) SV.cloud.forget();
+    lastArticleId = item.id;
+    mediaMeta(item);
     if (useCloud()) SV.cloud.warm(); // 先下载语音 SDK、拿令牌（不花额度），点「朗读」时快一点
     const topic = cur.topic;
     const art = els.article;
@@ -521,14 +561,30 @@
     window.scrollTo({ top: 0 });
   }
 
-  // 文章里的「下一篇」：列表里的下一篇；最后一篇之后换下一批
+  // 「下一篇」（播放栏、文章末尾、锁屏界面的「下一首」）：列表里的下一篇；最后一篇之后换下一批（这时停下）。
+  // 正在朗读时，打开下一篇后接着朗读，开着循环朗读就循环读新的这一篇；暂停着或没在读时只打开，不读。
   function nextArticle() {
     if (!cur.topic) return;
+    const reading = reader.state === 'speaking';
     const idx = cur.item ? cur.batch.indexOf(cur.item) : -1;
-    if (idx >= 0 && idx < cur.batch.length - 1) openArticle(cur.batch[idx + 1], false);
-    else {
+    if (idx >= 0 && idx < cur.batch.length - 1) {
+      openArticle(cur.batch[idx + 1], false);
+      if (reading) startReading();
+    } else {
       if (history.state && history.state.sv === 'article') { try { history.replaceState(null, ''); } catch (e) { /* 忽略 */ } }
       showTopic(cur.topic, true);
+    }
+  }
+  // 锁屏界面的「上一首」：列表里的上一篇（正在读时接着读）；已经是第一篇时，正在读的话从头再读这一篇
+  function prevArticle() {
+    if (!cur.topic || cur.view !== 'article') return;
+    const reading = reader.state === 'speaking';
+    const idx = cur.item ? cur.batch.indexOf(cur.item) : -1;
+    if (idx > 0) {
+      openArticle(cur.batch[idx - 1], false);
+      if (reading) startReading();
+    } else if (reading) {
+      reader.play(0, 0);
     }
   }
 
@@ -815,10 +871,32 @@
 
   window.addEventListener('scroll', () => { if (pop.open) placePopup(); }, { passive: true });
   window.addEventListener('resize', () => { if (pop.open) placePopup(); });
-  document.addEventListener('visibilitychange', () => { if (document.hidden && reader.state === 'speaking') reader.pause(); });
+  // 页面藏起来（切到别的标签页、窗口最小化、手机锁屏）时不暂停，接着读。回到前台时，标记已经在正在读的词上，
+  // 滚过去（不重读）；本机的声音如果被系统停掉了（手机锁屏），从停下的词接着读。
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || reader.state !== 'speaking') return;
+    if (reader.kick) reader.kick();
+    if (hlW) ensureVisible(hlW);
+  });
+
+  // 锁屏界面、通知栏、媒体键（见上面 Media Session）
+  mediaAction('play', () => { if (cur.view === 'article' && reader.state !== 'speaking') startReading(); });
+  mediaAction('pause', () => { if (reader.state === 'speaking') reader.pause(); });
+  mediaAction('stop', () => { if (reader.state !== 'idle') { reader.stop(); highlight(-1, -1, false); } });
+  mediaAction('nexttrack', () => { if (cur.view === 'article') nextArticle(); });
+  mediaAction('previoustrack', () => { if (cur.view === 'article') prevArticle(); });
 
   // 播放栏
   els.play.addEventListener('click', () => { els.play.blur(); startReading(); });
+  // 循环朗读：读完这一篇从头再读，直到按暂停、点「下一篇」（接着循环读下一篇）或者把它关掉；
+  // 读的时候关掉，这一遍读完就停
+  els.loop.addEventListener('click', () => {
+    els.loop.blur();
+    S.loop = !S.loop;
+    save();
+    updateButtons();
+    toast(S.loop ? '循环朗读：开。读完这一篇从头再读，直到按暂停' : '循环朗读：关。读完这一遍就停', 2500);
+  });
   const RATES = [0.6, 0.75, 0.9, 1, 1.15];
   els.rate.addEventListener('click', () => {
     els.rate.blur();
@@ -921,6 +999,7 @@
     if (!SV.speech.supported) t = '这个浏览器不支持朗读。';
     else if (!list.length) t = '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 → 时间和语言 → 语音」里添加瑞典语语音；iPhone / iPad 在「设置 → 辅助功能 → 朗读内容 → 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。';
     else t = `这台设备有 ${list.length} 个瑞典语声音。认不出男女的标为「性别不明」，可以试听后自己选。`;
+    t += ' 手机锁屏后，这台设备的声音会停下（回到前台从停下的词接着读）；锁屏后继续朗读需要云端语音。';
     if (cloudReader && S.engine === 'cloud' && quotaOut()) t = '云端语音这个月的免费额度用完了，下个月自动再用；现在用的是这台设备自己的声音。' + t;
     else if (cloudReader && S.engine === 'cloud' && cloudDown) t = '云端语音这次没成功，现在用的是这台设备自己的声音；刷新网页会再试云端。' + t;
     note.textContent = t;
@@ -996,6 +1075,7 @@
     ['#btnPlay', 'Läs upp', '先在列表里选一篇文章'],
     ['#btnRate', 'Talhastighet', '语速：点一下换一档'],
     ['#btnVoice', S.gender === 'm' ? 'Manlig röst' : 'Kvinnlig röst', '切换男声、女声'],
+    ['#btnLoop', 'Upprepa', '循环朗读：读完这一篇从头再读'],
     ['#btnNext', 'Nästa artikel', '列表里的下一篇'],
     ['#btnTipClose', 'Jag förstår', '知道了，不再显示这条说明'],
     ['#btnTryVoice', 'Provlyssna', '试听这个声音'],
@@ -1034,6 +1114,12 @@
       si: reader.si,
       wi: reader.wi,
       wordEvents: reader.wordEvents,
+      loop: S.loop === true,
+      loops: reader.loops || 0,
+      block: cur.model && cur.model.sentences[reader.si] ? cur.model.sentences[reader.si].block : -1,
+      hidden: document.hidden,
+      cloudCache: SV.cloud && SV.cloud.cacheSize ? SV.cloud.cacheSize() : 0,
+      media: media && media.metadata ? { title: media.metadata.title, artist: media.metadata.artist, state: media.playbackState } : null,
       sentences: cur.model ? cur.model.sentences.length : 0,
       blocks: cur.model ? cur.model.blocks.length : 0,
       engine: useCloud() ? 'cloud' : 'device',

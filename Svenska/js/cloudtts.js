@@ -5,9 +5,13 @@
      不在网页、也不在仓库里。没有设置 Worker 地址（js/config.js 的 ttsUrl）时，整个模块不用，只用本机的声音。
    - 用微软官方的 Speech SDK（固定版本，带完整性校验）合成一整段（一个段落一次），拿到 MP3 和每个词的音频时间，
      用普通的 <audio> 播放，按播放进度高亮正在读的词。所以 iPhone 上也能跟着高亮单词。
-   - 和本机朗读（js/speech.js 的 Reader）用同一套接口：play(si, wi)、pause、resume、toggle、stop、speakText。
+   - 和本机朗读（js/speech.js 的 Reader）用同一套接口：play(si, wi)、pause、resume、toggle、stop、speakText、kick。
      暂停就是 audio.pause()；继续、「从这里读」在已经合成的这一段里直接跳到那个词，不再合成。
-   - 合成过的段落按「声音 + 文字」放在内存里（最多 200 段），读第二遍不再花额度；读的时候顺便合成下一段。
+   - 合成过的段落按「声音 + 文字」放在内存里，读第二遍（循环朗读、继续、喇叭）不再花额度；换文章时 forget() 全部放掉。
+     读的时候提前合成后面两段。
+   - 页面藏起来（别的标签页、窗口最小化、手机锁屏）时接着读：一段读完，在 audio 的 ended 事件里同步换上下一段
+     （已经合成好的），不用定时器、不等网络；下一段还没好时，同一个 audio 先循环播静音，保住「正在播放」。
+     正在读的词靠 timeupdate 往前走（藏起来时 requestAnimationFrame 不来）。
    - iPhone 的 Safari 只让用户点过的 <audio> 播放：每次点击时先在两个 audio 元素上各播一小段静音（只做一次）。
    - 出错（令牌拿不到、额度用完、网络不通）时 onFail 告诉 app.js，app.js 改用本机的声音。 */
 (function () {
@@ -117,20 +121,31 @@
     return { url, bounds };
   }
 
-  // 合成过的段落（声音 + 文字 → Promise），最多留 200 段
+  // 合成过的段落（声音 + 文字）留在内存里：读第二遍（循环朗读、继续、「从这里读」、喇叭）不再花额度。
+  // 换文章时 app.js 调 forget()，全部放掉。cache 是 Promise，done 是已经合成好、可以马上拿到的。
   const cache = new Map();
+  const done = new Map();
+  let cacheGen = 0;
+  const keyOf = (text, voice) => voice + '\n' + text;
   function synthCached(text, voice) {
-    const key = voice + '\n' + text;
+    const key = keyOf(text, voice);
     if (cache.has(key)) return cache.get(key);
-    const p = synthesize(text, voice);
+    const g = cacheGen;
+    const p = synthesize(text, voice).then((r) => {
+      // 合成的时候文章已经换了：这段用不上了
+      if (g !== cacheGen) { URL.revokeObjectURL(r.url); throw cloudError('文章已经换了', 'stale'); }
+      done.set(key, r);
+      return r;
+    });
     cache.set(key, p);
-    p.catch(() => cache.delete(key));
-    if (cache.size > 200) {
-      const [oldKey, oldP] = cache.entries().next().value;
-      cache.delete(oldKey);
-      oldP.then((x) => URL.revokeObjectURL(x.url), () => {});
-    }
+    p.catch(() => { if (cache.get(key) === p) cache.delete(key); });
     return p;
+  }
+  function forget() {
+    cacheGen++;
+    for (const r of done.values()) URL.revokeObjectURL(r.url);
+    done.clear();
+    cache.clear();
   }
 
   function waitMeta(a) {
@@ -156,10 +171,12 @@
       this.wordEvents = true; // 每个词的时间都有
       this.clip = null; // { block, url, words: [{ t, si, wi }] }
       this.raf = 0;
+      this.loops = 0; // 循环朗读从头读了几遍（给测试看）
       this.audio = new Audio();
       this.wordAudio = new Audio();
       this.audio.preload = 'auto';
       this.audio.addEventListener('ended', () => this.onEnded());
+      // 页面藏起来时 requestAnimationFrame 停了，timeupdate 照样来，正在读的词照样往前走
       this.audio.addEventListener('timeupdate', () => this.update());
       this.unlocked = false;
     }
@@ -185,33 +202,72 @@
       }
     }
 
-    // 第 bi 段：句子用空格连起来（和页面上一样），合成，再把每个词的时间对到 (句子, 词)
-    async clipFor(bi) {
-      const blocks = this.h.blocks();
+    // 第 bi 段的文字：句子用空格连起来（和页面上一样），记下每句从哪里开始
+    blockText(bi) {
       const sentences = this.h.sentences();
-      const b = blocks[bi];
       let text = '';
       const starts = [];
-      for (const si of b.sentences) {
+      for (const si of this.h.blocks()[bi].sentences) {
         if (text) text += ' ';
         starts.push({ si, at: text.length });
         text += sentences[si].text;
       }
-      const r = await synthCached(text, this.h.voiceName());
-      const words = [];
-      for (const x of r.bounds) {
-        let k = starts.length - 1;
-        while (k > 0 && starts[k].at > x.start) k--;
-        const si = starts[k].si;
-        const wi = SV.text.wordAt(sentences[si], x.start - starts[k].at);
-        if (wi >= 0) words.push({ t: x.t, si, wi });
-      }
-      return { block: bi, url: r.url, words, text };
+      return { text, starts };
     }
 
+    // 把合成结果里每个词的时间对到 (句子, 词)
+    makeClip(bi, bt, r) {
+      const sentences = this.h.sentences();
+      const words = [];
+      for (const x of r.bounds) {
+        let k = bt.starts.length - 1;
+        while (k > 0 && bt.starts[k].at > x.start) k--;
+        const si = bt.starts[k].si;
+        const wi = SV.text.wordAt(sentences[si], x.start - bt.starts[k].at);
+        if (wi >= 0) words.push({ t: x.t, si, wi });
+      }
+      return { block: bi, url: r.url, words, text: bt.text };
+    }
+
+    async clipFor(bi) {
+      const bt = this.blockText(bi);
+      return this.makeClip(bi, bt, await synthCached(bt.text, this.h.voiceName()));
+    }
+
+    // 已经合成好的段落马上拿到（不用等），没有就是 null
+    clipNow(bi) {
+      const bt = this.blockText(bi);
+      const r = done.get(keyOf(bt.text, this.h.voiceName()));
+      return r ? this.makeClip(bi, bt, r) : null;
+    }
+
+    firstBlock() {
+      const blocks = this.h.blocks();
+      let bi = 0;
+      while (bi < blocks.length && !blocks[bi].sentences.length) bi++;
+      return bi < blocks.length ? bi : -1;
+    }
+
+    // 提前合成后面两段，一段读完马上接下一段（手机锁屏时也不断）；开着循环朗读时，快读完了也备好开头那段
     prefetch(bi) {
       const blocks = this.h.blocks();
-      if (bi < blocks.length && blocks[bi].sentences.length) this.clipFor(bi).catch(() => {});
+      for (let k = bi; k < Math.min(blocks.length, bi + 2); k++) if (blocks[k].sentences.length) this.clipFor(k).catch(() => {});
+      if (bi + 2 > blocks.length && this.h.loop && this.h.loop()) {
+        const f = this.firstBlock();
+        if (f >= 0) this.clipFor(f).catch(() => {});
+      }
+    }
+
+    // 下一段还没合成好时，在同一个 audio 上循环播一小段静音，保住「正在播放」：
+    // 手机锁屏、后台标签页里，停下来的 audio 之后可能不让再播
+    bridge() {
+      const a = this.audio;
+      try {
+        a.loop = true;
+        a.src = SILENCE;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => {});
+      } catch (e) { /* 忽略 */ }
     }
 
     // 从第 si 句的第 wi 个词开始读；在用户的点击里调用
@@ -230,28 +286,44 @@
       this.startBlock(gen, sentences[si].block, this.si, this.wi);
     }
 
+    // 读第 bi 段，从第 si 句第 wi 个词开始。这一段已经合成好、又是从头读（一段读完接下一段、循环朗读回到开头）时，
+    // 在调用它的那个事件里同步换上音频、开始播放，中间不等任何东西：后台标签页、手机锁屏时也接得上。
     async startBlock(gen, bi, si, wi) {
-      let clip;
-      try {
-        clip = await this.clipFor(bi);
-      } catch (e) {
-        if (gen === this.gen) this.fail(e);
-        return;
-      }
-      if (gen !== this.gen) return;
       const a = this.audio;
-      try {
-        if (!this.clip || this.clip.url !== clip.url || a.getAttribute('src') !== clip.url) {
-          a.src = clip.url;
-          await waitMeta(a);
+      let clip = this.clipNow(bi);
+      if (!clip) {
+        this.clip = null;
+        this.bridge();
+        try {
+          clip = await this.clipFor(bi);
+        } catch (e) {
+          if (gen === this.gen && !(e && e.code === 'stale')) this.fail(e);
+          return;
         }
-        this.clip = clip;
         if (gen !== this.gen) return;
-        // 从这个词（或这一句后面的第一个词）开始；早 30 毫秒，词头不被切掉（update 提前 50 毫秒，高亮还是这个词）
-        const w = clip.words.find((x) => (x.si === si && x.wi >= wi) || x.si > si);
-        a.currentTime = w ? Math.max(0, w.t / 1000 - 0.03) : 0;
-        a.playbackRate = this.h.rate();
-        await a.play();
+      }
+      // 从这个词（或这一句后面的第一个词）开始；早 30 毫秒，词头不被切掉（update 提前 50 毫秒，高亮还是这个词）
+      const w = clip.words.find((x) => (x.si === si && x.wi >= wi) || x.si > si);
+      const at = w ? Math.max(0, w.t / 1000 - 0.03) : 0;
+      const rate = this.h.rate();
+      try {
+        const same = !!this.clip && this.clip.url === clip.url && a.getAttribute('src') === clip.url && !a.loop;
+        this.clip = clip;
+        if (!same) {
+          a.loop = false;
+          a.src = clip.url;
+          if (at > 0.05) {
+            await waitMeta(a);
+            if (gen !== this.gen) return;
+          }
+        }
+        if (same || at > 0.05) a.currentTime = at;
+        a.defaultPlaybackRate = rate;
+        a.playbackRate = rate;
+        const p = a.play();
+        this.prefetch(bi + 1);
+        this.tick(gen);
+        await p;
       } catch (e) {
         if (gen !== this.gen) return;
         this.gen++;
@@ -259,9 +331,7 @@
         this.h.onError(e && e.name === 'NotAllowedError' ? '浏览器不让自动播放，请再点一次「继续」' : '播放出错：' + ((e && e.message) || e));
         return;
       }
-      if (gen !== this.gen) { a.pause(); return; }
-      this.prefetch(bi + 1);
-      this.loop(gen);
+      if (gen !== this.gen && this.state !== 'speaking') a.pause();
     }
 
     // 按播放进度找正在读的词
@@ -281,7 +351,8 @@
       }
     }
 
-    loop(gen) {
+    // 页面看得见时，每一帧对一下正在读的词（藏起来时 requestAnimationFrame 不来，靠 timeupdate）
+    tick(gen) {
       cancelAnimationFrame(this.raf);
       this.shown = false;
       const step = () => {
@@ -292,13 +363,23 @@
       this.raf = requestAnimationFrame(step);
     }
 
+    // 页面回到前台：标记马上跳到正在读的词（不重读）
+    kick() {
+      this.update();
+    }
+
+    // 一段读完：接着读下一段；整篇读完时，开着循环朗读就从头再读，不然停下
     onEnded() {
-      if (this.state !== 'speaking' || !this.clip) return;
+      if (this.state !== 'speaking' || !this.clip || this.audio.getAttribute('src') !== this.clip.url) return;
       const gen = this.gen;
       const blocks = this.h.blocks();
       let bi = this.clip.block + 1;
       while (bi < blocks.length && !blocks[bi].sentences.length) bi++;
-      if (bi >= blocks.length) { this.finish(); return; }
+      if (bi >= blocks.length) {
+        bi = this.h.loop && this.h.loop() ? this.firstBlock() : -1;
+        if (bi < 0) { this.finish(); return; }
+        this.loops++;
+      }
       const si = blocks[bi].sentences[0];
       this.si = si;
       this.wi = 0;
@@ -308,6 +389,7 @@
 
     fail(e) {
       this.gen++;
+      this.audio.loop = false;
       this.audio.pause();
       this.setState('paused');
       this.h.onFail(e);
@@ -317,6 +399,7 @@
       if (this.state !== 'speaking') return;
       this.gen++;
       cancelAnimationFrame(this.raf);
+      this.audio.loop = false;
       this.audio.pause();
       this.setState('paused');
     }
@@ -349,6 +432,7 @@
       this.gen++;
       this.wordGen++;
       cancelAnimationFrame(this.raf);
+      this.audio.loop = false;
       this.audio.pause();
       this.wordAudio.pause();
       this.si = 0;
@@ -369,12 +453,12 @@
         a.playbackRate = Math.min(this.h.rate(), 0.9);
         await a.play();
       }).catch((e) => {
-        if (gen !== this.wordGen) return;
+        if (gen !== this.wordGen || (e && e.code === 'stale')) return;
         if (e && e.code) this.h.onFail(e);
         else this.h.onError('播放出错：' + ((e && e.message) || e));
       });
     }
   }
 
-  SV.cloud = { configured, VOICES, Reader, warm, loadSdk, voiceByName: (n) => VOICES.find((v) => v.name === n) || null };
+  SV.cloud = { configured, VOICES, Reader, warm, loadSdk, forget, cacheSize: () => done.size, voiceByName: (n) => VOICES.find((v) => v.name === n) || null };
 })();

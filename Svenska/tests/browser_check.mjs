@@ -5,16 +5,20 @@
 //
 // 环境变量 SV_REAL_TTS=1：最后再用真的云端语音（js/config.js 里的令牌服务和微软 Azure）读几秒，会花几百个字符的免费额度。
 //
-// 前三次一律用本机的声音（不管 js/config.js 里填了什么），第四次用假的微软 SDK 和假的令牌服务查云端语音。
-// 前三次：
+// 前三次一律用本机的声音（不管 js/config.js 里填了什么），第四、五次用假的微软 SDK 和假的令牌服务查云端语音。
+// 「页面藏起来」用窗口最小化：页面真的 document.hidden，动画帧停下、定时器一秒一次（和切到别的标签页一样）。
 //   1. 电脑 1600×900、真实的朗读和浏览器内置翻译：每个话题列出文章、再点一次换一批；打开文章、返回列表、
-//      浏览器后退、下一篇；鼠标悬停查词；看看无头 Edge 里真实的瑞典语声音能不能读、有没有词的 boundary 事件；
-//      点一个词试内置翻译。
+//      浏览器后退、下一篇；鼠标悬停查词；看看无头 Edge 里真实的瑞典语声音能不能读、有没有词的 boundary 事件、
+//      窗口最小化时接着读；点一个词试内置翻译。
 //   2. 电脑 1600×900、模拟的朗读（假的 Sofie / Mattias，按词发 boundary 事件）、没有内置翻译、
-//      MyMemory 由测试代答（不占真实额度）：朗读高亮（只标词：浅色红色下划线、深色黄色下划线，句子不标，排版不动）、空格暂停继续、点文章暂停、从这里读、换男女声、
-//      没有内置翻译时提示整页翻译、本句译文走 MyMemory、发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）。
+//      MyMemory 由测试代答（不占真实额度）：朗读高亮（只标词：浅色红色下划线、深色黄色下划线，句子不标，排版不动）、空格暂停继续、
+//      窗口最小化时不暂停、点文章暂停、从这里读、换男女声、没有内置翻译时提示整页翻译、本句译文走 MyMemory、
+//      发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）、本机的声音循环朗读。
 //   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：列表和文章不横向溢出、再点话题换一批、点词弹框不出屏、点屏幕暂停、
 //      有整页翻译的提示、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」。
+//   4. 云端语音：合成、播放、跟着播放进度标词、缓存、换声音、出错时改用本机的声音。
+//   5. 云端语音：页面藏起来时一段接一段读下去、回来时标记在正在读的词上、锁屏界面和媒体键（Media Session）、
+//      循环朗读（重读不再合成）、「下一首」接着读下一篇、关掉循环这一遍读完就停。
 // 只连 SR、MyMemory 和本机；页面连了别的地方算失败。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -22,6 +26,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from 'node:os';
 import { extname, join, normalize, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FAKE_AZURE, MS_RECORDER } from './fakes.mjs';
 
 const [outDir = 'shots', urlArg = ''] = process.argv.slice(2);
 mkdirSync(outDir, { recursive: true });
@@ -215,40 +220,15 @@ const FAKE_SPEECH = `(() => {
 })();`;
 const NO_BUILTIN = `(() => { try { delete window.Translator; } catch (e) {} if (typeof window.Translator !== 'undefined') Object.defineProperty(window, 'Translator', { value: undefined, configurable: true }); })();`;
 
-// 假的微软 Speech SDK：不联网，每个词 220 毫秒，返回同样长的静音 WAV 和每个词的时间（和真的 SDK 一样的事件和字段）。
-// 记下每次合成的声音、文字、令牌，看缓存和换声音对不对。
-const FAKE_AZURE = `(() => {
-  window.__ttsLog = [];
-  const WORD = /[\\p{L}\\p{N}]+(?:[-'’:][\\p{L}\\p{N}]+|[.,]\\p{N}+)*/gu;
-  function wav(ms) {
-    const rate = 8000, n = Math.round(rate * ms / 1000), buf = new ArrayBuffer(44 + n), v = new DataView(buf);
-    const s = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
-    s(0, 'RIFF'); v.setUint32(4, 36 + n, true); s(8, 'WAVE'); s(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-    v.setUint32(24, rate, true); v.setUint32(28, rate, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); s(36, 'data'); v.setUint32(40, n, true);
-    for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
-    return buf;
-  }
-  class SpeechSynthesizer {
-    constructor(conf, audioConfig) { this.conf = conf; this.audioConfig = audioConfig; this.wordBoundary = null; }
-    speakTextAsync(text, ok) {
-      // window.__ttsFail = 'quota'：像 Azure 的免费额度用完时一样，合成被拒绝（429）
-      if (window.__ttsFail === 'quota') { setTimeout(() => ok({ reason: 'canceled', errorDetails: 'WebSocket upgrade failed: Too many requests (429). Quota exceeded.' }), 50); return; }
-      const ws = [...text.matchAll(WORD)];
-      window.__ttsLog.push({ voice: this.conf.speechSynthesisVoiceName, text, token: this.conf.token, audioConfig: this.audioConfig });
-      setTimeout(() => {
-        ws.forEach((m, i) => this.wordBoundary && this.wordBoundary(this, { audioOffset: (100 + i * 220) * 10000, duration: 200 * 10000, text: m[0], wordLength: m[0].length, textOffset: m.index, boundaryType: 'WordBoundary' }));
-        ok({ reason: 'done', audioData: wav(150 + ws.length * 220) });
-      }, 80);
-    }
-    close() {}
-  }
-  window.SpeechSDK = {
-    SpeechConfig: { fromAuthorizationToken: (token, region) => ({ token, region }) },
-    SpeechSynthesisOutputFormat: { Audio24Khz48KBitRateMonoMp3: 'mp3' },
-    ResultReason: { SynthesizingAudioCompleted: 'done' },
-    SpeechSynthesizer,
-  };
-})();`;
+// 窗口最小化 / 还原：页面真的藏起来（document.hidden），requestAnimationFrame 停下，定时器放慢到一秒一次，
+// 和切到别的标签页一样（无头 Edge 里实测）
+async function minimize(on) {
+  const w = await send('Browser.getWindowForTarget', {});
+  if (!w.result) return false;
+  await send('Browser.setWindowBounds', { windowId: w.result.windowId, bounds: { windowState: on ? 'minimized' : 'normal' } });
+  await sleep(300);
+  return true;
+}
 
 let scriptIds = [];
 const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36';
@@ -261,6 +241,7 @@ async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, 
   if (cloud === true) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_AZURE })).result.identifier);
   if (fakeSpeech) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_SPEECH })).result.identifier);
   if (noBuiltin) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: NO_BUILTIN })).result.identifier);
+  scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: MS_RECORDER })).result.identifier);
   const patterns = [];
   if (cloud === true) patterns.push({ urlPattern: '*svtts.test/*', requestStage: 'Request' });
   if (mockMM) patterns.push({ urlPattern: '*api.mymemory.translated.net*', requestStage: 'Request' });
@@ -384,7 +365,7 @@ try {
   })()`);
   check('电脑上朗读按钮组紧跟在「简易瑞典语」后面、同一行', ctl.sameRow && ctl.after, JSON.stringify(ctl));
   check('朗读按钮是立体的样子（渐变、加厚的下边），和话题按钮不同', parseFloat(ctl.keyBottom) >= 3 && parseFloat(ctl.chipBottom) <= 1 && /gradient/.test(ctl.keyBg), JSON.stringify(ctl));
-  check('没有「全文翻译」按钮（朗读按钮组是朗读、语速、男女声、下一篇）', !ctl.translateBtn && ctl.players === 4, JSON.stringify(ctl));
+  check('没有「全文翻译」按钮（朗读按钮组是朗读、语速、男女声、循环、下一篇）', !ctl.translateBtn && ctl.players === 5, JSON.stringify(ctl));
   check('有内置翻译时不显示整页翻译的提示', availStart !== 'unavailable' && !ctl.hint, `${availStart} ${JSON.stringify(ctl)}`);
   const topicKeys = await evalJs('SV.sources.TOPICS.map((t) => t.key)');
   for (let i = 0; i < topicKeys.length; i++) {
@@ -480,6 +461,15 @@ try {
   summary.realSpeech = { reader: sr.reader, si: sr.si, wi: sr.wi, wordEvents: sr.wordEvents, voice: sr.voice, curWord };
   console.log('  真实朗读 6 秒后：', JSON.stringify(summary.realSpeech));
   if (sr.reader === 'speaking') {
+    // 真实的声音（speechSynthesis）在页面藏起来时：Edge 接着读（一句读完在 onend 里接下一句，不靠定时器）
+    const r0 = await state();
+    await minimize(true);
+    await sleep(6000);
+    const r1 = await state();
+    const rHidden = await evalJs('document.hidden');
+    await minimize(false);
+    summary.realSpeechHidden = { before: { si: r0.si, wi: r0.wi }, after: { si: r1.si, wi: r1.wi, reader: r1.reader }, hidden: rHidden };
+    check('真实的声音：页面藏起来（窗口最小化）6 秒，接着往下读', rHidden && r1.reader === 'speaking' && (r1.si > r0.si || (r1.si === r0.si && r1.wi > r0.wi)), JSON.stringify(summary.realSpeechHidden));
     await space();
     await sleep(200);
     check('真实朗读：空格暂停', (await state()).reader === 'paused', (await state()).reader);
@@ -575,6 +565,15 @@ try {
   const resumedText = await evalJs(`__speechLog[${logLen}] && __speechLog[${logLen}].text`);
   const expected = await evalJs(`(() => { const s = document.querySelectorAll('#article .s')[${pausedAt.si}]; const w = s.querySelectorAll('.w')[${pausedAt.wi}]; return w ? w.textContent : ''; })()`);
   check('空格继续，从停下的词接着读', s.reader === 'speaking' && resumedText && resumedText.startsWith(expected), `从「${(resumedText || '').slice(0, 40)}」开始，停在「${expected}」`);
+  // 页面藏起来（窗口最小化）时本机的声音也不暂停。模拟的声音靠定时器报词，藏起来时一秒才报一个，所以只看还在往前走
+  const d0 = await state();
+  await minimize(true);
+  const dHidden = await evalJs('document.hidden');
+  await sleep(3500);
+  const d1 = await state();
+  await minimize(false);
+  check('本机的声音：页面藏起来（窗口最小化）时不暂停，接着往下读', dHidden && d1.reader === 'speaking' && (d1.si > d0.si || (d1.si === d0.si && d1.wi > d0.wi)),
+    `藏着：${dHidden}，第 ${d0.si} 句第 ${d0.wi} 词 → 第 ${d1.si} 句第 ${d1.wi} 词`);
   await sleep(1200);
   const wc2 = await center('#article .body .w', 3);
   await tap(wc2.x, wc2.y);
@@ -645,6 +644,23 @@ try {
     check('鼠标选中几个词，弹出它们的中文', !!pr && pr.word && pr.word.includes(' ') && pr.mt.length > 0, pr ? `${pr.word} → ${pr.mt}` : '');
     await shot('desktop-selection');
   }
+  // 循环朗读，本机的声音：开着「循环」时，读完最后一句从头再读（读完关掉，后面几轮照常）
+  await evalJs(`document.querySelector('#popup').hidden || document.querySelector('#main').click()`);
+  const lbD = await center('#btnLoop');
+  await tap(lbD.x, lbD.y);
+  const lastD = await evalJs(`(() => { const ss = document.querySelectorAll('#article .s'); return [...document.querySelectorAll('#article .w')].indexOf(ss[ss.length - 1].querySelector('.w')); })()`);
+  const lwD = await center('#article .w', lastD);
+  await tap(lwD.x, lwD.y);
+  await sleep(300);
+  await clickButtonText('#popup .acts button', '从这里读');
+  const loopsD0 = (await state()).loops;
+  const loopedD = await waitFor(`SVApp.state().loops > ${loopsD0} && SVApp.state().reader === 'speaking'`, 20000, 100);
+  st = await state();
+  check('本机的声音：开着「循环」，读完最后一句从头再读这一篇', loopedD && st.si <= 2, `第 ${st.loops} 遍，第 ${st.si} 句`);
+  await space();
+  const lbD2 = await center('#btnLoop');
+  await tap(lbD2.x, lbD2.y);
+  check('本机的声音：再点「循环」关掉', (await state()).settings.loop === false);
 
   // ================= 3. 手机 390×844 触摸 =================
   console.log('\n== 3. 手机 390×844 触摸');
@@ -870,9 +886,103 @@ try {
   await evalJs(`(() => { const r = document.querySelector('#engineRow input[value="cloud"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`);
   check('云端额度用完：设置里选回云端就再试', (await state()).engine === 'cloud' && (await state()).settings.cloudOffMonth === '');
 
-  // ================= 5. 真的云端语音（SV_REAL_TTS=1 才做） =================
+  // ================= 5. 后台朗读、循环朗读、锁屏界面的控制（云端语音：假的 SDK 和令牌服务） =================
+  console.log('\n== 5. 电脑 1600×900：页面藏起来时接着读、循环朗读、锁屏界面和媒体键（Media Session）');
+  check('后台：页面打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true }));
+  check('后台：用云端语音，循环朗读默认关着', (await state()).engine === 'cloud' && (await state()).loop === false, JSON.stringify({ engine: (await state()).engine, loop: (await state()).loop }));
+  check('后台：打开一篇文章', await openFirstCard(0));
+  const msInfo = await evalJs(`(() => { const m = navigator.mediaSession && navigator.mediaSession.metadata; return { handlers: Object.keys(window.__ms || {}), title: m ? m.title : '', artist: m ? m.artist : '', artwork: m ? m.artwork.length : 0 }; })()`);
+  check('锁屏界面：注册了播放、暂停、停止、下一篇、上一篇；标题是这篇文章，下面是节目和 Sveriges Radio',
+    ['play', 'pause', 'stop', 'nexttrack', 'previoustrack'].every((n) => msInfo.handlers.includes(n)) && msInfo.title === (await state()).title && /Sveriges Radio/.test(msInfo.artist) && msInfo.artwork >= 1, JSON.stringify(msInfo));
+  const pcB = await center('#btnPlay');
+  await tap(pcB.x, pcB.y);
+  await waitFor(`SVApp.state().reader === 'speaking' && !!document.querySelector('#article .w.current')`, 8000);
+  check('锁屏界面：朗读时显示「正在播放」', (await evalJs('navigator.mediaSession.playbackState')) === 'playing');
+  // 窗口最小化：页面藏起来，requestAnimationFrame 停下、定时器一秒一次；一段读完要在 audio 的 ended 事件里接着读下一段
+  await minimize(true);
+  const h0 = await evalJs(`({ hidden: document.hidden, s: SVApp.state() })`);
+  // 藏着的 7 秒里每半秒看一次（从测试这边问，不受页面定时器放慢的影响）：读到了第几段、一直在读、页面一直藏着
+  let hMax = h0.s.block;
+  let hStates = new Set();
+  let hHidden = true;
+  for (let k = 0; k < 14; k++) {
+    await sleep(500);
+    const x = await evalJs(`({ hidden: document.hidden, reader: SVApp.state().reader, block: SVApp.state().block })`);
+    hHidden = hHidden && x.hidden;
+    hStates.add(x.reader);
+    if (x.reader === 'speaking') hMax = Math.max(hMax, x.block);
+  }
+  check('后台：页面藏起来（窗口最小化）时接着读，一段读完接着读下一段',
+    h0.hidden && hHidden && h0.s.reader === 'speaking' && hMax > h0.s.block && !hStates.has('paused'), `藏着 7 秒：从第 ${h0.s.block} 段读到第 ${hMax} 段，状态 ${[...hStates].join('、')}`);
+  await minimize(false);
+  await sleep(1200);
+  const back = await evalJs(`(() => { const s = SVApp.state(); const w = document.querySelector('#article .w.current'); const sEl = document.querySelectorAll('#article .s')[s.si];
+    const exp = sEl ? sEl.querySelectorAll('.w')[s.wi] : null; const r = w ? w.getBoundingClientRect() : null;
+    return { hidden: document.hidden, reader: s.reader, onWord: !!w && w === exp, inView: !!r && r.top >= 0 && r.bottom <= innerHeight, scrolled: Math.round(scrollY) }; })()`);
+  check('后台：回到前台时，标记就在正在读的词上（不重读），也滚到看得见的地方', !back.hidden && back.reader === 'speaking' && back.onWord && back.inView, JSON.stringify(back));
+  await shot('desktop-back-from-background');
+  // 锁屏界面的暂停、播放
+  await evalJs('window.__ms.pause()');
+  await sleep(200);
+  check('锁屏界面的「暂停」：停下，显示「已暂停」', (await state()).reader === 'paused' && (await evalJs('navigator.mediaSession.playbackState')) === 'paused');
+  await evalJs('window.__ms.play()');
+  await waitFor(`SVApp.state().reader === 'speaking'`, 5000);
+  check('锁屏界面的「播放」：从停下的词接着读', (await state()).reader === 'speaking');
+  // 循环朗读：打开开关，从最后一段读起，读完从头再读；第二遍不再合成
+  const lb = await center('#btnLoop');
+  await tap(lb.x, lb.y);
+  const loopOn = await evalJs(`({ loop: SVApp.state().settings.loop, pressed: document.querySelector('#btnLoop').getAttribute('aria-pressed'), sv: document.querySelector('#btnLoop').dataset.sv,
+    stored: (() => { try { return JSON.parse(localStorage.getItem('sv.settings.v1')).loop; } catch (e) { return null; } })() })`);
+  check('「循环」按钮：按下去开着，瑞典文提示是 Upprepa: på，这个浏览器记住了', loopOn.loop === true && loopOn.pressed === 'true' && loopOn.sv === 'Upprepa: på' && loopOn.stored === true, JSON.stringify(loopOn));
+  await evalJs('window.__ttsWordMs = 25');
+  const lastW = await evalJs(`(() => { const ps = [...document.querySelectorAll('#article .body p, #article .body li')].filter((p) => p.querySelector('.w')); const w = ps[ps.length - 1].querySelector('.w'); return [...document.querySelectorAll('#article .body .w')].indexOf(w); })()`);
+  const lwc = await center('#article .body .w', lastW);
+  await tap(lwc.x, lwc.y);
+  await sleep(300);
+  await clickButtonText('#popup .acts button', '从这里读');
+  const loops0 = (await state()).loops;
+  const idLoop = (await state()).id;
+  const looped = await waitFor(`SVApp.state().loops > ${loops0} && SVApp.state().reader === 'speaking'`, 30000, 50);
+  st = await state();
+  check('循环朗读：读完最后一段，从头再读这一篇', looped && st.block <= 2 && st.id === idLoop, `第 ${st.loops} 遍，第 ${st.block} 段`);
+  const looped2 = await waitFor(`SVApp.state().loops > ${loops0 + 1}`, 120000, 500);
+  const synthLog = await evalJs('window.__ttsLog.map((x) => x.voice + "\\n" + x.text)');
+  const dups = synthLog.length - new Set(synthLog).size;
+  check('循环朗读：第二遍、第三遍不再合成（每段只向 Azure 合成一次）', looped2 && dups === 0, `读了 ${(await state()).loops} 遍，合成 ${synthLog.length} 次，重复 ${dups} 次`);
+  // 暂停：不再往前走，也不从头再读
+  await evalJs('window.__ms.pause()');
+  const p1 = await state();
+  await sleep(1500);
+  const p2 = await state();
+  check('循环朗读：按暂停（锁屏界面的暂停也一样）就停下', p1.reader === 'paused' && p2.reader === 'paused' && p2.si === p1.si && p2.wi === p1.wi && p2.loops === p1.loops, JSON.stringify({ si: p2.si, wi: p2.wi, loops: p2.loops }));
+  // 下一篇（锁屏界面的「下一首」）：正在读时打开下一篇接着读，循环还开着；上一篇合成的语音放掉
+  await evalJs('window.__ms.play()');
+  await waitFor(`SVApp.state().reader === 'speaking'`, 5000);
+  const idL = (await state()).id;
+  const cacheBefore = (await state()).cloudCache;
+  await evalJs('window.__ttsWordMs = 220');
+  await evalJs('window.__ms.nexttrack()');
+  await waitFor(`SVApp.state().id !== ${JSON.stringify(idL)} && SVApp.state().reader === 'speaking'`, 8000);
+  await sleep(400);
+  st = await state();
+  // 新的一篇只留着正在读的这段和提前合成的两段，上一篇的都放掉了
+  check('「下一首」（下一篇）：打开下一篇接着读，循环还开着，上一篇合成的语音放掉了',
+    st.id !== idL && st.id === st.batch[st.batch.indexOf(idL) + 1] && st.reader === 'speaking' && st.loop === true && st.cloudCache <= 3 && st.media && st.media.title === st.title,
+    `合成好的段落 ${cacheBefore} → ${st.cloudCache}；${st.title}`);
+  await evalJs('window.__ttsWordMs = 25');
+  // 关掉循环：这一遍读完就停
+  const lb2 = await center('#btnLoop');
+  await tap(lb2.x, lb2.y);
+  const loopsOff = (await state()).loops;
+  check('再点「循环」：关掉', (await state()).settings.loop === false && (await evalJs(`document.querySelector('#btnLoop').getAttribute('aria-pressed')`)) === 'false');
+  const ended = await waitFor(`SVApp.state().reader === 'idle'`, 120000, 500);
+  st = await state();
+  check('关掉循环以后：这一遍读完就停，不再从头读', ended && st.loops === loopsOff && (await evalJs('navigator.mediaSession.playbackState')) === 'none', `${st.reader}，第 ${st.loops} 遍`);
+  await shot('desktop-loop-off-idle');
+
+  // ================= 6. 真的云端语音（SV_REAL_TTS=1 才做） =================
   if (process.env.SV_REAL_TTS === '1') {
-    console.log('\n== 5. 真的云端语音：js/config.js 的令牌服务和微软 Azure');
+    console.log('\n== 6. 真的云端语音：js/config.js 的令牌服务和微软 Azure');
     check('真的云端：页面打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: false, noBuiltin: true, mockMM: true, cloud: 'real' }));
     check('真的云端：用云端语音', (await state()).engine === 'cloud', (await state()).engine);
     await openFirstCard(0);

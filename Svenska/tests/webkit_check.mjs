@@ -1,6 +1,7 @@
 // 用 Playwright 的 WebKit（Safari 的引擎，Windows 上也能跑）检查 Safari / iPhone / iPad 上的用法，
-// 重点：没有「全文翻译」按钮，没有浏览器内置翻译时提示浏览器自己的整页翻译；查词和本句译文走 MyMemory。
-// 最后在 Playwright 的 Firefox 里也看一下（没装就跳过）。
+// 重点：没有「全文翻译」按钮，没有浏览器内置翻译时提示浏览器自己的整页翻译；查词和本句译文走 MyMemory；
+// 「循环」开关（记住、浏览器不让存时照样能用）。
+// 最后在 Playwright 的 Firefox 里也看一下（没装就跳过），包括云端语音（假的 SDK）的后台朗读、循环朗读和锁屏界面的动作。
 //   node tests/webkit_check.mjs <截图目录> [网址] [real]
 // 不给网址时，自己在本机起静态服务器。MyMemory 默认由测试代答（不占真实额度）；最后加 real 时，
 // 「真实翻译」那一项真的去问 MyMemory（一个词和一句话，很少的额度）。
@@ -11,6 +12,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { FAKE_AZURE, MS_RECORDER } from './fakes.mjs';
 
 const [outDir = 'shots-webkit', urlArg = '', mode = ''] = process.argv.slice(2);
 mkdirSync(outDir, { recursive: true });
@@ -65,8 +67,14 @@ const browser = await webkit.launch();
 const allErrors = [];
 let shotNo = 0;
 // preset：打开网页之前先放进 localStorage 的设置（模拟旧版本、或者用户自己改过的设置）
-async function newPage(device, mm, rec = [], preset = null, userAgent = '') {
+// blockStorage：浏览器不让存（隐私模式、关了网站数据），读 localStorage / sessionStorage 就出错
+async function newPage(device, mm, rec = [], preset = null, userAgent = '', blockStorage = false) {
   const ctx = await browser.newContext({ ...devices[device], ...(userAgent ? { userAgent } : {}) });
+  if (blockStorage) {
+    await ctx.addInitScript(() => {
+      for (const k of ['localStorage', 'sessionStorage']) Object.defineProperty(window, k, { configurable: true, get() { throw new DOMException('blocked', 'SecurityError'); } });
+    });
+  }
   if (preset) await ctx.addInitScript((p) => { try { if (!sessionStorage.getItem('preset-done')) { localStorage.setItem('sv.settings.v1', JSON.stringify(p)); sessionStorage.setItem('preset-done', '1'); } } catch (e) { /* 忽略 */ } }, preset);
   const page = await ctx.newPage();
   page.hasTouchInput = !!devices[device].hasTouch;
@@ -94,6 +102,13 @@ const trState = (page, where) => page.evaluate((w) => ({
   btn: !!document.querySelector('#btnTranslate'),
   hint: [...document.querySelectorAll(w + ' .page-tr-hint')].filter((x) => x.offsetParent).map((x) => x.textContent).join(''),
 }), where);
+// 「循环」按钮的样子和存下来的设置
+const loopState = (page) => page.evaluate(() => {
+  const b = document.querySelector('#btnLoop');
+  let stored = null;
+  try { stored = JSON.parse(localStorage.getItem('sv.settings.v1')).loop; } catch (e) { stored = 'blocked'; }
+  return { exists: !!b, sv: b && b.dataset.sv, pressed: b && b.getAttribute('aria-pressed'), loop: SVApp.state().settings.loop, stored };
+});
 const layout = (page) => page.evaluate(() => {
   const de = document.documentElement;
   const btns = [...document.querySelectorAll('#player button')].filter((b) => !b.hidden).map((b) => b.getBoundingClientRect());
@@ -159,6 +174,32 @@ try {
   await page.waitForFunction(() => document.body.classList.contains('no-builtin'), null, { timeout: 5000 }).catch(() => {});
   tr = await trState(page, '#list');
   check('iPhone 上的 Chrome：没有按钮，提示用浏览器自带的翻译', !tr.btn && /用浏览器自带的翻译功能/.test(tr.hint), tr.hint);
+  await ctx.close();
+
+  // ---------- 循环朗读的开关：瑞典文提示、按下去的样子、浏览器记住；浏览器不让存时照样能用 ----------
+  // （Windows 上的 WebKit 不能播音频，也没有 Media Session，所以朗读本身在这里试不了，在下面的 Firefox 里试）
+  console.log('\n== 循环朗读的开关');
+  ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok));
+  let lp = await loopState(page);
+  check('iPhone 上有「循环」按钮，瑞典文提示 Upprepa，默认关着', lp.exists && lp.sv === 'Upprepa' && lp.pressed === 'false' && lp.loop === false, JSON.stringify(lp));
+  await touch(page, '#btnLoop');
+  await page.waitForTimeout(200);
+  lp = await loopState(page);
+  check('点「循环」：开着（瑞典文提示 Upprepa: på），存进了浏览器', lp.pressed === 'true' && lp.sv === 'Upprepa: på' && lp.stored === true, JSON.stringify(lp));
+  await page.reload();
+  await page.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 });
+  lp = await loopState(page);
+  check('重新打开网页，「循环」还开着', lp.pressed === 'true' && lp.loop === true, JSON.stringify(lp));
+  const lay5 = await layout(page);
+  check('iPhone 上五个朗读按钮都在屏幕内', lay5.playerFits, JSON.stringify(lay5));
+  await shot(page, 'iphone-loop-on');
+  await ctx.close();
+  ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok, [], null, '', true));
+  check('浏览器不让存的时候，页面照常列出文章', ok);
+  await touch(page, '#btnLoop');
+  await page.waitForTimeout(200);
+  lp = await loopState(page);
+  check('浏览器不让存的时候，「循环」照样能开（只在这次打开的页面里有效）', lp.pressed === 'true' && lp.loop === true && lp.stored === 'blocked', JSON.stringify(lp));
   await ctx.close();
 
   // ---------- 旧版本留下的「关」：改回默认一次 ----------
@@ -282,6 +323,66 @@ try {
     const fpop = await fpage.evaluate(() => document.querySelector('#popup .mt')?.textContent || '');
     check('Firefox 上点词，查词用 MyMemory', /【译】/.test(fpop), fpop);
     await fpage.screenshot({ path: join(outDir, String(++shotNo).padStart(2, '0') + '-firefox-article.png') });
+    await fctx.close();
+
+    // ---------- Firefox：后台朗读、循环朗读、锁屏界面的控制（云端语音：假的 SDK 和令牌服务；Firefox 的 audio 真的播） ----------
+    // 无头里页面藏不起来：把 document.hidden 改成 true、发 visibilitychange（和切到别的标签页时页面收到的一样），
+    // 看页面自己不停下、一段读完接着读下一段。真的后台（定时器、动画帧停下）在无头 Edge 的测试里试（窗口最小化）。
+    console.log('\n== Firefox：后台朗读和循环朗读（云端语音，假的 SDK）');
+    const cctx = await ff.newContext({ viewport: { width: 1280, height: 800 } });
+    await cctx.addInitScript({ content: `window.SV_CONFIG = { ttsUrl: 'https://svtts.test' };` });
+    await cctx.addInitScript({ content: FAKE_AZURE });
+    await cctx.addInitScript({ content: MS_RECORDER });
+    const cpage = await cctx.newPage();
+    cpage.on('pageerror', (e) => allErrors.push('Firefox 云端: ' + e.message));
+    await cpage.route('https://svtts.test/**', (route) => json(route, { token: 'tok-ff', region: 'northeurope' }));
+    await cpage.route('**/api.mymemory.translated.net/**', (route) => MM.ok(route, []));
+    await cpage.goto(baseUrl);
+    ok = await cpage.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 }).then(() => true, () => false);
+    await cpage.locator('#list .card').first().click();
+    await cpage.waitForFunction(() => SVApp.state().view === 'article' && SVApp.state().sentences > 0, null, { timeout: 10000 });
+    const fst = () => cpage.evaluate(() => SVApp.state());
+    const fms = await cpage.evaluate(() => ({ handlers: Object.keys(window.__ms || {}), title: navigator.mediaSession && navigator.mediaSession.metadata ? navigator.mediaSession.metadata.title : '' }));
+    check('Firefox：用云端语音；锁屏界面和媒体键的动作都注册了，标题是这篇文章',
+      ok && (await fst()).engine === 'cloud' && ['play', 'pause', 'stop', 'nexttrack', 'previoustrack'].every((n) => fms.handlers.includes(n)) && fms.title === (await fst()).title, JSON.stringify(fms));
+    await cpage.locator('#btnPlay').click();
+    const fStarted = await cpage.waitForFunction(() => SVApp.state().reader === 'speaking' && !!document.querySelector('#article .w.current'), null, { timeout: 8000 }).then(() => true, () => false);
+    check('Firefox：点「朗读」，云端语音读起来（audio 真的在播）', fStarted, JSON.stringify(await fst()).slice(0, 120));
+    const fb0 = (await fst()).block;
+    await cpage.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    let fMax = fb0;
+    const fStates = new Set();
+    for (let k = 0; k < 14; k++) {
+      await cpage.waitForTimeout(500);
+      const x = await fst();
+      fStates.add(x.reader);
+      if (x.reader === 'speaking') fMax = Math.max(fMax, x.block);
+    }
+    check('Firefox：页面藏起来（模拟）时不停，一段读完接着读下一段', fStarted && fMax > fb0 && !fStates.has('paused'), `第 ${fb0} 段 → 第 ${fMax} 段，状态 ${[...fStates].join('、')}`);
+    await cpage.evaluate(() => { delete document.hidden; delete document.visibilityState; document.dispatchEvent(new Event('visibilitychange')); });
+    await cpage.waitForTimeout(800);
+    const fBack = await cpage.evaluate(() => { const s = SVApp.state(); const w = document.querySelector('#article .w.current'); const sEl = document.querySelectorAll('#article .s')[s.si]; return { reader: s.reader, onWord: !!w && !!sEl && w === sEl.querySelectorAll('.w')[s.wi] }; });
+    check('Firefox：回到前台时，标记就在正在读的词上', fBack.reader === 'speaking' && fBack.onWord, JSON.stringify(fBack));
+    // 循环朗读：从最后一段读起，读完从头再读，重读时不再合成
+    await cpage.evaluate(() => { window.__ttsWordMs = 25; });
+    await cpage.locator('#btnLoop').click();
+    const fLast = await cpage.evaluate(() => { const ps = [...document.querySelectorAll('#article .body p, #article .body li')].filter((p) => p.querySelector('.w')); return [...document.querySelectorAll('#article .body .w')].indexOf(ps[ps.length - 1].querySelector('.w')); });
+    await cpage.locator('#article .body .w').nth(fLast).click();
+    await cpage.waitForTimeout(300);
+    await cpage.locator('#popup .acts button', { hasText: '从这里读' }).click();
+    const fLoops0 = (await fst()).loops;
+    const fLooped = await cpage.waitForFunction((n) => SVApp.state().loops > n + 1, fLoops0, { timeout: 120000, polling: 200 }).then(() => true, () => false);
+    const fSynth = await cpage.evaluate(() => window.__ttsLog.map((x) => x.voice + '\n' + x.text));
+    check('Firefox：开着「循环」，读完从头再读，读了两遍也每段只合成一次', fLooped && fSynth.length === new Set(fSynth).size, `读了 ${(await fst()).loops} 遍，合成 ${fSynth.length} 次`);
+    await cpage.evaluate(() => window.__ms.pause());
+    await cpage.waitForTimeout(300);
+    check('Firefox：锁屏界面的「暂停」停下循环朗读', (await fst()).reader === 'paused' && (await cpage.evaluate(() => navigator.mediaSession.playbackState)) === 'paused');
+    await cpage.screenshot({ path: join(outDir, String(++shotNo).padStart(2, '0') + '-firefox-loop-paused.png') });
+    await cctx.close();
     await ff.close();
   }
 } catch (e) {

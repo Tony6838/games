@@ -52,6 +52,8 @@
     </button>
     <button type="button" id="btnRate"><b>0.9×</b><span class="lbl">语速</span></button>
     <button type="button" id="btnVoice"><b>女</b><span class="lbl">女声</span></button>
+    <button type="button" id="btnLoop" aria-pressed="false"><b>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l3 3-3 3M4 11V9a3 3 0 0 1 3-3h13M7 21l-3-3 3-3M20 13v2a3 3 0 0 1-3 3H4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span class="lbl">循环</span></button>
     <button type="button" id="btnNext"><b>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span class="lbl">下一篇</span></button>
   </div>
@@ -116,8 +118,9 @@
     <h2 id="helpTitle">怎么用</h2>
     <ul class="help">
       <li><b>选话题</b>：点上面的话题，下面列出这个话题今天的几篇新闻（今天还没有的，列最近的），点一篇来读。<b>再点一次同一个话题，换一批</b>，列过的不会再列。读完点「← 返回列表」回到列表，或者点「下一篇」读列表里的下一篇。</li>
-      <li><b>朗读</b>：点话题按钮后面那组立体按钮里的「朗读」（手机上在话题下面一行，往下滚时一直在顶上）。正在读的单词下面有一条下划线，跟着往下走。</li>
+      <li><b>朗读</b>：点话题按钮后面那组立体按钮里的「朗读」（手机上在话题下面一行，往下滚时一直在顶上）。正在读的单词下面有一条下划线，跟着往下走。切到别的标签页、窗口最小化、手机锁屏时接着读（<b>锁屏后继续朗读需要云端语音</b>，手机上设备自己的声音锁屏就停，回来接着读）；手机锁屏界面、电脑键盘的媒体键可以暂停、继续、下一篇。</li>
       <li><b>暂停</b>：按<kbd>空格</kbd>，或者点一下文章。再按空格或点「继续」，从停下的地方接着读。</li>
+      <li><b>循环朗读</b>：点「循环」，读完这一篇从头再读，一遍又一遍，直到按暂停或者再点一次「循环」关掉（读的时候关掉，这一遍读完就停）。正在读的时候点「下一篇」，接着读下一篇，也是循环。这个开关这台设备的浏览器会记住。</li>
       <li><b>查词</b>：鼠标停在词上，或者点一下词，就显示中文。喇叭读这个词，「从这里读」从这个词开始朗读，「本句译文」翻译这一整句。电脑上用鼠标选中几个词，也会翻译选中的部分。</li>
       <li><b>整篇翻译</b>：用浏览器自带的整页翻译。Safari、iPhone、iPad 点地址栏「aA → 翻译成中文」；安卓的 Chrome 点右上角 ⋮ →「翻译…」；Firefox 用地址栏的翻译图标。这些浏览器在列表和文章开头也有一行这样的提示。</li>
       <li><b>在线翻译</b>：浏览器没有内置翻译时，查词和「本句译文」自动用 MyMemory 在线翻译（默认开着）；不想用可以在顶部齿轮按钮「设置」里关掉。</li>
