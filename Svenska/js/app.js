@@ -7,7 +7,8 @@
 
   // ---------- 设置 ----------
   const SET_KEY = 'sv.settings.v1';
-  // online：浏览器没有内置翻译时用 MyMemory 在线翻译。默认开着，只有在「设置」里取消勾选才关（false）。
+  // online：微软翻译（额度用完、连不上）和浏览器内置翻译都用不了时，用 MyMemory 在线翻译。
+  // 默认开着，只有在「设置」里取消勾选才关（false）。微软翻译不受这个开关管（微软不保存文字）。
   // engine：'cloud' 云端自然语音（js/config.js 设了 ttsUrl 才有）或 'device' 这台设备自己的声音；cloudVoice：云端选的声音；
   // cloudOffMonth：云端这个月的免费额度用完了（'2026-11'），这个月里直接用本机的声音，不再每次先试云端
   // loop：循环朗读（读完这一篇从头再读），这个浏览器记住；存不了（隐私模式等）时只在这次打开的页面里有效
@@ -631,20 +632,40 @@
     p.style.top = Math.round(Math.max(8, top)) + 'px';
   }
 
-  function trErrorText(e) {
+  // hasSent：弹出框里有「本句译文」（文章里的一个词）
+  function trErrorText(e, hasSent) {
     if (!e) return '翻译失败';
-    if (e.code === 'needGesture') return '点一下这个词，启用浏览器内置的翻译';
-    if (isOffError(e)) return '在线翻译关着（开关在顶部齿轮按钮「设置」里），这个浏览器又没有内置翻译。';
-    if (e.code === 'none') return '这个浏览器没有可用的翻译';
-    if (e.code === 'quota') return '今天的免费在线翻译额度用完了，明天再来，或者换 Chrome / Edge 电脑版（有内置翻译）';
-    if (e.code === 'network') return '在线翻译服务没有回应（网络不通、今天的额度用完了，或者被内容拦截器挡住了）';
-    return e.message || '翻译失败';
+    // 微软翻译的免费额度用完了才落到后面的：说一声
+    const az = e.azure === 'quota' ? '微软翻译的免费额度用完了，' : '';
+    if (e.code === 'needClick') return az + '点一下这个词，用 MyMemory 在线翻译';
+    if (e.code === 'needGesture') return az + '点一下这个词，启用浏览器内置的翻译';
+    if (isOffError(e)) return offText(e);
+    if (e.code === 'none') return az + '这个浏览器没有可用的翻译';
+    if (e.code === 'unreliable') return az + '在线翻译没有给出可靠的译文' + (hasSent ? '，看看「本句译文」' : '');
+    if (e.code === 'quota') return az ? az + 'MyMemory 今天的免费额度也用完了，明天再来，或者换 Chrome / Edge 电脑版（有内置翻译）' : '今天的免费在线翻译额度用完了，明天再来，或者换 Chrome / Edge 电脑版（有内置翻译）';
+    if (e.code === 'network') return az + '在线翻译服务没有回应（网络不通、今天的额度用完了，或者被内容拦截器挡住了）';
+    return az + (e.message || '翻译失败');
   }
-  const ENGINE = { builtin: '浏览器内置翻译', mymemory: 'MyMemory 在线翻译', cache: '' };
+  // 微软翻译只是这会儿不行（连不上、超时、太忙、出错、设置不对、这一句太长）
+  const AZ_TRANSIENT = ['network', 'server', 'busy', 'broken', 'long'];
+  // MyMemory 关着、又没有内置翻译时：说清楚到底是怎么回事。微软翻译只是暂时连不上时，先说这个，打开 MyMemory 只是另一个办法
+  function offText(e) {
+    if (AZ_TRANSIENT.includes(e.azure)) return '微软翻译暂时用不了（连不上或者出错了），这个浏览器又没有内置翻译。过一会儿再试；也可以打开 MyMemory 在线翻译（开关在顶部齿轮按钮「设置」里）。';
+    if (e.azure === 'quota') return '微软翻译的免费额度用完了，MyMemory 在线翻译又关着（开关在顶部齿轮按钮「设置」里），这个浏览器也没有内置翻译。';
+    return '在线翻译关着（开关在顶部齿轮按钮「设置」里），这个浏览器又没有内置翻译。';
+  }
+  const ENGINE = { azure: '微软翻译', builtin: '浏览器内置翻译', mymemory: 'MyMemory 在线翻译', cache: '' };
+  // 弹出框最下面那一行小字：用的哪个翻译；微软翻译的额度用完了才用别的时，说一声
+  const engineLabel = (r) => (ENGINE[r.engine] ? ENGINE[r.engine] + (r.engine !== 'azure' && r.azure === 'quota' ? '（微软翻译的免费额度用完了）' : '') : '');
 
   function onDownload(p) {
     toast(`正在下载浏览器的瑞典语→中文翻译模型：${Math.round((p || 0) * 100)}%`, 3000);
   }
+
+  // 整句译文先占多大地方：中文译文的字数一般是瑞典语句子长度的 0.28–0.37 倍（2026-11-13 的评估集，140 句），
+  // 按 0.37 倍、一行 21 个字估；最多 4 行，更长的在格子里滚动。这样译文来的时候大多不用再长高（评估集里 140 句有 7 句长高一行）
+  const sentenceLines = (sv) => SV.clamp(Math.ceil((sv.length * 0.37) / 21), 1, 4);
+  let senseApplied = 0; // 给测试看：按这一句选词义的结果真的放进弹出框几次（换了词、关了以后回来的结果不算）
 
   // 弹出框：word 模式（文章里的一个词）或 text 模式（鼠标选中的几个词）
   function openPopup({ wordEl, text, rect, pinned, si, wi }) {
@@ -659,36 +680,74 @@
     p.setAttribute('aria-label', '「' + text + '」的中文');
     const isWord = !!wordEl;
     const gl = isWord ? SV.glossary.lookup(text) : null;
+    // 小词典里的意思，一个一个分开（「判决；（口语）他们」是两个）
+    const senses = gl ? SV.sense.senses(gl) : [];
+    const sentence = isWord && cur.model ? cur.model.sentences[si] : null;
+    // 有几个意思（Tony 定的）：自动显示这一句的译文；js/sense.js 确定时，给那个意思和整句译文里这个词的译文画下划线。
+    // 鼠标只是停在词上时不用 MyMemory：只剩 MyMemory 时不自动翻这一句，只有意思和「本句译文」
+    const auto = !!sentence && senses.length >= 2 && (pinned || SV.tr.hoverCanTranslate());
+    p.classList.toggle('multi', auto);
     p.append(h('div', { class: 'pw' }, h('b', { lang: 'sv' }, text)));
     if (gl) {
       const box = h('div', { class: 'gl' });
-      for (const e of gl) {
-        box.append(h('div', null,
-          e.lemma !== text.toLowerCase() ? h('i', { lang: 'sv' }, e.lemma + '：') : null,
-          e.zh,
-          e.guessed ? h('i', null, '（按词形推测的原形）') : null));
-      }
+      gl.forEach((e, ei) => {
+        const line = h('div', null, e.lemma !== text.toLowerCase() ? h('i', { lang: 'sv' }, e.lemma + '：') : null);
+        senses.filter((x) => x.entry === ei).forEach((x, j) => {
+          if (j) line.append('；');
+          x.el = h('span', { class: 'sense' }, x.text);
+          line.append(x.el);
+        });
+        if (e.guessed) line.append(h('i', null, '（按词形推测的原形）'));
+        box.append(line);
+      });
       p.append(box);
     }
+    let ctxs = null;
+    if (auto) {
+      ctxs = h('div', { class: 'ctxs wait', 'data-why': 'wait' }, '正在翻译这一句…');
+      ctxs.style.minHeight = 'calc(' + sentenceLines(sentence.text) * 1.6 + 'em + 7px)'; // 7px：上面的虚线和空隙（border-box）
+      p.append(ctxs);
+    }
+    // 小词典里没有的词才交给翻译引擎（单独发这个词）；小词典里有的，意思直接显示，不花在线翻译的额度
     const mt = h('div', { class: 'mt wait' }, '翻译中…');
-    const needMt = !gl || SV.tr.builtinReady();
+    const needMt = !gl;
     if (needMt) p.append(mt);
     const acts = h('div', { class: 'acts' });
     const bSpeak = isWord ? tip(h('button', { type: 'button' }), 'Läs upp ordet', '读这个词') : tip(h('button', { type: 'button' }), 'Läs upp', '读选中的词句');
     bSpeak.innerHTML = ICON_SPEAK + '<span>读</span>';
     bSpeak.addEventListener('click', (e) => { e.stopPropagation(); reader.speakText(text); });
     acts.append(bSpeak);
+    let bSent = null;
     if (isWord) {
       const bFrom = tip(h('button', { type: 'button' }), 'Läs härifrån', '从这个词开始朗读');
       bFrom.innerHTML = ICON_PLAY + '<span>从这里读</span>';
       bFrom.addEventListener('click', (e) => { e.stopPropagation(); hidePopup(); reader.play(si, wi); });
       acts.append(bFrom);
       const sentBox = h('div', { class: 'sent', hidden: true });
-      const bSent = tip(h('button', { type: 'button' }, '本句译文'), 'Översätt meningen', '翻译这个词所在的整句');
-      bSent.addEventListener('click', async (e) => {
+      bSent = tip(h('button', { type: 'button' }, '本句译文'), 'Översätt meningen', '翻译这个词所在的整句');
+      // 和自动显示的整句译文是同一个翻译、同一个缓存：一句只花一次额度
+      bSent.addEventListener('click', (e) => {
         e.stopPropagation();
         const s = cur.model && cur.model.sentences[si];
         if (!s) return;
+        if (ctxs) {
+          if (!ctxs.hidden && ctxs.dataset.why !== 'wait' && ctxs.dataset.why !== 'fail') {
+            // 整句译文已经在上面了：让那一格闪一下（只换底色，弹出框不变），滚回开头
+            ctxs.scrollTop = 0;
+            ctxs.classList.remove('flash');
+            void ctxs.offsetWidth;
+            ctxs.classList.add('flash');
+            clearTimeout(ctxs.flashTimer);
+            ctxs.flashTimer = setTimeout(() => ctxs.classList.remove('flash'), 900);
+            return;
+          }
+          // 还在等（可能是鼠标停着开始的：不能下载内置翻译的模型、不能用 MyMemory），或者刚才没翻成：点的这一次自己再翻，
+          // 结果放在同一个格子里。微软翻译那一步和还在等的那一次共用一个请求（js/translate.js），不多花额度
+          ctxs.hidden = false;
+          ctxs.dataset.clicked = '1';
+          fillInto(ctxs, () => translateText(s.text), 'ctxs', 'ctxs err', eng, null, () => ctxs.dataset.why !== 'wait' && ctxs.dataset.why !== 'fail');
+          return;
+        }
         sentBox.hidden = false;
         fillInto(sentBox, () => translateText(s.text), 'sent', 'sent err', null);
       });
@@ -697,50 +756,109 @@
     } else {
       p.append(acts);
     }
-    const eng = h('div', { class: 'eng' });
+    // 最下面那一行小字（用的哪个翻译）。有几个意思的词先占好这一行，整句译文来的时候弹出框不长高
+    const eng = h('div', { class: 'eng' }, auto ? ' ' : null);
     p.append(eng);
     p.hidden = false;
     placePopup();
+    if (auto) fillSentence(ctxs, sentence, sentence.words[wi], senses, gl, pinned, eng);
     if (!needMt) return;
     const short = isWord || text.split(/\s+/).length <= 3;
-    fillInto(mt, () => (short
-      ? SV.tr.translate(text, 'word', { gesture: pinned, online: S.online !== false, onDownload })
-      : translateText(text)), 'mt', 'mt err', eng);
+    // explicit：读者点了按钮重试（「打开在线翻译」）：就算弹出框是鼠标停着打开的，这一次也算点出来的
+    fillInto(mt, (explicit) => (short
+      ? SV.tr.translate(text, 'word', { gesture: pinned || explicit, online: S.online !== false, mm: pinned || explicit, onDownload })
+      : translateText(text)), 'mt', 'mt err', eng, bSent);
+  }
+
+  // 有几个意思的词：意思已经都列出来了，这里自动放上这一句的译文。
+  // 能挑的词（js/sense.js）先请微软翻译把这个词包在 <b> 里翻译整句：确定时，给那个意思画下划线，整句译文里这个词的译文也画下划线；
+  // 不确定、或者微软翻译用不了（再用内置翻译、MyMemory 翻整句）：只放整句译文，不画。
+  // 结果回来时弹出框已经关了、或者换到别的词上了，就不管它。整句也翻不了：收起这一格，不报错（点「本句译文」能看到原因）。
+  async function fillSentence(box, s, w, senses, gl, pinned, eng) {
+    const token = pop.token;
+    const put = (zh, res, r) => {
+      senseApplied++;
+      box.textContent = '';
+      box.className = 'ctxs';
+      box.dataset.why = res ? res.why : 'plain';
+      if (res && res.index >= 0 && res.start >= 0 && res.end <= zh.length) {
+        box.append(zh.slice(0, res.start), h('span', { class: 'key', title: '这个词在这一句里的译文' }, zh.slice(res.start, res.end)), zh.slice(res.end));
+        const best = senses[res.index];
+        if (best && best.el) {
+          best.el.classList.add('best');
+          best.el.title = '符合这句的意思';
+          best.el.append(h('span', { class: 'sr' }, '（符合这句的意思）'));
+        }
+      } else {
+        box.append(zh);
+      }
+      if (eng && !eng.textContent.trim()) eng.textContent = engineLabel(r) || ' ';
+      placePopup();
+    };
+    if (SV.sense.pickable(gl, senses) && SV.tr.azureState() === 'ok') {
+      try {
+        const r = await SV.tr.tagged(s.text, w.start, w.end);
+        if (token !== pop.token) return;
+        const parsed = SV.sense.parseTagged(r.html);
+        if (parsed.text) {
+          SV.tr.rememberText(s.text, parsed.text);
+          put(parsed.text, SV.sense.pickTagged(senses, parsed), r);
+          return;
+        }
+      } catch (e) {
+        if (token !== pop.token) return; // 落到普通的整句翻译
+      }
+    }
+    try {
+      const r = await translateText(s.text, { gesture: pinned, mm: pinned });
+      if (token !== pop.token) return;
+      put(r.zh, null, r);
+    } catch (e) {
+      if (token !== pop.token || box.dataset.clicked) return; // 点了「本句译文」：那边自己显示结果或原因
+      box.hidden = true;
+      box.dataset.why = 'fail';
+      placePopup();
+    }
   }
 
   // 在线翻译是不是因为被关掉才没法用
   function isOffError(e) {
     return !!e && (e.code === 'disabled' || (e.code === 'none' && S.online === false));
   }
-  // 在弹出框的一个格子里放译文。在线翻译关着时，给一个「打开在线翻译」按钮：
-  // 点了先看同样的说明（同意后才打开），然后马上重新翻译。
-  function fillInto(box, run, okClass, errClass, eng) {
+  // 在弹出框的一个格子里放译文。在线翻译关着时，给一个「打开在线翻译」按钮：一点就打开，马上重新翻译
+  // （微软翻译只是暂时连不上时，这个按钮不醒目：先说暂时连不上，打开 MyMemory 只是另一个办法）。
+  // MyMemory 给单词的译文不可靠时，说一声，并把下面那个「本句译文」按钮（bSent，弹出框是文章里的一个词时才有）变成醒目的样子。
+  // skip()：结果回来时如果它说「已经有了」（别的途径先放好了），就不放。
+  // run(explicit)：explicit 是 true 时，是读者点了按钮重试（不管弹出框是不是鼠标停着打开的，都算点出来的）
+  function fillInto(box, run, okClass, errClass, eng, bSent, skip) {
     const token = pop.token;
     box.className = errClass.replace(' err', '') + ' wait';
     box.textContent = '翻译中…';
     placePopup();
-    Promise.resolve().then(run).then((r) => {
-      if (token !== pop.token) return;
+    Promise.resolve().then(() => run(false)).then((r) => {
+      if (token !== pop.token || (skip && skip())) return;
       if (!r) {
         box.textContent = '没有翻译';
         box.className = errClass;
       } else {
         box.textContent = r.zh;
         box.className = okClass;
-        if (eng && ENGINE[r.engine]) eng.textContent = ENGINE[r.engine];
+        if (eng) eng.textContent = engineLabel(r);
       }
       placePopup();
     }, (err) => {
-      if (token !== pop.token) return;
-      box.textContent = trErrorText(err);
+      if (token !== pop.token || (skip && skip())) return;
+      box.textContent = trErrorText(err, !!bSent);
       box.className = errClass;
+      if (err && err.code === 'unreliable' && bSent) bSent.classList.add('primary');
       if (isOffError(err)) {
-        const b = tip(h('button', { type: 'button', class: 'primary on-btn' }, '打开在线翻译'), 'Slå på onlineöversättning', '打开 MyMemory 在线翻译，马上重新翻译');
+        const quiet = AZ_TRANSIENT.includes(err.azure);
+        const b = tip(h('button', { type: 'button', class: quiet ? 'on-btn' : 'primary on-btn' }, '打开在线翻译'), 'Slå på onlineöversättning', '打开 MyMemory 在线翻译，马上重新翻译');
         b.addEventListener('click', (e) => {
           e.stopPropagation();
           pop.pinned = true;
           turnOnline();
-          fillInto(box, run, okClass, errClass, eng);
+          fillInto(box, () => run(true), okClass, errClass, eng);
         });
         box.append(h('br'), b);
       }
@@ -758,21 +876,13 @@
     openPopup({ wordEl, text: s.words[wi].text, pinned, si, wi });
   }
 
-  // 本句译文、选中的几个词：浏览器内置翻译优先（Chrome、Edge 电脑版），没有的话用 MyMemory（默认开着）。
-  // 返回 { ok: true, online, mm } 或 { ok: false, why: 'disabled'（在「设置」里关了在线翻译） }
-  async function decideOnline() {
-    const avail = await SV.tr.builtinAvailability();
-    const builtinOk = avail === 'ready' || avail === 'available' || avail === 'downloadable' || avail === 'downloading';
-    if (builtinOk) return { ok: true, online: S.online !== false };
-    if (S.online === false) return { ok: false, why: 'disabled' };
-    return { ok: true, online: true, mm: true };
-  }
-  async function translateText(text) {
+  // 本句译文、选中的几个词、自动显示的整句译文：和查词一样的顺序（js/translate.js）：微软翻译，用不了时浏览器内置翻译
+  // （Chrome、Edge 电脑版），再不行用 MyMemory（默认开着，在「设置」里关了就不用）。
+  // opts.gesture、opts.mm：是不是读者点出来的。鼠标只是停在词上时都是 false：不能开始下载内置翻译的模型，也不用 MyMemory（Tony 定的）
+  async function translateText(text, opts = {}) {
     const cached = SV.tr.cachedText(text);
     if (cached) return { zh: cached, engine: 'cache' };
-    const d = await decideOnline();
-    if (!d.ok) { const e = new Error('在线翻译关着'); e.code = 'disabled'; throw e; }
-    return SV.tr.translate(text, 'text', { gesture: true, online: d.online, onDownload });
+    return SV.tr.translate(text, 'text', { gesture: opts.gesture !== false, mm: opts.mm !== false, online: S.online !== false, onDownload });
   }
 
   // 「打开在线翻译」按钮：一点就打开（关掉的开关在顶部齿轮按钮「设置」里）
@@ -1053,11 +1163,15 @@
   async function updateTrNote() {
     const a = await SV.tr.builtinAvailability();
     const u = SV.tr.mmUsage();
-    let t;
-    if (a === 'ready' || a === 'available') t = '浏览器内置翻译：可用（在本机翻译，文字不离开这台设备，不限量）。';
-    else if (a === 'downloadable' || a === 'downloading') t = '浏览器内置翻译：可用。第一次用时浏览器要下载瑞典语→中文的翻译模型（点一个词就开始）。';
-    else t = '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）。';
-    if (u.chars) t += ` 今天已用在线翻译约 ${u.chars} 个字符。`;
+    const az = SV.tr.azureState();
+    let t = '';
+    if (az === 'quota') t = '微软翻译的免费额度用完了（每 6 小时再试一次）。';
+    else if (az !== 'off') t = '查词和「本句译文」先用微软翻译（微软不保存收到的文字；免费额度所有读者共用，用完时自动改用下面的）。';
+    const lead = az === 'off' ? '浏览器内置翻译：可用' : '微软翻译用不了时，用浏览器内置翻译';
+    if (a === 'ready' || a === 'available') t += lead + '（在本机翻译，文字不离开这台设备，不限量）。';
+    else if (a === 'downloadable' || a === 'downloading') t += lead + '。第一次用时浏览器要下载瑞典语→中文的翻译模型（点一个词就开始）。';
+    else t += '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：' + (az === 'off' ? '' : '微软翻译用不了时，') + '查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）。';
+    if (u.chars) t += ` 今天已用 MyMemory 在线翻译约 ${u.chars} 个字符。`;
     $('#trNote').textContent = t;
   }
 
@@ -1126,6 +1240,7 @@
       voice: useCloud() ? cloudVoice().name : voiceInfo.voice ? voiceInfo.voice.name : null,
       voiceGender: useCloud() ? cloudVoice().gender : voiceInfo.gender,
       popup: pop.open ? { pinned: pop.pinned, text: pop.text } : null,
+      senseApplied,
       settings: Object.assign({}, S),
     }),
   };

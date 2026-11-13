@@ -10,6 +10,7 @@
   --accent-soft: #e6f0fa;
   --word: #d32f2f;        /* 正在读的词的下划线：浅色（日间）是红色 */
   --word-paused: #e57373; /* 暂停时停下的词：浅一些的红色 */
+  --sense: #1565c0;       /* 查词弹出框里按这一句选出来的意思：蓝色下划线（和正在读的词的红色、黄色分开） */
   --zh: #6b4e16;
   --easy-bg: #e3f2e5;
   --easy-ink: #1d6b2b;
@@ -37,6 +38,7 @@
     --accent-soft: #1d2b3b;
     --word: #f5c518;
     --word-paused: #8a6f14;
+    --sense: #64b5f6;
     --zh: #e2c48a;
     --easy-bg: #1d3323;
     --easy-ink: #8fd49b;
@@ -235,6 +237,28 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 .popup .gl { margin: 4px 0 0; font-family: var(--zh-font); }
 .popup .gl div { margin: 2px 0; }
 .popup .gl i { font-style: normal; color: var(--muted); font-size: 13px; }
+/* 小词典有几个意思时（js/sense.js）：确定的那个意思，和整句译文里这个词的译文（.ctxs .key），画蓝色下划线；
+   和正文里正在读的词一样是一整条（不在 g、j、p、y 处断开），不占位置，字的颜色、粗细不变，弹出框不变大小。 */
+.popup .gl .sense.best, .popup .ctxs .key {
+  text-decoration: underline;
+  text-decoration-color: var(--sense);
+  text-decoration-thickness: max(2px, .12em);
+  text-underline-offset: .22em;
+  text-decoration-skip-ink: none;
+}
+/* 有几个意思的词：弹出框宽度固定（整句译文来的时候不变宽），下面自动放这一句的译文。
+   译文的格子一开始就按估计的行数占好地方，最多 4 行，更长的在格子里滚动 */
+.popup.multi { width: min(340px, calc(100vw - 16px)); }
+.popup .ctxs {
+  margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line);
+  font-family: var(--zh-font); font-size: 15px; line-height: 1.6; color: var(--zh);
+  max-height: calc(1.6em * 4 + 7px); overflow-y: auto; overscroll-behavior: contain; overflow-wrap: anywhere;
+}
+.popup .ctxs.wait, .popup .ctxs.err { color: var(--muted); }
+/* 整句译文已经在上面时点「本句译文」：这一格闪一下（只换底色） */
+.popup .ctxs.flash { background: var(--accent-soft); }
+/* 只给读屏软件看的文字（「符合这句的意思」），不占位置 */
+.sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .popup .mt { margin: 4px 0 0; font-family: var(--zh-font); font-size: 18px; }
 .popup .mt.wait, .popup .mt.err { font-size: 14px; color: var(--muted); }
 .popup .acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

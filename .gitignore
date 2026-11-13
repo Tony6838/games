@@ -1,0 +1,2 @@
+# wrangler（Cloudflare 的命令行工具）的本机缓存，里面有账号信息，不放进仓库
+Svenska/tools/tts-worker/.wrangler/

@@ -1,6 +1,7 @@
 // 用 Playwright 的 WebKit（Safari 的引擎，Windows 上也能跑）检查 Safari / iPhone / iPad 上的用法，
 // 重点：没有「全文翻译」按钮，没有浏览器内置翻译时提示浏览器自己的整页翻译；查词和本句译文走 MyMemory；
-// 「循环」开关（记住、浏览器不让存时照样能用）。
+// 「循环」开关（记住、浏览器不让存时照样能用）；微软翻译（假的 /translate）和按这一句选词义的下划线在 WebKit 里的样子。
+// 微软翻译默认当作连不上（假的 /translate 让请求失败），别的检查照旧走 MyMemory。
 // 最后在 Playwright 的 Firefox 里也看一下（没装就跳过），包括云端语音（假的 SDK）的后台朗读、循环朗读和锁屏界面的动作。
 //   node tests/webkit_check.mjs <截图目录> [网址] [real]
 // 不给网址时，自己在本机起静态服务器。MyMemory 默认由测试代答（不占真实额度）；最后加 real 时，
@@ -12,7 +13,7 @@ import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FAKE_AZURE, MS_RECORDER } from './fakes.mjs';
+import { FAKE_AZURE, MS_RECORDER, fakeTranslateReply } from './fakes.mjs';
 
 const [outDir = 'shots-webkit', urlArg = '', mode = ''] = process.argv.slice(2);
 mkdirSync(outDir, { recursive: true });
@@ -63,6 +64,20 @@ const MM = {
   blocked: (route) => route.abort('blockedbyclient'),
 };
 
+// 假的 /translate（微软翻译，Tony 的 Worker 的替身，fakes.mjs）：azMode 'down'（默认：连不上）| 'ok' | 'quota' | 'busy'；
+// azPlan.add 放进句子的译文里（按这一句选词义的测试用）
+let azMode = 'down';
+let azPlan = {};
+const azRoute = (route) => {
+  const req = route.request();
+  const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' };
+  if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+  const r = fakeTranslateReply(azMode, req.postData() || '', azPlan);
+  if (!r) return route.abort('connectionrefused');
+  return route.fulfill({ status: r.status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(r.body) });
+};
+const WORKER_TRANSLATE = 'https://svenska-tts.tony6838.workers.dev/translate';
+
 const browser = await webkit.launch();
 const allErrors = [];
 let shotNo = 0;
@@ -80,10 +95,12 @@ async function newPage(device, mm, rec = [], preset = null, userAgent = '', bloc
   page.hasTouchInput = !!devices[device].hasTouch;
   page.on('pageerror', (e) => allErrors.push(device + ': ' + e.message));
   if (mm) await page.route('**/api.mymemory.translated.net/**', (route) => mm(route, rec));
+  await page.route(WORKER_TRANSLATE, azRoute);
   await page.goto(baseUrl);
   const ok = await page.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 }).then(() => true, () => false);
   return { ctx, page, ok, rec };
 }
+// 「本句译文」的结果：一般在弹出框下面（.sent）；有几个意思的词，整句译文自动显示在上面的格子里（.ctxs），结果和说明都在那里
 // 有触摸的设备用 tap，Mac 的 Safari 用鼠标点
 const touch = (page, sel, i = 0) => (page.hasTouchInput ? page.locator(sel).nth(i).tap() : page.locator(sel).nth(i).click());
 async function openArticle(page) {
@@ -154,7 +171,7 @@ try {
   check('iPhone 上点词弹出中文，弹出框在屏幕内', pop && pop.text && pop.on, JSON.stringify(pop));
   await page.locator('#popup .acts button', { hasText: '本句译文' }).tap();
   await page.waitForTimeout(800);
-  let sent = await page.evaluate(() => document.querySelector('#popup .sent')?.textContent || '');
+  let sent = await page.evaluate(() => (() => { const a = document.querySelector('#popup .sent'); const b = document.querySelector('#popup .ctxs'); return (a && !a.hidden ? a.textContent : '') || (b && !b.hidden ? b.textContent : ''); })());
   check('「本句译文」用 MyMemory（测试代答）', /【译】/.test(sent), sent.slice(0, 40));
   check('发给 MyMemory 的每段不超过 500 个字符、只有 q 和 langpair', rec.length && rec.every((r) => r.chars <= 500 && r.params.every((k) => k === 'q' || k === 'langpair')),
     `${rec.length} 次，最长 ${Math.max(0, ...rec.map((r) => r.chars))} 字符 / ${Math.max(0, ...rec.map((r) => r.bytes))} 字节 / 网址 ${Math.max(0, ...rec.map((r) => r.urlLen))} 字符`);
@@ -237,11 +254,11 @@ try {
   await page.waitForTimeout(500);
   await page.locator('#popup .acts button', { hasText: '本句译文' }).tap();
   await page.waitForTimeout(500);
-  pw2 = await page.evaluate(() => ({ sent: document.querySelector('#popup .sent')?.textContent || '', btn: !!document.querySelector('#popup .sent .on-btn') }));
+  pw2 = await page.evaluate(() => ({ sent: (() => { const a = document.querySelector('#popup .sent'); const b = document.querySelector('#popup .ctxs'); return (a && !a.hidden ? a.textContent : '') || (b && !b.hidden ? b.textContent : ''); })(), btn: !!document.querySelector('#popup .sent:not([hidden]) .on-btn, #popup .ctxs:not([hidden]) .on-btn') }));
   check('「本句译文」：关着时也给「打开在线翻译」按钮', pw2.btn && /设置/.test(pw2.sent), pw2.sent);
-  await touch(page, '#popup .sent .on-btn');
+  await touch(page, '#popup .sent:not([hidden]) .on-btn, #popup .ctxs:not([hidden]) .on-btn');
   await page.waitForTimeout(800);
-  sent = await page.evaluate(() => document.querySelector('#popup .sent')?.textContent || '');
+  sent = await page.evaluate(() => (() => { const a = document.querySelector('#popup .sent'); const b = document.querySelector('#popup .ctxs'); return (a && !a.hidden ? a.textContent : '') || (b && !b.hidden ? b.textContent : ''); })());
   check('点了以后马上显示整句的译文', /【译】/.test(sent), sent);
   await ctx.close();
 
@@ -259,11 +276,70 @@ try {
     await page.waitForTimeout(400);
     await page.locator('#popup .acts button', { hasText: '本句译文' }).tap();
     await page.waitForTimeout(1200);
-    sent = await page.evaluate(() => document.querySelector('#popup .sent')?.textContent || '');
+    sent = await page.evaluate(() => (() => { const a = document.querySelector('#popup .sent'); const b = document.querySelector('#popup .ctxs'); return (a && !a.hidden ? a.textContent : '') || (b && !b.hidden ? b.textContent : ''); })());
     check(`${name}：说明写成中文，不当成译文`, expect.test(sent) && !/MYMEMORY WARNING|^QUERY LENGTH/.test(sent), sent.slice(0, 60));
     if (name.startsWith('额度用完（quota')) await shot(page, 'iphone-quota');
     await ctx.close();
   }
+
+  // ---------- 微软翻译（假的 /translate）、按这一句选词义的下划线 ----------
+  console.log('\n== iPhone：微软翻译（假的 /translate）、按这一句选词义');
+  azMode = 'ok';
+  azPlan = {};
+  ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok));
+  await openArticle(page);
+  const wk = await page.evaluate(() => [...document.querySelectorAll('#article .w')].map((w, i) => {
+    const sEl = w.closest('.s'); const gl = SV.glossary.lookup(w.textContent); const ss = SV.sense.senses(gl);
+    return { i, si: +sEl.dataset.si, text: w.textContent, gl: !!gl, n: ss.length, pickable: SV.sense.pickable(gl, ss), keys: ss.map((x) => x.keys) };
+  }));
+  const popW = () => page.evaluate(() => {
+    const p = document.querySelector('#popup'); if (p.hidden) return null; const r = p.getBoundingClientRect();
+    const best = p.querySelector('.sense.best'); const c = best ? getComputedStyle(best) : null; const box = p.querySelector('.ctxs'); const key = box && box.querySelector('.key');
+    return { word: p.querySelector('.pw b').textContent, mt: p.querySelector('.mt') ? p.querySelector('.mt').textContent : '', eng: p.querySelector('.eng').textContent,
+      best: p.querySelectorAll('.sense.best').length, bestIndex: best ? [...p.querySelectorAll('.sense')].indexOf(best) : -1, why: box ? box.dataset.why : null,
+      sentence: box && !box.hidden ? box.textContent : '', key: key ? key.textContent : '', keyColor: key ? getComputedStyle(key).textDecorationColor : '',
+      line: c ? c.textDecorationLine : '', color: c ? c.textDecorationColor : '',
+      on: r.left >= 0 && r.top >= 0 && r.right <= document.documentElement.clientWidth + 0.5 && r.bottom <= innerHeight + 0.5 };
+  });
+  const closeW = () => page.evaluate(() => { if (!document.querySelector('#popup').hidden) document.querySelector('#main').click(); });
+  const freshW = wk.filter((x) => !x.gl && x.text.length >= 4 && /^\p{L}+$/u.test(x.text));
+  await touch(page, '#article .w', freshW[0].i);
+  await page.waitForTimeout(800);
+  let pz = await popW();
+  check('iPhone：小词典里没有的词用微软翻译', pz && pz.mt === '〔微软〕' + freshW[0].text && pz.eng === '微软翻译', JSON.stringify(pz));
+  await closeW();
+  const mw = wk.find((x) => x.pickable);
+  const mw2 = wk.find((x) => x.pickable && mw && x.si !== mw.si);
+  if (mw && mw2) {
+    azPlan = { tag: mw.keys[0][0] };
+    await touch(page, '#article .w', mw.i);
+    await page.waitForTimeout(900);
+    pz = await popW();
+    check('iPhone：能挑的词、确定：意思和自动显示的整句译文里都画蓝色下划线，弹出框在屏幕内',
+      pz && pz.best === 1 && pz.bestIndex === 0 && pz.why === 'match' && /underline/.test(pz.line) && pz.color === 'rgb(21, 101, 192)' && pz.key === mw.keys[0][0] && pz.keyColor === 'rgb(21, 101, 192)' && pz.on, `${mw.text}「${mw.keys[0][0]}」 ${JSON.stringify(pz)}`);
+    await shot(page, 'iphone-sense-certain');
+    await closeW();
+    azPlan = { tag: mw2.keys[0][0] + mw2.keys[1][0] };
+    await touch(page, '#article .w', mw2.i);
+    await page.waitForTimeout(900);
+    pz = await popW();
+    check('iPhone：不确定：整句译文自动显示，不画', pz && pz.best === 0 && ['tie', 'wide'].includes(pz.why) && /测试译文/.test(pz.sentence) && !pz.key && pz.on, JSON.stringify(pz));
+    await shot(page, 'iphone-sense-uncertain');
+    await closeW();
+    azPlan = {};
+  } else {
+    check('iPhone：文章里有两句带能挑的词', false, '这篇文章里没有');
+  }
+  azMode = 'quota';
+  await touch(page, '#article .w', freshW[1].i);
+  await page.waitForTimeout(900);
+  pz = await popW();
+  const markW = await page.evaluate(() => { try { return !!JSON.parse(localStorage.getItem('sv.az.v1')).until; } catch (e) { return false; } });
+  check('iPhone：微软翻译的免费额度用完：用 MyMemory，写着额度用完了，记住 6 小时', pz && /【译】/.test(pz.mt) && pz.eng === 'MyMemory 在线翻译（微软翻译的免费额度用完了）' && markW, JSON.stringify(pz));
+  await shot(page, 'iphone-quota-mymemory');
+  await ctx.close();
+  azMode = 'down';
+  azPlan = {};
 
   // ---------- iPad、Mac 的 Safari ----------
   for (const device of ['iPad (gen 7)', 'Desktop Safari']) {
@@ -291,7 +367,7 @@ try {
     pv = await page.evaluate(() => document.querySelector('#popup .mt')?.textContent || '');
     await page.locator('#popup .acts button', { hasText: '本句译文' }).tap();
     await page.waitForTimeout(4000);
-    sent = await page.evaluate(() => document.querySelector('#popup .sent')?.textContent || '');
+    sent = await page.evaluate(() => (() => { const a = document.querySelector('#popup .sent'); const b = document.querySelector('#popup .ctxs'); return (a && !a.hidden ? a.textContent : '') || (b && !b.hidden ? b.textContent : ''); })());
     const zhRe = /[一-鿿]/;
     check('真实的 MyMemory：查词和本句译文都有中文（或者清楚的中文说明）', zhRe.test(pv) && zhRe.test(sent), `${pv} ｜ ${sent.slice(0, 50)}`);
     await shot(page, 'iphone-real-mymemory');
@@ -308,6 +384,7 @@ try {
     fpage.on('pageerror', (e) => allErrors.push('Firefox: ' + e.message));
     const frec = [];
     await fpage.route('**/api.mymemory.translated.net/**', (route) => MM.ok(route, frec));
+    await fpage.route(WORKER_TRANSLATE, azRoute);
     await fpage.goto(baseUrl);
     ok = await fpage.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 }).then(() => true, () => false);
     check('Firefox 上列出文章', ok, await fpage.evaluate(() => navigator.userAgent));
@@ -336,6 +413,7 @@ try {
     const cpage = await cctx.newPage();
     cpage.on('pageerror', (e) => allErrors.push('Firefox 云端: ' + e.message));
     await cpage.route('https://svtts.test/**', (route) => json(route, { token: 'tok-ff', region: 'northeurope' }));
+    await cpage.route('https://svtts.test/translate', azRoute); // 后注册的先匹配：微软翻译照旧当作连不上
     await cpage.route('**/api.mymemory.translated.net/**', (route) => MM.ok(route, []));
     await cpage.goto(baseUrl);
     ok = await cpage.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 }).then(() => true, () => false);
@@ -371,6 +449,9 @@ try {
     await cpage.evaluate(() => { window.__ttsWordMs = 25; });
     await cpage.locator('#btnLoop').click();
     const fLast = await cpage.evaluate(() => { const ps = [...document.querySelectorAll('#article .body p, #article .body li')].filter((p) => p.querySelector('.w')); return [...document.querySelectorAll('#article .body .w')].indexOf(ps[ps.length - 1].querySelector('.w')); });
+    // 先暂停再点最后一段的词：一个词 25 毫秒时，读着的页面一直在往回滚到正在读的词，
+    // 滚到最后一段和点下去之间要是正好开始往回滚，点完词页面还在滚，那个词滚出屏幕，弹出框就关了
+    await cpage.evaluate(() => window.__ms.pause());
     await cpage.locator('#article .body .w').nth(fLast).click();
     await cpage.waitForTimeout(300);
     await cpage.locator('#popup .acts button', { hasText: '从这里读' }).click();

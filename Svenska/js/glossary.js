@@ -165,7 +165,7 @@ kunna|能；会|kan kunde kunnat
 ska|将要；应该|skall skulle
 vilja|想要|vill ville velat
 måste|必须|
-få|得到；可以；必须；很少（可数）|får fick fått
+få|得到、受到；可以；必须；很少（可数）|får fick fått
 göra|做|gör gjorde gjort
 säga|说|säger sa sade sagt
 komma|来；（kommer att）将会|kommer kom kommit
@@ -222,6 +222,7 @@ stå|站；写着|står stod stått
 sitta|坐|sitter satt suttit
 ligga|躺；位于|ligger låg legat
 hålla|拿着；举行；保持|håller höll hållit
+sköta|照顾；负责；管理|sköter skötte skött sköts sköttes
 kräva|要求|kräver krävde krävt
 planera|计划|
 bestämma|决定|bestämmer bestämde bestämt
@@ -365,6 +366,7 @@ skatt|税；宝藏|skatten skatter
 ränta|利率；利息|räntan
 budget|预算|budgeten
 kris|危机|krisen
+läge|位置；局势；情况|läget lägen lägena
 risk|风险|risken
 säkerhet|安全|säkerheten
 brott|犯罪|brottet

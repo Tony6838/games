@@ -19,6 +19,13 @@
 //   4. 云端语音：合成、播放、跟着播放进度标词、缓存、换声音、出错时改用本机的声音。
 //   5. 云端语音：页面藏起来时一段接一段读下去、回来时标记在正在读的词上、锁屏界面和媒体键（Media Session）、
 //      循环朗读（重读不再合成）、「下一首」接着读下一篇、关掉循环这一遍读完就停。
+//   6. 电脑：翻译的顺序（假的 /translate、假的内置翻译）：微软翻译 → 连不上、超时时用内置翻译、30 秒里不再问 → 额度用完时 6 小时不再问；
+//      按这一句选词义（js/sense.js）：只有一个意思直接显示；几个意思时自动显示整句译文，确定（标签）时意思和译文里都画蓝色下划线
+//      （深色模式另一种蓝），弹出框不跳不变大小、不盖住词；拿不准不画；结果回来时弹出框已经换了、关了，真的没放进去。
+//      6b：在线翻译（MyMemory）关着、内置翻译要下载：微软翻译、内置翻译照样用，MyMemory 不用；鼠标停着开始的翻译不拖累点出来的。
+//      6c：Worker 的设置不对（403、404、405、500、Azure 的密钥不对）：这次打开的页面里不再问。
+//   7. 手机 390×844：额度用完时用 MyMemory 并说明；鼠标停着不用 MyMemory；手机宽度下的两种样子、很长的整句；MyMemory 给单词的字幕不显示；
+//      翻译全都失败时不画也不报错；微软翻译暂时连不上时说清楚；太忙时一分钟里不再问。
 // 只连 SR、MyMemory 和本机；页面连了别的地方算失败。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -26,7 +33,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from 'node:os';
 import { extname, join, normalize, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FAKE_AZURE, MS_RECORDER } from './fakes.mjs';
+import { FAKE_AZURE, MS_RECORDER, FAKE_TRANSLATOR, fakeTranslateReply } from './fakes.mjs';
 
 const [outDir = 'shots', urlArg = ''] = process.argv.slice(2);
 mkdirSync(outDir, { recursive: true });
@@ -78,6 +85,14 @@ let mock = null; // MyMemory 代答
 let ttsWorkerMode = 'ok'; // 假的云端语音令牌服务：'ok' 或 'forbidden'
 let ttsTokenCalls = 0;
 const mmRequests = [];
+// 假的 /translate（微软翻译，Tony 的 Worker 的替身，fakes.mjs）：azMode 'ok' | 'quota' | 'busy' | 'down'（连不上）；
+// azPlan.add 放进句子的译文里；azDelay 毫秒以后才回答；azRequests 记下每次请求的 texts
+let azMode = 'ok';
+let azPlan = {};
+let azDelay = 0;
+const azRequests = [];
+// MyMemory 代答的样子：'ok'（【译】原文）、'garbage'（单词回一句字幕，像真的 MyMemory 那样）、'fail'（连不上）
+let mmMode = 'ok';
 ws.addEventListener('message', async (m) => {
   const msg = JSON.parse(m.data);
   if (msg.id && pendingMsgs.has(msg.id)) { pendingMsgs.get(msg.id)(msg); pendingMsgs.delete(msg.id); return; }
@@ -102,6 +117,20 @@ ws.addEventListener('message', async (m) => {
       if (p.responseStatusCode === 200 && b.result) writeFileSync(file, Buffer.from(b.result.body, b.result.base64Encoded ? 'base64' : 'utf8'));
       send('Fetch.continueRequest', { requestId: p.requestId });
     }
+  } else if (msg.method === 'Fetch.requestPaused' && /svtts\.test\/translate/.test(p.request.url)) {
+    const cors = [{ name: 'Access-Control-Allow-Origin', value: '*' }, { name: 'Access-Control-Allow-Methods', value: 'POST' }, { name: 'Access-Control-Allow-Headers', value: 'Content-Type' }];
+    if (p.request.method === 'OPTIONS') {
+      send('Fetch.fulfillRequest', { requestId: p.requestId, responseCode: 204, responseHeaders: cors });
+      return;
+    }
+    const body = p.request.postData != null ? p.request.postData
+      : (p.request.postDataEntries || []).map((e) => Buffer.from(e.bytes || '', 'base64').toString('utf8')).join('');
+    try { const j = JSON.parse(body); const t = j.texts; t.html = j.textType === 'html'; azRequests.push(t); } catch { azRequests.push(null); }
+    const reply = fakeTranslateReply(azMode, body, azPlan);
+    const go = () => (reply
+      ? send('Fetch.fulfillRequest', { requestId: p.requestId, responseCode: reply.status, responseHeaders: [...cors, { name: 'Content-Type', value: 'application/json' }], body: Buffer.from(JSON.stringify(reply.body)).toString('base64') })
+      : send('Fetch.failRequest', { requestId: p.requestId, errorReason: 'ConnectionRefused' }));
+    if (azDelay) setTimeout(go, azDelay); else go();
   } else if (msg.method === 'Fetch.requestPaused' && /svtts\.test/.test(p.request.url)) {
     // 假的云端语音令牌服务（Tony 的 Cloudflare Worker 的替身）：ok 发令牌，forbidden 回 403
     ttsTokenCalls++;
@@ -115,7 +144,10 @@ ws.addEventListener('message', async (m) => {
     const u = new URL(p.request.url);
     const q = u.searchParams.get('q') || '';
     mmRequests.push({ q, bytes: Buffer.byteLength(q), params: [...u.searchParams.keys()] });
-    const body = JSON.stringify({ responseData: { translatedText: '【译】' + q.slice(0, 24), match: 0.9 }, quotaFinished: false, responseDetails: '', responseStatus: 200, matches: [] });
+    if (mmMode === 'fail') { send('Fetch.failRequest', { requestId: p.requestId, errorReason: 'ConnectionRefused' }); return; }
+    // MyMemory 给单个词常常回翻译记忆库里的字幕（2026-11-13 实测：kommunen →「市长办公厅的人能够相信吗?」）
+    const out = mmMode === 'garbage' && !/\s/.test(q) ? '市长办公厅的人能够相信吗?' : '【译】' + q.slice(0, 24);
+    const body = JSON.stringify({ responseData: { translatedText: out, match: 0.9 }, quotaFinished: false, responseDetails: '', responseStatus: 200, matches: [] });
     send('Fetch.fulfillRequest', {
       requestId: p.requestId, responseCode: 200,
       responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: '*' }],
@@ -234,13 +266,16 @@ let scriptIds = [];
 const ANDROID_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36';
 // cloud：true 用云端语音（假的 SDK 和假的令牌服务 svtts.test）；'real' 用 js/config.js 里真的令牌服务和真的 Azure；
 // 不设时一律用本机的声音，不管 js/config.js 里填了什么
-async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, cloud = false, query = '', ua = '' }) {
+// fakeTranslator：假的浏览器内置翻译（fakes.mjs）；initJs：在页面脚本之前运行的一段脚本（比如先清掉翻译的缓存）
+async function openPage({ width, height, mobile, fakeSpeech, noBuiltin, mockMM, cloud = false, query = '', ua = '', fakeTranslator = false, initJs = '' }) {
   for (const id of scriptIds) await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: id });
   scriptIds = [];
   if (cloud !== 'real') scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.SV_CONFIG = { ttsUrl: ${JSON.stringify(cloud ? 'https://svtts.test' : '')} };` })).result.identifier);
   if (cloud === true) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_AZURE })).result.identifier);
   if (fakeSpeech) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_SPEECH })).result.identifier);
   if (noBuiltin) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: NO_BUILTIN })).result.identifier);
+  if (fakeTranslator) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: FAKE_TRANSLATOR })).result.identifier);
+  if (initJs) scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: initJs })).result.identifier);
   scriptIds.push((await send('Page.addScriptToEvaluateOnNewDocument', { source: MS_RECORDER })).result.identifier);
   const patterns = [];
   if (cloud === true) patterns.push({ urlPattern: '*svtts.test/*', requestStage: 'Request' });
@@ -327,6 +362,570 @@ async function longPress(x, y, ms = 800) {
 }
 const svTip = () => evalJs(`(() => { const t = document.querySelector('.svtip'); if (!t || t.hidden) return null; const r = t.getBoundingClientRect(); const de = document.documentElement;
   return { text: t.innerText.replace(/\\n/g, ' / '), inView: r.left >= 0 && r.top >= 0 && r.right <= de.clientWidth + 0.5 && r.bottom <= innerHeight + 0.5, inDialog: !!t.closest('dialog[open]') }; })()`);
+
+// ================= 6、7. 翻译：微软翻译（假的 /translate）、按这一句选词义 =================
+// 每一轮先清掉翻译的缓存（单词、句子）和微软翻译的额度记录
+const CLEAR_TR = `try { localStorage.removeItem('sv.trw.v1'); localStorage.removeItem('sv.az.v1'); sessionStorage.removeItem('sv.trs.v1'); } catch (e) {}`;
+// 文章里的每个词：在「#article .w」里的序号、第几句、小词典里几个意思、能不能挑（js/sense.js 规则 1）、每个意思的中文词
+const articleWords = () => evalJs(`[...document.querySelectorAll('#article .w')].map((w, i) => {
+  const sEl = w.closest('.s'); const gl = SV.glossary.lookup(w.textContent); const ss = SV.sense.senses(gl);
+  return { i, si: +sEl.dataset.si, text: w.textContent, gl: !!gl, n: ss.length, pickable: SV.sense.pickable(gl, ss), keys: ss.map((x) => x.keys) };
+})`);
+const sentenceText = (si) => evalJs(`document.querySelectorAll('#article .s')[${si}].textContent`);
+// 弹出框现在的样子；wordI：查的词在「#article .w」里的序号（看弹出框盖没盖住它）
+const popState = (wordI = -1) => evalJs(`(() => { const p = document.querySelector('#popup'); if (p.hidden) return null; const r = p.getBoundingClientRect(); const de = document.documentElement;
+  const ss = [...p.querySelectorAll('.gl .sense')]; const best = ss.filter((x) => x.classList.contains('best')); const c = p.querySelector('.ctxs');
+  const w = ${wordI} >= 0 ? document.querySelectorAll('#article .w')[${wordI}].getBoundingClientRect() : null;
+  return { word: p.querySelector('.pw b') ? p.querySelector('.pw b').textContent : '', rect: [r.left, r.top, r.width, r.height].map((v) => Math.round(v * 10) / 10),
+    senses: ss.map((x) => (x.firstChild ? x.firstChild.textContent : '')), best: best.map((x) => ss.indexOf(x)), bestTitle: best[0] ? best[0].title : '',
+    ctxs: !!c && !c.hidden, why: c ? c.dataset.why : null, sentence: c ? c.textContent : '', key: c && c.querySelector('.key') ? c.querySelector('.key').textContent : '',
+    mt: p.querySelector('.mt') ? p.querySelector('.mt').textContent : '', mtNode: !!p.querySelector('.mt'), eng: p.querySelector('.eng') ? p.querySelector('.eng').textContent : '',
+    err: !!p.querySelector('.err'), sentBtn: (p.querySelector('.acts button.primary') || {}).textContent === '本句译文', sentBox: !!p.querySelector('.sent') && !p.querySelector('.sent').hidden,
+    sentBoxText: p.querySelector('.sent') ? p.querySelector('.sent').textContent : '',
+    covers: !!w && !(r.bottom <= w.top || r.top >= w.bottom || r.right <= w.left || r.left >= w.right),
+    onScreen: r.left >= 0 && r.top >= 0 && r.right <= de.clientWidth + 0.5 && r.bottom <= innerHeight + 0.5 }; })()`);
+// 弹出框里的结果都回来了（整句译文的格子不是「正在…」，译文不是「翻译中…」）
+const popSettled = (ms = 6000) => waitFor(`(() => { const p = document.querySelector('#popup'); if (p.hidden) return false; const c = p.querySelector('.ctxs'); const m = p.querySelector('.mt');
+  return (!c || c.dataset.why !== 'wait') && (!m || !m.classList.contains('wait')); })()`, ms, 100);
+const closePop = () => evalJs(`document.querySelector('#popup').hidden || document.querySelector('#main').click()`);
+// 点一个词。模拟的触摸偶尔不产生点击（CDP 的问题，2026-11-13 在一篇文章上见过一次）：一秒内没有这个词的弹出框，
+// 就直接在词上发一次点击，并在输出里写一行「提示」，不悄悄地算过
+let tapRetries = 0;
+const clickW = async (w) => {
+  const c = await center('#article .w', w.i);
+  await tap(c.x, c.y);
+  const ok = await waitFor(`!document.querySelector('#popup').hidden && document.querySelector('#popup .pw b').textContent === ${JSON.stringify(w.text)}`, 1000, 50);
+  if (!ok) {
+    tapRetries++;
+    console.log(`  提示：点「${w.text}」没有打开弹出框，改用直接点击（第 ${tapRetries} 次）`);
+    await evalJs(`document.querySelectorAll('#article .w')[${w.i}].click()`);
+  }
+};
+// 直接在那个词上发一次点击（弹出框可能正好盖住它，真的点下去会点到弹出框上）
+const clickWDirect = (w) => evalJs(`document.querySelectorAll('#article .w')[${w.i}].click()`);
+// 下划线的样子：意思的、整句译文里的
+const underlineStyle = (sel) => evalJs(`(() => { const b = document.querySelector(${JSON.stringify(sel)}); if (!b) return null; const c = getComputedStyle(b);
+  return { line: c.textDecorationLine, color: c.textDecorationColor, skip: c.textDecorationSkipInk }; })()`);
+const setDark = (on) => send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: on ? 'dark' : 'light' }] });
+// 页面里的钟往后拨（看「30 秒里不再问」）
+const shiftTime = (ms) => evalJs(`(() => { if (!window.__realNow) { window.__realNow = Date.now.bind(Date); window.__timeOff = 0; } window.__timeOff += ${ms}; Date.now = () => window.__realNow() + window.__timeOff; })()`);
+// 找一篇有好几句带「能挑的词」、也有不能挑的多义词的文章（每个测试用一个新的句子，译文还没缓存）：
+// 先在今日要闻这一批里找，没有就换几个话题
+// freshSi：还要有这么多句，里面有小词典里没有的词（查词的测试用）
+async function articleWithSenses(need, freshSi = 0) {
+  for (const topic of ['idag', 'sverige', 'politik', 'varlden', 'ekonomi']) {
+    if (topic !== 'idag' || (await state()).topic !== 'idag') {
+      const c = await center(`#topics .chip[data-topic="${topic}"]`);
+      await tap(c.x, c.y);
+      if (!(await waitFor(listReady(topic), 40000))) continue;
+    }
+    const n = (await state()).batch.length;
+    for (let k = 0; k < n; k++) {
+      if (!(await openFirstCard(k))) continue;
+      const pool = await articleWords();
+      const sis = new Set(pool.filter((x) => x.pickable).map((x) => x.si));
+      const fsi = new Set(pool.filter((x) => !x.gl && x.text.length >= 4 && /^\p{L}+$/u.test(x.text)).map((x) => x.si));
+      if (sis.size >= need && fsi.size >= freshSi && pool.some((x) => x.n >= 2 && !x.pickable)) return pool;
+      await clickButtonText('#btnBack', '列表');
+      await waitFor(`SVApp.state().view === 'list'`, 5000);
+    }
+  }
+  return null;
+}
+function wordPicker(pool) {
+  const usedText = new Set(['kommunen', 'grattis']); // 这两个词在第 6 轮开始时已经放进单词的缓存
+  const usedSi = new Set();
+  return {
+    // 小词典里没有的词（每次一个新的，免得用到单词的缓存）；newSentence：还要在一个没用过的句子里（句子的译文还没缓存）
+    fresh(newSentence = false) {
+      const w = pool.find((x) => !x.gl && x.text.length >= 4 && /^\p{L}+$/u.test(x.text) && !usedText.has(x.text.toLowerCase()) && (!newSentence || !usedSi.has(x.si)));
+      if (w) { usedText.add(w.text.toLowerCase()); if (newSentence) usedSi.add(w.si); }
+      return w;
+    },
+    // 能挑的词，每次在一个新的句子里
+    pickable() { const w = pool.find((x) => x.pickable && !usedSi.has(x.si)); if (w) usedSi.add(w.si); return w; },
+    // 有几个意思、但不能挑的词（有单字或括号说明的意思），在一个新的句子里
+    unpickable() { const w = pool.find((x) => x.n >= 2 && !x.pickable && !usedSi.has(x.si)); if (w) usedSi.add(w.si); return w; },
+    single() { return pool.find((x) => x.gl && x.n === 1); },
+  };
+}
+const brief = (ps) => (ps ? JSON.stringify({ word: ps.word, senses: ps.senses, best: ps.best, why: ps.why, sentence: ps.sentence, key: ps.key, mt: ps.mt, eng: ps.eng, rect: ps.rect }) : '没有弹出框');
+const azLast = () => azRequests[azRequests.length - 1] || null;
+
+async function translationChecks() {
+  // ---------- 6. 电脑 ----------
+  console.log('\n== 6. 电脑 1600×900：微软翻译（假的 /translate）、按这一句选词义、翻译的顺序');
+  azMode = 'ok'; azPlan = {}; azDelay = 0; mmMode = 'ok';
+  // 单词的缓存先放两个：微软翻译给的「Grattis →『祝贺！』」（新的格式，记着来源），以前的版本存的 MyMemory 字幕（只有一个字符串）
+  const SEED = CLEAR_TR + ` try { localStorage.setItem('sv.trw.v1', JSON.stringify({ grattis: { z: '祝贺！', e: 'azure' }, kommunen: '市长办公厅的人能够相信吗?' })); } catch (e) {}`;
+  check('翻译：页面打开（假的内置翻译、假的微软翻译）', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, fakeTranslator: true, mockMM: true, cloud: true, initJs: SEED }));
+  check('翻译：微软翻译的地址跟着令牌服务走（js/config.js）', (await evalJs('SV.config.translateUrl')) === 'https://svtts.test/translate' && (await evalJs('SV.tr.azureState()')) === 'ok');
+
+  // 按这一句选词义的规则（更多的例子在 tests/sense_eval.mjs）：审查找到的例子，HTML 是真的微软翻译给这几句编的句子的回答
+  const u = await evalJs(`(() => {
+    const T = (sv, wi, html) => SV.sense.inSentence(sv, wi, html);
+    return {
+      de: T('De svenska spelarna säger att laget vann.', 0, null), var: T('Det var svårt för alla.', 1, null), for: T('Priset är för högt på grund av kriget.', 2, null),
+      skota: T('Hon ansvarar för att sköta barnen.', 4, '她 <b>负责照顾孩子们</b> 。'),
+      far: T('Regeringen får kritik för att företag kan undvika skatt.', 1, '政府因企业能够逃税而 <b>受到</b> 批评。'),
+      svenska: T('Det svenska folket röstade.', 1, '<b>瑞典</b>人就在这座城市里。'),
+      dom: T('Domen föll i tingsrätten i går.', 0, '该<b>判决</b>于昨天在地区法院作出。'),
+    };
+  })()`);
+  check('选词义：有单字或括号说明的意思的词不挑（De 是复数定冠词、var 是「是」、för 是「太」时，以前会画错）', !u.de.pickable && !u.var.pickable && !u.for.pickable, JSON.stringify([u.de, u.var, u.for]));
+  check('选词义：小词典外的词译出了某个意思（ansvarar →「负责」）、词的一部分（瑞典 ⊂ 瑞典人民）：不画', u.skota.index === -1 && u.svenska.index === -1, JSON.stringify([u.skota, u.svenska]));
+  check('选词义：微软把标签放在「受到」上：får 是「得到、受到」（以前画了「可以」）；标签在「判决」上：dom 是「判决」', u.far.best === '得到、受到' && u.dom.best === '判决', JSON.stringify([u.far, u.dom]));
+  // 微软的 HTML 译文里的实体全部还原成文字（浏览器里用 DOMParser，只取文字），标签那样的东西也只是文字
+  const ent = await evalJs(`(() => { const r = SV.sense.parseTagged('这&hellip;&eacute;&#8212;&ndash;&copy;&nbsp;<b>局势</b>&lt;img src=x onerror=alert(1)&gt;&amp;'); return { text: r.text, tag: r.text.slice(r.tag.start, r.tag.end) }; })()`);
+  check('解析：所有实体都还原（&hellip; &eacute; &#8212; &ndash; &copy;），转义的标签还是文字', ent.text === '这…é—–©局势<img src=x onerror=alert(1)>&' && ent.tag === '局势', JSON.stringify(ent));
+  // MyMemory 给单词的「译文」：字幕不当译文显示
+  const junk = await evalJs(`[['kommunen', '市长办公厅的人能够相信吗?'], ['fick', '线路安全 好了'], ['rätt', '- 对，没错。\\n- 好吧。'], ['Hej', 'Hello there, how are you doing today my friend'], ['kommunen', '市长办公厅的人能够相信他们说的那些话']].map(([a, b]) => SV.tr.unreliable(a, b))`);
+  const fine = await evalJs(`[['läget', '你好'], ['kommunen', '市政府'], ['arbetsmarknadsdepartementet', '劳动力市场部'], ['Kristersson', 'Kristersson'], ['inte längre', '不再'], ['både', '既……又……']].map(([a, b]) => SV.tr.unreliable(a, b))`);
+  check('MyMemory 的字幕：带问号、汉字中间有空格、对话（破折号、分行）、太长的不当译文', junk.every(Boolean), JSON.stringify(junk));
+  check('MyMemory 的字幕：正常的译文照常显示（「你好」这样短而错的认不出来）', fine.every((x) => !x), JSON.stringify(fine));
+  // 单词的缓存：以前的版本存的字符串还查字幕；现在记下了是哪个翻译给的，微软翻译、内置翻译的（Grattis →「祝贺！」）不查
+  let nc = azRequests.length;
+  const cg = await evalJs(`SV.tr.translate('Grattis', 'word', { online: true, gesture: true }).then((r) => r.engine + '/' + r.zh)`);
+  check('单词的缓存：微软翻译给的「祝贺！」照常用（不当成 MyMemory 的字幕，不再请求）', cg === 'cache/祝贺！' && azRequests.length === nc, cg);
+  const ck = await evalJs(`SV.tr.translate('kommunen', 'word', { online: true, gesture: true }).then((r) => r.engine + '/' + r.zh)`);
+  check('单词的缓存：以前的版本存的字幕（不知道来源）丢掉重查', ck === 'azure/〔微软〕kommunen' && azRequests.length === nc + 1, ck);
+  const stored = await evalJs(`JSON.parse(localStorage.getItem('sv.trw.v1')).kommunen`);
+  check('单词的缓存：新存的记着是哪个翻译给的', stored && stored.e === 'azure' && stored.z === '〔微软〕kommunen', JSON.stringify(stored));
+
+  const pool = await articleWithSenses(6);
+  check('翻译：找到一篇有六句以上带「能挑的词」、也有不能挑的多义词的文章', !!pool, pool ? (await state()).title : '几个话题里都没有');
+  if (!pool) return;
+  const pick = wordPicker(pool);
+
+  // 小词典里没有的词：只发这个词给微软翻译
+  let w = pick.fresh();
+  let n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  let ps = await popState();
+  check('翻译：小词典里没有的词，用微软翻译，只发这个词', ps && ps.mt === '〔微软〕' + w.text && ps.eng === '微软翻译' && azRequests.length === n0 + 1 && JSON.stringify(azRequests[n0]) === JSON.stringify([w.text]), brief(ps));
+  await shot('desktop-azure-word');
+  await closePop();
+  // 只有一个意思：直接显示，不自动翻整句
+  const one = pick.single();
+  n0 = azRequests.length;
+  await clickW(one);
+  await sleep(700);
+  ps = await popState();
+  check('翻译：小词典里只有一个意思：直接显示，不自动翻整句，不发请求', ps && ps.word === one.text && ps.senses.length === 1 && !ps.ctxs && !ps.mtNode && azRequests.length === n0, brief(ps));
+  await closePop();
+
+  // 能挑、确定：意思和整句译文里这个词的译文都画下划线
+  const wU = pick.pickable();
+  const keyU = wU.keys[0][0];
+  azPlan = { tag: keyU };
+  azDelay = 900;
+  n0 = azRequests.length;
+  await clickW(wU);
+  await sleep(250);
+  const before = await popState(wU.i);
+  await popSettled();
+  const after = await popState(wU.i);
+  const sentU = await sentenceText(wU.si);
+  check('翻译：有几个意思的词，意思马上全部列出来，下面先占好整句译文的地方（「正在翻译这一句…」）', before && before.why === 'wait' && before.ctxs && /正在翻译这一句/.test(before.sentence) && before.senses.length === wU.n && !before.best.length, brief(before));
+  const tagReq = azRequests[n0];
+  check('翻译：能挑的词，请微软翻译把整句当 HTML 翻，这个词包在 <b> 里（一次）', azRequests.length === n0 + 1 && tagReq && tagReq.html && tagReq[0].includes('<b>' + wU.text + '</b>') && tagReq[0].replace(/<\/?b>/g, '') === sentU.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'), JSON.stringify(tagReq));
+  check('翻译：确定（标签里正好是一个意思的词）：意思画下划线（title「符合这句的意思」），整句译文自动显示，里面这个词的译文也画下划线',
+    after && after.best.length === 1 && after.best[0] === 0 && after.bestTitle === '符合这句的意思' && after.why === 'match' && after.key === keyU && after.sentence === '这句' + keyU + '测试译文。', `${wU.text}「${keyU}」 ${brief(after)}`);
+  check('翻译：结果来了，弹出框不跳、不变大小、意思不换顺序，没盖住这个词', before && after && JSON.stringify(before.rect) === JSON.stringify(after.rect) && JSON.stringify(before.senses) === JSON.stringify(after.senses) && !after.covers, `${JSON.stringify(before && before.rect)} → ${JSON.stringify(after && after.rect)}`);
+  check('翻译：读屏软件听得到「符合这句的意思」', await evalJs(`(document.querySelector('#popup .sense.best .sr') || {}).textContent === '（符合这句的意思）'`));
+  await setDark(false);
+  const ulL = [await underlineStyle('#popup .sense.best'), await underlineStyle('#popup .ctxs .key')];
+  check('浅色：两个下划线都是蓝色（--sense）、一整条', ulL.every((x) => x && /underline/.test(x.line) && x.color === 'rgb(21, 101, 192)' && x.skip === 'none'), JSON.stringify(ulL));
+  await shot('desktop-sense-certain');
+  await setDark(true);
+  await sleep(150);
+  const ulD = [await underlineStyle('#popup .sense.best'), await underlineStyle('#popup .ctxs .key')];
+  check('深色：两个下划线都是浅蓝色，和正在读的词的黄色不一样', ulD.every((x) => x && /underline/.test(x.line) && x.color === 'rgb(100, 181, 246)'), JSON.stringify(ulD));
+  await shot('desktop-sense-certain-dark');
+  await setDark(false);
+  azDelay = 0;
+  n0 = azRequests.length;
+  const rectF = (await popState()).rect;
+  await clickButtonText('#popup .acts button', '本句译文');
+  await sleep(300);
+  const flashed = await evalJs(`document.querySelector('#popup .ctxs').classList.contains('flash')`);
+  ps = await popState();
+  check('翻译：整句译文已经在上面了，再点「本句译文」：那一格闪一下，不再发请求、不重复显示，弹出框不变', ps && flashed && azRequests.length === n0 && !ps.sentBox && ps.ctxs && JSON.stringify(ps.rect) === JSON.stringify(rectF), `${flashed} ${brief(ps)}`);
+  await sleep(900);
+  check('翻译：闪一下就好（过一会儿底色还原）', !(await evalJs(`document.querySelector('#popup .ctxs').classList.contains('flash')`)));
+  await closePop();
+  // 同一句里别的只有一个意思的词：「本句译文」用刚才拿到的整句译文，不再花额度
+  const sameSi = pool.find((x) => x.si === wU.si && x.gl && x.n === 1);
+  if (sameSi) {
+    n0 = azRequests.length;
+    await clickW(sameSi);
+    await sleep(300);
+    await clickButtonText('#popup .acts button', '本句译文');
+    await sleep(300);
+    ps = await popState();
+    check('翻译：同一句里别的词点「本句译文」，用已经拿到的整句译文（不再发请求）', ps && ps.sentBoxText === '这句' + keyU + '测试译文。' && azRequests.length === n0, brief(ps));
+    await closePop();
+  }
+
+  // 能挑、不确定（平手，鼠标停在词上）：整句译文照样自动显示，不画
+  const wT = pick.pickable();
+  azPlan = { tag: wT.keys[0][0] + wT.keys[1][0] };
+  azDelay = 300;
+  const cT = await center('#article .w', wT.i);
+  await hover(cT.x, cT.y);
+  await waitFor(`!document.querySelector('#popup').hidden && document.querySelector('#popup .pw b').textContent === ${JSON.stringify(wT.text)}`, 3000, 100);
+  await popSettled();
+  ps = await popState(wT.i);
+  check('翻译：鼠标停在词上也一样；两个意思都在标签里（不确定）：整句译文自动显示，意思和译文里都不画', ps && ps.word === wT.text && !ps.best.length && ['tie', 'wide'].includes(ps.why) && ps.ctxs && !ps.key && ps.sentence.includes('测试译文') && !ps.covers, brief(ps));
+  await shot('desktop-sense-uncertain-hover');
+  await setDark(true);
+  await sleep(150);
+  await shot('desktop-sense-uncertain-dark');
+  await setDark(false);
+  await hover(5, 880);
+  await sleep(800);
+  // 标签盖住的字太多：不画
+  const wW = pick.pickable();
+  azPlan = { tag: wW.keys[0][0] + '仍然是' };
+  azDelay = 0;
+  await clickW(wW);
+  await popSettled();
+  ps = await popState();
+  // 太宽（'wide'）；如果别的意思的词正好也在里面（没有 ⊂ 没有人），就是平手（'tie'）：都是拿不准
+  check('翻译：标签比意思的词多三个字（太宽）：不画，整句照样显示', ps && !ps.best.length && ['wide', 'tie'].includes(ps.why) && ps.ctxs && !ps.key, brief(ps));
+  await closePop();
+  // 有几个意思、但不能挑的词：只要普通的整句译文，自动显示，不画
+  const wP = pick.unpickable();
+  azPlan = { add: '普通' };
+  n0 = azRequests.length;
+  await clickW(wP);
+  await popSettled();
+  ps = await popState();
+  check('翻译：有几个意思但不能挑的词（有单字或括号说明的意思）：发普通的整句，自动显示，不画', ps && ps.why === 'plain' && ps.ctxs && !ps.best.length && ps.sentence === '这句普通测试译文。' && azRequests.length === n0 + 1 && !azRequests[n0].html, `${wP.text} ${brief(ps)}`);
+  await closePop();
+  azPlan = {};
+  // 结果回来时弹出框已经换到别的词：真的没放进去（senseApplied 不变；去掉 fillSentence 里对 pop.token 的检查，这一项就过不了）
+  const wS = pick.pickable();
+  azPlan = { tag: wS.keys[0][0] };
+  azDelay = 1500;
+  let applied0 = (await state()).senseApplied;
+  await clickW(wS);
+  await sleep(250);
+  await clickWDirect(one);
+  await sleep(1900);
+  ps = await popState();
+  check('翻译：结果回来时弹出框已经换到别的词：不放进去（计数不变），新的弹出框没有下划线', ps && ps.word === one.text && !ps.best.length && !ps.ctxs && (await state()).senseApplied === applied0, `${brief(ps)} 计数 ${applied0} → ${(await state()).senseApplied}`);
+  await closePop();
+  const wS2 = pick.pickable();
+  azPlan = { tag: wS2.keys[0][0] };
+  azDelay = 1200;
+  applied0 = (await state()).senseApplied;
+  await clickW(wS2);
+  await sleep(250);
+  await closePop();
+  await sleep(1500);
+  check('翻译：结果回来时弹出框已经关了：不放进去，也不再打开', await evalJs(`document.querySelector('#popup').hidden`) && (await state()).senseApplied === applied0);
+  azDelay = 0;
+  azPlan = {};
+
+  // ---------- 翻译的顺序：微软翻译 → 内置翻译 ----------
+  azMode = 'down';
+  w = pick.fresh();
+  n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('翻译的顺序：微软翻译连不上：这一次用浏览器内置翻译', ps && ps.mt === '〔内置〕' + w.text && ps.eng === '浏览器内置翻译' && azRequests.length === n0 + 1, brief(ps));
+  await closePop();
+  azMode = 'ok';
+  w = pick.fresh();
+  n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('翻译的顺序：连不上以后 30 秒里不再问微软翻译（不发请求），用内置翻译', ps && azRequests.length === n0 && ps.mt === '〔内置〕' + w.text && (await evalJs('SV.tr.azureState()')) === 'network', brief(ps));
+  await closePop();
+  await shiftTime(31000);
+  w = pick.fresh();
+  n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('翻译的顺序：30 秒以后又先问微软翻译', ps && ps.mt === '〔微软〕' + w.text && azRequests.length === n0 + 1, brief(ps));
+  await closePop();
+  // 8 秒没回答：超时，这一次用内置翻译，也停 30 秒
+  azDelay = 9000;
+  w = pick.fresh();
+  const t0 = Date.now();
+  await clickW(w);
+  await popSettled(15000);
+  const waited = Date.now() - t0;
+  ps = await popState();
+  check('翻译的顺序：微软翻译 8 秒没回答：不再等，这一次用内置翻译，30 秒里不再问', ps && ps.mt === '〔内置〕' + w.text && waited >= 7500 && waited < 12000 && (await evalJs('SV.tr.azureState()')) === 'network', `等了 ${waited} 毫秒 ${brief(ps)}`);
+  await closePop();
+  azDelay = 0;
+  await sleep(1500); // 让被放弃的那个假请求也回答完
+  await shiftTime(31000);
+  azMode = 'quota';
+  w = pick.fresh();
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  const mark = await evalJs(`(() => { try { return JSON.parse(localStorage.getItem('sv.az.v1')); } catch (e) { return null; } })()`);
+  const left = mark ? mark.until - (await evalJs('Date.now()')) : 0;
+  check('翻译的顺序：微软翻译的免费额度用完：用内置翻译，下面写着额度用完了', ps && ps.mt === '〔内置〕' + w.text && ps.eng === '浏览器内置翻译（微软翻译的免费额度用完了）', brief(ps));
+  check('翻译的顺序：记住 6 小时里不再问微软翻译（localStorage 的 sv.az.v1）', left > 6 * 3600e3 - 120e3 && left <= 6 * 3600e3 + 5e3, `还有 ${Math.round(left / 60000)} 分钟`);
+  await shot('desktop-quota-builtin');
+  await closePop();
+  azMode = 'ok';
+  w = pick.fresh();
+  n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('翻译的顺序：额度用完以后不再问微软翻译（不发请求）', ps && azRequests.length === n0 && ps.mt === '〔内置〕' + w.text && /额度用完/.test(ps.eng), brief(ps));
+  await closePop();
+  // 能挑的词：微软翻译用不了时，整句用内置翻译，不画
+  const wB = pick.pickable();
+  await clickW(wB);
+  await popSettled();
+  ps = await popState();
+  check('翻译：微软翻译用不了时，能挑的词也只显示内置翻译给的整句，不画（内置翻译不会放标签）', ps && ps.ctxs && ps.why === 'plain' && ps.sentence.startsWith('〔内置〕') && !ps.best.length, brief(ps));
+  await closePop();
+  const sb = await center('#btnSettings');
+  await tap(sb.x, sb.y);
+  await sleep(400);
+  const setT = await evalJs(`({ note: document.querySelector('#trNote').textContent, label: document.querySelector('#chkOnline').parentElement.textContent })`);
+  check('设置：说明微软翻译的免费额度用完了；在线翻译的开关只管 MyMemory', /微软翻译的免费额度用完了/.test(setT.note) && /MyMemory/.test(setT.label) && /微软翻译的免费额度用完/.test(setT.label), JSON.stringify(setT));
+  await shot('desktop-settings-translate');
+  await evalJs(`document.querySelector('#dlgSettings').close()`);
+
+  // ---------- 在线翻译（MyMemory）关着、内置翻译要点一下才能下载：微软翻译和内置翻译照样用，MyMemory 不用；点的人不被鼠标停着的那次拖累 ----------
+  console.log('\n== 6b. 电脑：在线翻译关着、内置翻译要下载');
+  azMode = 'ok'; azPlan = {}; azDelay = 0; mmMode = 'ok';
+  const OFF = CLEAR_TR + ` window.__trAvail = 'downloadable'; try { localStorage.setItem('sv.settings.v1', JSON.stringify({ online: false, v: 3, topic: 'idag', tip: false })); } catch (e) {}`;
+  check('关着：页面打开（MyMemory 关着，内置翻译要下载）', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, fakeTranslator: true, mockMM: true, cloud: true, initJs: OFF }));
+  check('关着：设置里在线翻译是关的', (await state()).settings.online === false);
+  const poolB = await articleWithSenses(2);
+  if (!poolB) { check('关着：找到文章', false); return; }
+  const pickB = wordPicker(poolB);
+  const mm0 = mmRequests.length;
+  w = pickB.fresh();
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('关着：小词典里没有的词照样用微软翻译', ps && ps.mt === '〔微软〕' + w.text, brief(ps));
+  await closePop();
+  // 鼠标停在一个有几个意思的词上（不能下载模型），微软翻译慢、最后连不上；这时点「本句译文」：
+  // 微软翻译那一步共用一个请求，连不上以后，点的这一次自己去下载内置翻译的模型，用它翻这一句
+  const wD = pickB.unpickable();
+  azMode = 'down';
+  azDelay = 2500;
+  n0 = azRequests.length;
+  const cD = await center('#article .w', wD.i);
+  await hover(cD.x, cD.y);
+  await waitFor(`!document.querySelector('#popup').hidden && document.querySelector('#popup .pw b').textContent === ${JSON.stringify(wD.text)}`, 3000, 100);
+  await sleep(400);
+  const creates0 = await evalJs('window.__trCreates');
+  await clickButtonText('#popup .acts button', '本句译文');
+  await waitFor(`(() => { const c = document.querySelector('#popup .ctxs'); return c && !c.hidden && /〔内置〕/.test(c.textContent); })()`, 8000, 100);
+  ps = await popState();
+  check('关着：鼠标停着开始翻的一句，接着点了「本句译文」：微软翻译只问一次，连不上以后点的那次下载内置翻译的模型来翻（不会被鼠标停着的那次拖累）',
+    ps && /^〔内置〕/.test(ps.sentence) && azRequests.length === n0 + 1 && (await evalJs('window.__trCreates')) > creates0 && !/点一下这个词/.test(ps.sentence), `${brief(ps)} 请求 ${azRequests.length - n0} 次，下载 ${creates0} → ${await evalJs('window.__trCreates')}`);
+  await hover(5, 880);
+  await sleep(800);
+  azDelay = 0;
+  await shiftTime(31000);
+  azMode = 'down';
+  w = pickB.fresh();
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('关着：微软翻译连不上：用内置翻译', ps && ps.mt === '〔内置〕' + w.text, brief(ps));
+  await closePop();
+  check('关着：一次也没有问 MyMemory', mmRequests.length === mm0, `${mmRequests.length - mm0} 次`);
+  azMode = 'ok';
+
+  // ---------- Worker 的设置不对（403、404、405、500、Azure 的密钥不对）：这次打开的页面里不再问 ----------
+  console.log('\n== 6c. Worker 的设置不对');
+  for (const mode of ['status:403', 'status:404', 'status:405', 'status:500', 'azure401']) {
+    azMode = mode;
+    const okOpen = await openPage({ width: 1200, height: 800, mobile: false, fakeSpeech: true, fakeTranslator: true, mockMM: true, cloud: true, initJs: CLEAR_TR });
+    n0 = azRequests.length;
+    const r1 = await evalJs(`SV.tr.translate('provord' + Math.random().toString(36).slice(2, 6), 'word', { online: true, gesture: true }).then((r) => r.engine + '/' + r.azure, (e) => 'ERR ' + e.code)`);
+    const st = await evalJs('SV.tr.azureState()');
+    azMode = 'ok';
+    const r2 = await evalJs(`SV.tr.translate('annatord' + Math.random().toString(36).slice(2, 6), 'word', { online: true, gesture: true }).then((r) => r.engine, (e) => 'ERR ' + e.code)`);
+    check(`设置不对（${mode}）：这一次用内置翻译，这次打开的页面里不再问微软翻译`, okOpen && r1 === 'builtin/broken' && st === 'broken' && r2 === 'builtin' && azRequests.length === n0 + 1, `${r1} ${st} ${r2}，请求 ${azRequests.length - n0} 次`);
+  }
+  azMode = 'ok';
+
+  // ---------- 7. 手机 ----------
+  console.log('\n== 7. 手机 390×844：额度用完时用 MyMemory、鼠标停着不用 MyMemory、手机上的下划线和整句译文、字幕、全都失败、太忙');
+  azMode = 'ok'; azPlan = {}; azDelay = 0; mmMode = 'ok';
+  const QUOTA_MARK = CLEAR_TR + ` try { localStorage.setItem('sv.az.v1', JSON.stringify({ until: Date.now() + 6 * 3600 * 1000 })); localStorage.setItem('sv.settings.v1', JSON.stringify({ online: true, v: 3, topic: 'idag' })); } catch (e) {}`;
+  check('手机翻译：页面打开（没有内置翻译，微软翻译的额度用完了）', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true, ua: ANDROID_UA, initJs: QUOTA_MARK }));
+  const pool2 = await articleWithSenses(5, 12);
+  check('手机翻译：找到一篇有五句以上带「能挑的词」的文章', !!pool2, pool2 ? (await state()).title : '这一批里没有');
+  if (!pool2) return;
+  const pick2 = wordPicker(pool2);
+  w = pick2.fresh();
+  n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('手机翻译：额度用完、没有内置翻译：点词用 MyMemory，下面写着微软翻译的额度用完了，不问微软翻译',
+    ps && /^【译】/.test(ps.mt) && ps.eng === 'MyMemory 在线翻译（微软翻译的免费额度用完了）' && azRequests.length === n0, brief(ps));
+  await shot('phone-quota-mymemory');
+  await closePop();
+  // 鼠标停在词上（Tony 定的）：只剩 MyMemory 时不用它，不自动翻整句；点了才用。手机上没有鼠标，用模拟的鼠标试
+  touchMode = false;
+  const mmH = mmRequests.length;
+  const wH = pick2.fresh(true);
+  const cH = await center('#article .w', wH.i);
+  await hover(cH.x, cH.y);
+  await waitFor(`!document.querySelector('#popup').hidden && document.querySelector('#popup .pw b').textContent === ${JSON.stringify(wH.text)}`, 3000, 100);
+  await popSettled();
+  ps = await popState();
+  check('鼠标停着：只剩 MyMemory 时，小词典里没有的词说「点一下这个词」，不发给 MyMemory', ps && /点一下这个词，用 MyMemory 在线翻译/.test(ps.mt) && mmRequests.length === mmH, brief(ps));
+  await hover(5, 830);
+  await sleep(800);
+  const wHm = pick2.unpickable();
+  const cHm = await center('#article .w', wHm.i);
+  await hover(cHm.x, cHm.y);
+  await waitFor(`!document.querySelector('#popup').hidden && document.querySelector('#popup .pw b').textContent === ${JSON.stringify(wHm.text)}`, 3000, 100);
+  await sleep(600);
+  ps = await popState();
+  check('鼠标停着：只剩 MyMemory 时，有几个意思的词只有意思和「本句译文」，不自动翻整句，不发给 MyMemory', ps && !ps.ctxs && ps.senses.length >= 2 && mmRequests.length === mmH, brief(ps));
+  touchMode = true;
+  await closePop();
+  await clickW(wHm);
+  await popSettled();
+  ps = await popState();
+  check('点一下同一个词：自动显示整句，用 MyMemory（点出来的才用）', ps && ps.ctxs && /^【译】/.test(ps.sentence) && mmRequests.length === mmH + 1, brief(ps));
+  await closePop();
+  // 鼠标停着打开的弹出框（MyMemory 关着、微软翻译的额度用完了、没有内置翻译）里点「打开在线翻译」：
+  // 点按钮就是点出来的，这一次用 MyMemory 翻译（以前用的是鼠标停着的那次的条件，马上又说「点一下这个词」）
+  await evalJs(`(() => { const c = document.querySelector('#chkOnline'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  touchMode = false;
+  const wO = pick2.fresh();
+  const mmO = mmRequests.length;
+  const cO = await center('#article .w', wO.i);
+  await hover(cO.x, cO.y);
+  await waitFor(`!document.querySelector('#popup').hidden && document.querySelector('#popup .pw b').textContent === ${JSON.stringify(wO.text)}`, 3000, 100);
+  await popSettled();
+  const psO = await popState();
+  const offBtn = await evalJs(`(() => { const b = document.querySelector('#popup .mt .on-btn'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`);
+  if (offBtn) await tap(offBtn.x, offBtn.y);
+  await popSettled();
+  ps = await popState();
+  check('鼠标停着打开的弹出框里点「打开在线翻译」：打开 MyMemory，马上用它翻译（不再说「点一下这个词」）',
+    offBtn && /在线翻译又关着/.test(psO.mt) && ps && /^【译】/.test(ps.mt) && mmRequests.length === mmO + 1 && (await state()).settings.online === true, `${psO && psO.mt} → ${ps && ps.mt}`);
+  touchMode = true;
+  await closePop();
+  await evalJs(`localStorage.removeItem('sv.az.v1')`);
+  // 手机宽度：确定（两个下划线）、不确定（只有整句），深浅两种
+  const wPu = pick2.pickable();
+  azPlan = { tag: wPu.keys[0][0] };
+  azDelay = 600;
+  await clickW(wPu);
+  await sleep(200);
+  const bP = await popState(wPu.i);
+  await popSettled();
+  const aP = await popState(wPu.i);
+  check('手机翻译：确定：意思和整句译文里都画下划线，弹出框不跳、在屏幕内、不盖住这个词',
+    aP && aP.best.length === 1 && aP.key === wPu.keys[0][0] && aP.onScreen && !aP.covers && bP && JSON.stringify(bP.rect) === JSON.stringify(aP.rect), `${brief(bP)} → ${brief(aP)}`);
+  const cutP = await evalJs(`[...document.querySelectorAll('#popup .gl > div, #popup .acts button')].filter((x) => x.scrollWidth > x.clientWidth + 1).map((x) => x.textContent)`);
+  check('手机翻译：弹出框里没有被截断的字', !cutP.length, cutP.join('、'));
+  await shot('phone-sense-certain');
+  await setDark(true);
+  await sleep(150);
+  const ulP = await underlineStyle('#popup .ctxs .key');
+  check('手机翻译：深色模式下的下划线是浅蓝色', ulP && ulP.color === 'rgb(100, 181, 246)', JSON.stringify(ulP));
+  await shot('phone-sense-certain-dark');
+  await setDark(false);
+  await closePop();
+  const wPt = pick2.pickable();
+  azPlan = { tag: wPt.keys[0][0] + wPt.keys[1][0] };
+  azDelay = 0;
+  await clickW(wPt);
+  await popSettled();
+  ps = await popState(wPt.i);
+  check('手机翻译：不确定（两个意思都在标签里，或者标签太宽）：整句译文自动显示、不画，弹出框在屏幕内、不盖住这个词', ps && !ps.best.length && ['tie', 'wide'].includes(ps.why) && ps.ctxs && ps.onScreen && !ps.covers, brief(ps));
+  await shot('phone-sense-uncertain');
+  await setDark(true);
+  await sleep(150);
+  await shot('phone-sense-uncertain-dark');
+  await setDark(false);
+  await closePop();
+  // 很长的整句译文：最多 4 行，在格子里滚动
+  const wL = pick2.unpickable();
+  azPlan = { add: '很长的一句话'.repeat(20) };
+  await clickW(wL);
+  await popSettled();
+  const longBox = await evalJs(`(() => { const c = document.querySelector('#popup .ctxs'); if (!c) return null; const lh = parseFloat(getComputedStyle(c).lineHeight); return { h: c.clientHeight, sh: c.scrollHeight, lines: Math.round((c.clientHeight - 6) / lh), scrolls: getComputedStyle(c).overflowY }; })()`);
+  ps = await popState(wL.i);
+  check('手机翻译：很长的整句译文最多占 4 行，在格子里滚动；弹出框在屏幕内、不盖住这个词', longBox && longBox.sh > longBox.h && longBox.lines <= 4 && longBox.scrolls === 'auto' && ps.onScreen && !ps.covers, JSON.stringify(longBox));
+  await shot('phone-sense-long');
+  await closePop();
+  azPlan = {};
+  // MyMemory 给单词回一句字幕
+  azMode = 'down';
+  mmMode = 'garbage';
+  w = pick2.fresh(true);
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('手机翻译：MyMemory 给单词回一句字幕：不显示，说明没有可靠的译文，「本句译文」按钮变醒目', ps && /没有给出可靠的译文，看看「本句译文」/.test(ps.mt) && !ps.mt.includes('市长') && ps.sentBtn && ps.onScreen, brief(ps));
+  await shot('phone-unreliable');
+  const ob = await evalJs(`(() => { const b = document.querySelector('#popup .acts button.primary'); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`);
+  await tap(ob.x, ob.y);
+  await sleep(800);
+  ps = await popState();
+  check('手机翻译：点「本句译文」，显示这一句的译文', /【译】/.test(ps.sentBoxText), ps.sentBoxText);
+  await closePop();
+  // 全都失败：意思照样显示，不画，也不报错（整句的格子收起来）
+  mmMode = 'fail';
+  await shiftTime(31000);
+  const wF = pick2.pickable();
+  await clickW(wF);
+  await popSettled(12000);
+  ps = await popState();
+  check('手机翻译：微软翻译和 MyMemory 都连不上：意思照样显示，不画，没有错误提示', ps && ps.why === 'fail' && !ps.ctxs && !ps.best.length && !ps.err && ps.senses.length === wF.n, brief(ps));
+  await closePop();
+  // 微软翻译只是暂时连不上、MyMemory 关着：先说暂时连不上，「打开在线翻译」不醒目
+  mmMode = 'ok';
+  await evalJs(`(() => { const c = document.querySelector('#chkOnline'); c.checked = false; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  w = pick2.fresh(true);
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  const btnCls = await evalJs(`(document.querySelector('#popup .mt .on-btn') || {}).className || ''`);
+  check('手机翻译：微软翻译暂时连不上、MyMemory 关着：说「微软翻译暂时用不了」，「打开在线翻译」只是另一个办法（不醒目）', ps && /微软翻译暂时用不了/.test(ps.mt) && btnCls === 'on-btn', `${ps && ps.mt}「${btnCls}」`);
+  await shot('phone-azure-transient-off');
+  await closePop();
+  await evalJs(`(() => { const c = document.querySelector('#chkOnline'); c.checked = true; c.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  // 太忙：这一次用 MyMemory，一分钟里不再问
+  await shiftTime(31000);
+  azMode = 'busy';
+  w = pick2.fresh();
+  n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  const mark2 = await evalJs(`localStorage.getItem('sv.az.v1')`);
+  check('手机翻译：微软翻译太忙（429 busy）：这一次用 MyMemory，不说额度用完，也不记 6 小时', ps && /^【译】/.test(ps.mt) && ps.eng === 'MyMemory 在线翻译' && azRequests.length === n0 + 1 && !mark2, brief(ps));
+  await closePop();
+  azMode = 'ok';
+  w = pick2.fresh();
+  n0 = azRequests.length;
+  await clickW(w);
+  await popSettled();
+  ps = await popState();
+  check('手机翻译：太忙以后一分钟里不再问微软翻译', ps && azRequests.length === n0 && /^【译】/.test(ps.mt), brief(ps));
+  await closePop();
+}
 
 const summary = { url: baseUrl, topics: [] };
 try {
@@ -620,7 +1219,8 @@ try {
   await sleep(400);
   await clickButtonText('#popup .acts button', '本句译文');
   await sleep(800);
-  const sentT = await evalJs(`document.querySelector('#popup .sent')?.textContent || ''`);
+  // 有几个意思的词，整句译文自动显示在上面的格子里（.ctxs），点「本句译文」不再重复；别的词显示在下面（.sent）
+  const sentT = await evalJs(`(() => { const a = document.querySelector('#popup .sent'); const b = document.querySelector('#popup .ctxs'); return (a && !a.hidden ? a.textContent : '') || (b && !b.hidden ? b.textContent : ''); })()`);
   check('「本句译文」用在线翻译', /【译】/.test(sentT), sentT.slice(0, 40));
   check('发给 MyMemory 的每段不超过 500 个字符', mmRequests.length > 0 && mmRequests.every((r) => r.q.length <= 500), `${mmRequests.length} 次，最长 ${Math.max(0, ...mmRequests.map((r) => r.q.length))} 字符 / ${Math.max(0, ...mmRequests.map((r) => r.bytes))} 字节`);
   check('发给 MyMemory 的请求不带电子邮件等参数', mmRequests.every((r) => r.params.every((k) => k === 'q' || k === 'langpair')), [...new Set(mmRequests.flatMap((r) => r.params))].join(','));
@@ -980,9 +1580,12 @@ try {
   check('关掉循环以后：这一遍读完就停，不再从头读', ended && st.loops === loopsOff && (await evalJs('navigator.mediaSession.playbackState')) === 'none', `${st.reader}，第 ${st.loops} 遍`);
   await shot('desktop-loop-off-idle');
 
-  // ================= 6. 真的云端语音（SV_REAL_TTS=1 才做） =================
+  // ================= 6、7. 翻译：微软翻译、按这一句选词义（函数在文件后面） =================
+  await translationChecks();
+
+  // ================= 8. 真的云端语音（SV_REAL_TTS=1 才做） =================
   if (process.env.SV_REAL_TTS === '1') {
-    console.log('\n== 6. 真的云端语音：js/config.js 的令牌服务和微软 Azure');
+    console.log('\n== 8. 真的云端语音：js/config.js 的令牌服务和微软 Azure');
     check('真的云端：页面打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: false, noBuiltin: true, mockMM: true, cloud: 'real' }));
     check('真的云端：用云端语音', (await state()).engine === 'cloud', (await state()).engine);
     await openFirstCard(0);
@@ -1007,7 +1610,9 @@ const allowed = (h) => /^127\.0\.0\.1(:\d+)?$/.test(h) || h === 'api.sr.se' || h
 summary.hosts = Object.fromEntries(hosts);
 check('页面只连了本站、SR、MyMemory，以及云端语音的 SDK 和令牌服务', [...hosts.keys()].every(allowed), [...hosts.entries()].map(([h, n]) => `${h}×${n}`).join(' '));
 // 第 4 轮故意让假的令牌服务回 403（测试改用本机声音），浏览器自己会记一条网络错误，不算
-const realProblems = problems.filter((p) => !/favicon/.test(p) && !p.includes('403 (Forbidden) https://svtts.test/token'));
+// 第 6、7 轮故意让假的 /translate 回 429、连不上，让 MyMemory 连不上，浏览器也会记一条网络错误，不算
+const realProblems = problems.filter((p) => !/favicon/.test(p) && !p.includes('403 (Forbidden) https://svtts.test/token')
+  && !/svtts\.test\/translate|api\.mymemory\.translated\.net/.test(p));
 check('控制台没有错误', !realProblems.length, realProblems.slice(0, 8).join(' | '));
 summary.problems = problems;
 summary.results = results;

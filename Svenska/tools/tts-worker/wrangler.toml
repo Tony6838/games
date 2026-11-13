@@ -1,9 +1,21 @@
 # 用命令行部署时用（npx wrangler deploy）；在 Cloudflare 网页控制台里贴代码部署的，用不到这个文件。
-# 密钥 AZURE_SPEECH_KEY 不写在这里：在控制台里加成机密（Secret），或者 npx wrangler secret put AZURE_SPEECH_KEY。
+# 密钥 AZURE_SPEECH_KEY、AZURE_TRANSLATOR_KEY 不写在这里：在控制台里加成机密（Secret），
+# 或者 npx wrangler secret put AZURE_SPEECH_KEY、npx wrangler secret put AZURE_TRANSLATOR_KEY。
 name = "svenska-tts"
 main = "worker.js"
 compatibility_date = "2026-10-01"
 
 [vars]
 AZURE_SPEECH_REGION = "northeurope"
+AZURE_TRANSLATOR_REGION = "northeurope"
 ALLOWED_ORIGINS = "https://tony6838.github.io"
+
+# /translate 每个网络地址的上限：每 60 秒 60 份，一份 = 100 个字符（worker.js 的 LIMIT_UNIT_CHARS），约每分钟 6000 个字符。
+# Cloudflare 的 Rate Limiting 绑定，每个机房各算各的、大概的数；namespace_id 是这个账号里自己挑的一个数字。
+[[ratelimits]]
+name = "TRANSLATE_LIMIT"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 60
+  period = 60
