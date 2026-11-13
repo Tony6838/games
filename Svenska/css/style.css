@@ -8,7 +8,6 @@
   --accent: #0b5cad;
   --accent-ink: #ffffff;
   --accent-soft: #e6f0fa;
-  --sent: rgba(11, 92, 173, 0.09);
   --word: #d32f2f;        /* 正在读的词的下划线：浅色（日间）是红色 */
   --word-paused: #e57373; /* 暂停时停下的词：浅一些的红色 */
   --zh: #6b4e16;
@@ -36,7 +35,6 @@
     --accent: #5ea8f5;
     --accent-ink: #0b1420;
     --accent-soft: #1d2b3b;
-    --sent: rgba(94, 168, 245, 0.13);
     --word: #f5c518;
     --word-paused: #8a6f14;
     --zh: #e2c48a;
@@ -191,13 +189,12 @@ main { padding: 6px var(--pad) calc(40px + env(safe-area-inset-bottom)); }
 .loading-bar { height: 4px; border-radius: 4px; background: var(--line); overflow: hidden; max-width: 360px; margin-top: 12px; }
 .loading-bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
 
-/* 句子、单词、高亮 */
+/* 单词、高亮。正在读的句子不标出来（日间、夜间都不标），只标正在读的词。 */
 .article .w { border-radius: 4px; cursor: pointer; transition: background-color .12s; }
 @media (hover: hover) {
   body:not(.speaking) .article .w:hover { background: var(--accent-soft); }
 }
-.article .s.reading { background: var(--sent); border-radius: 5px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-/* 正在读的词，浅色（日间）：红色下划线，字的颜色和底色不变（句子的淡蓝底照样透出来）。
+/* 正在读的词，浅色（日间）：红色下划线，字的颜色、粗细和底色都不变。
    下划线不跳过 g、j、p、y 的下伸部分（skip-ink: none），是一整条；只画在这个词上，词和词之间的空格不画，
    所以挨着的两个词不会连成一条。下划线不占位置，行高和排版都不变。暂停时用浅一些的红色。 */
 .article .w.current {

@@ -1,6 +1,6 @@
 /* 朗读：浏览器的 Web Speech API（speechSynthesis），瑞典语（sv-SE）声音。
    一次读一句（长句再按逗号切开）：
-   - 每句开始时高亮这一句；声音支持 boundary 事件的，再跟着高亮正在读的词；
+   - 每句开始时报告位置（页面滚到这一句，句子本身不标出来）；声音支持 boundary 事件的，再跟着标出正在读的词；
    - 暂停用 cancel() 而不是 pause()（安卓的 Chrome 不支持 pause），继续时从停下的那个词重新读；
    - iPhone 的 Safari 只允许在用户点击里开始朗读，所以 speak() 都在点击/按键的处理函数里同步调用。 */
 (function () {

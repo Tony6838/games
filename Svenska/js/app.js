@@ -206,18 +206,15 @@
       name ? '现在的声音：' + name + '（点一下切换男声、女声）' : '这台设备没有瑞典语声音');
   }
 
-  let hlS = null;
+  // 只标正在读的词（下划线）；正在读的句子不标出来。声音没有词的位置时（不发 boundary 事件），
+  // 不标词，页面照样滚动，让正在读的那一句留在屏幕里。
   let hlW = null;
   function highlight(si, wi, byWord) {
     const m = cur.model;
     const s = m && si >= 0 ? m.sentences[si] : null;
-    if (hlS && (!s || hlS !== s.el)) hlS.classList.remove('reading');
     if (hlW) hlW.classList.remove('current');
-    hlS = null;
     hlW = null;
     if (!s) return;
-    s.el.classList.add('reading');
-    hlS = s.el;
     const w = wi >= 0 ? s.words[wi] : null;
     if (w && (byWord || reader.wordEvents)) {
       w.el.classList.add('current');
@@ -458,7 +455,7 @@
     if (!fromHistory && history.state && history.state.sv === 'article') { history.back(); return; }
     reader.stop();
     hidePopup();
-    hlS = hlW = null;
+    hlW = null;
     const read = SV.sources.readSet();
     for (const a of els.list.querySelectorAll('.card')) {
       if (read.has(a.dataset.id) && !a.classList.contains('read')) {
@@ -480,7 +477,7 @@
   function openArticle(item, push) {
     reader.stop();
     hidePopup();
-    hlS = hlW = null;
+    hlW = null;
     if (cur.view === 'list') cur.listScroll = window.scrollY;
     if (push && !(history.state && history.state.sv === 'article')) {
       try { history.pushState({ sv: 'article', id: item.id }, ''); } catch (e) { /* 不支持就算了 */ }

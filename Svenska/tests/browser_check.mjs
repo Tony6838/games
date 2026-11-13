@@ -11,7 +11,7 @@
 //      浏览器后退、下一篇；鼠标悬停查词；看看无头 Edge 里真实的瑞典语声音能不能读、有没有词的 boundary 事件；
 //      点一个词试内置翻译。
 //   2. 电脑 1600×900、模拟的朗读（假的 Sofie / Mattias，按词发 boundary 事件）、没有内置翻译、
-//      MyMemory 由测试代答（不占真实额度）：朗读高亮（浅色红色下划线、深色黄色下划线）、空格暂停继续、点文章暂停、从这里读、换男女声、
+//      MyMemory 由测试代答（不占真实额度）：朗读高亮（只标词：浅色红色下划线、深色黄色下划线，句子不标，排版不动）、空格暂停继续、点文章暂停、从这里读、换男女声、
 //      没有内置翻译时提示整页翻译、本句译文走 MyMemory、发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）。
 //   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：列表和文章不横向溢出、再点话题换一批、点词弹框不出屏、点屏幕暂停、
 //      有整页翻译的提示、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」。
@@ -515,28 +515,38 @@ try {
   await tap(pc2.x, pc2.y);
   await sleep(1500);
   let s = await state();
-  const hl = await evalJs(`({ word: document.querySelector('#article .w.current')?.textContent || '', sent: !!document.querySelector('#article .s.reading') })`);
-  check('点「朗读」开始读，句子和词高亮', s.reader === 'speaking' && hl.sent && hl.word, `${s.reader} 第 ${s.si} 句第 ${s.wi} 词「${hl.word}」，声音 ${s.voice}`);
+  // 只标正在读的词；正在读的句子不标出来（没有 reading 这个 class，句子没有底色）
+  const hl = await evalJs(`(() => { const w = document.querySelector('#article .w.current'); return { word: w ? w.textContent : '',
+    sentMarked: !!document.querySelector('#article .reading'), sentBg: w ? getComputedStyle(w.closest('.s')).backgroundColor : '' }; })()`);
+  check('点「朗读」开始读，正在读的词有标记，句子不标出来', s.reader === 'speaking' && hl.word && !hl.sentMarked && hl.sentBg === 'rgba(0, 0, 0, 0)', `${s.reader} 第 ${s.si} 句第 ${s.wi} 词「${hl.word}」，句子底色 ${hl.sentBg}，声音 ${s.voice}`);
+  // 词一个一个往下走时，排版不动：所有词相对文章的位置在两个时刻完全一样
+  const wordMap = () => evalJs(`(() => { const a = document.querySelector('#article').getBoundingClientRect();
+    return { cur: document.querySelector('#article .w.current')?.textContent || '', pos: [...document.querySelectorAll('#article .w')].map((w) => { const r = w.getBoundingClientRect(); return Math.round((r.left - a.left) * 10) + ',' + Math.round((r.top - a.top) * 10); }).join(';') }; })()`);
+  const mapA = await wordMap();
+  await sleep(500);
+  const mapB = await wordMap();
+  check('正在读的词往下走时，别的词一点也不挪（不重新折行）', mapA.pos === mapB.pos && mapA.cur !== mapB.cur, `「${mapA.cur}」→「${mapB.cur}」`);
   check('默认用女声 Sofie', /Sofie/.test(s.voice || ''), s.voice);
   check('朗读时「暂停」按钮的瑞典文提示是 Pausa', (await evalJs(`document.querySelector('#btnPlay').dataset.sv`)) === 'Pausa');
-  // 正在读的词：浅色（日间）是红色下划线，深色（夜间）是黄色下划线；都没有色块底，字是正文的颜色，
+  // 正在读的词：浅色（日间）是红色下划线，深色（夜间）是黄色下划线；都没有色块底，字是正文的颜色、不加粗，
   // 高度和同一句里别的词一样（下划线不改行高和排版）
   const wordStyle = () => evalJs(`(() => { const w = document.querySelector('#article .w.current'); if (!w) return null;
     const c = getComputedStyle(w), a = getComputedStyle(document.querySelector('#article'));
     const other = [...w.closest('.s').querySelectorAll('.w')].find((x) => x !== w);
     return { bg: c.backgroundColor, shadow: c.boxShadow, line: c.textDecorationLine, lineColor: c.textDecorationColor, skip: c.textDecorationSkipInk, color: c.color, ink: a.color,
+      sameWeight: !other || c.fontWeight === getComputedStyle(other).fontWeight, sentBg: getComputedStyle(w.closest('.s')).backgroundColor,
       sameHeight: !other || Math.abs(w.getBoundingClientRect().height - other.getBoundingClientRect().height) < 0.5 }; })()`);
   const darkMode = (on) => send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: on ? 'dark' : 'light' }] });
   await darkMode(false);
   const lightW = await wordStyle();
-  check('浅色：正在读的词是一整条红色下划线，没有黄底，字是正文的颜色，不改行高',
-    lightW && lightW.bg === 'rgba(0, 0, 0, 0)' && lightW.shadow === 'none' && /underline/.test(lightW.line) && lightW.lineColor === 'rgb(211, 47, 47)' && lightW.skip === 'none' && lightW.color === lightW.ink && lightW.sameHeight, JSON.stringify(lightW));
+  check('浅色：正在读的词是一整条红色下划线，没有黄底，字是正文的颜色、不加粗，不改行高，句子没有底色',
+    lightW && lightW.bg === 'rgba(0, 0, 0, 0)' && lightW.shadow === 'none' && /underline/.test(lightW.line) && lightW.lineColor === 'rgb(211, 47, 47)' && lightW.skip === 'none' && lightW.color === lightW.ink && lightW.sameWeight && lightW.sameHeight && lightW.sentBg === 'rgba(0, 0, 0, 0)', JSON.stringify(lightW));
   await shot('desktop-light-reading');
   await darkMode(true);
   await sleep(150);
   const darkW = await wordStyle();
-  check('深色：正在读的词是黄色下划线，没有黄底，字是正文的颜色',
-    darkW && darkW.bg === 'rgba(0, 0, 0, 0)' && /underline/.test(darkW.line) && darkW.lineColor === 'rgb(245, 197, 24)' && darkW.color === darkW.ink, JSON.stringify(darkW));
+  check('深色：正在读的词是黄色下划线，没有黄底，字是正文的颜色、不加粗，句子没有底色',
+    darkW && darkW.bg === 'rgba(0, 0, 0, 0)' && /underline/.test(darkW.line) && darkW.lineColor === 'rgb(245, 197, 24)' && darkW.color === darkW.ink && darkW.sameWeight && darkW.sentBg === 'rgba(0, 0, 0, 0)', JSON.stringify(darkW));
   await shot('desktop-dark-reading');
   await darkMode(false);
   await space();
