@@ -9,12 +9,12 @@
 // 前三次：
 //   1. 电脑 1600×900、真实的朗读和浏览器内置翻译：每个话题列出文章、再点一次换一批；打开文章、返回列表、
 //      浏览器后退、下一篇；鼠标悬停查词；看看无头 Edge 里真实的瑞典语声音能不能读、有没有词的 boundary 事件；
-//      试内置翻译。
+//      点一个词试内置翻译。
 //   2. 电脑 1600×900、模拟的朗读（假的 Sofie / Mattias，按词发 boundary 事件）、没有内置翻译、
-//      MyMemory 由测试代答（不占真实额度）：朗读高亮、空格暂停继续、点文章暂停、从这里读、换男女声、
-//      没有内置翻译时不显示「全文翻译」而提示整页翻译、本句译文走 MyMemory、发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）。
+//      MyMemory 由测试代答（不占真实额度）：朗读高亮（浅色红色下划线、深色黄色下划线）、空格暂停继续、点文章暂停、从这里读、换男女声、
+//      没有内置翻译时提示整页翻译、本句译文走 MyMemory、发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）。
 //   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：列表和文章不横向溢出、再点话题换一批、点词弹框不出屏、点屏幕暂停、
-//      没有「全文翻译」按钮而有整页翻译的提示、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」。
+//      有整页翻译的提示、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」。
 // 只连 SR、MyMemory 和本机；页面连了别的地方算失败。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -370,7 +370,9 @@ try {
   check('云端语音的微软 SDK 能从 CDN 加载，完整性校验通过', sdkOk === true, String(sdkOk));
   check('没有设置云端语音时用本机的声音', (await state()).engine === 'device', (await state()).engine);
   // 朗读按钮组紧跟在最后一个话题「简易瑞典语」后面，同一行，样子是立体按键，和话题按钮不一样
-  await waitFor(`!document.querySelector('#btnTranslate').hidden || document.body.classList.contains('no-builtin')`, 8000);
+  // 页面开始时问过一次内置翻译（有的话不显示整页翻译的提示）；这里再问一次，等它答完
+  const availStart = await evalJs('SV.tr.builtinAvailability()');
+  await sleep(200);
   const ctl = await evalJs(`(() => {
     const last = document.querySelector('#topics .chip:last-child').getBoundingClientRect();
     const play = document.querySelector('#btnPlay').getBoundingClientRect();
@@ -378,11 +380,12 @@ try {
     const keyCss = getComputedStyle(document.querySelector('#btnRate'));
     return { sameRow: Math.abs((last.top + last.bottom) / 2 - (play.top + play.bottom) / 2) < 6, after: play.left > last.right,
       chipBottom: chipCss.borderBottomWidth, keyBottom: keyCss.borderBottomWidth, keyBg: keyCss.backgroundImage.slice(0, 15),
-      translateBtn: !document.querySelector('#btnTranslate').hidden, hint: !!document.querySelector('#list .page-tr-hint').offsetParent };
+      translateBtn: !!document.querySelector('#btnTranslate'), players: document.querySelectorAll('#player button').length, hint: !!document.querySelector('#list .page-tr-hint').offsetParent };
   })()`);
   check('电脑上朗读按钮组紧跟在「简易瑞典语」后面、同一行', ctl.sameRow && ctl.after, JSON.stringify(ctl));
   check('朗读按钮是立体的样子（渐变、加厚的下边），和话题按钮不同', parseFloat(ctl.keyBottom) >= 3 && parseFloat(ctl.chipBottom) <= 1 && /gradient/.test(ctl.keyBg), JSON.stringify(ctl));
-  check('有内置翻译时显示「全文翻译」按钮，不显示整页翻译的提示', ctl.translateBtn && !ctl.hint, JSON.stringify(ctl));
+  check('没有「全文翻译」按钮（朗读按钮组是朗读、语速、男女声、下一篇）', !ctl.translateBtn && ctl.players === 4, JSON.stringify(ctl));
+  check('有内置翻译时不显示整页翻译的提示', availStart !== 'unavailable' && !ctl.hint, `${availStart} ${JSON.stringify(ctl)}`);
   const topicKeys = await evalJs('SV.sources.TOPICS.map((t) => t.key)');
   for (let i = 0; i < topicKeys.length; i++) {
     const key = topicKeys[i];
@@ -485,24 +488,26 @@ try {
     console.log('  真实的在线声音这次没读出来（语音服务出错），页面状态：', sr.reader);
     check('真实朗读出错时停下，不卡住', sr.reader === 'paused' || sr.reader === 'idle', sr.reader);
   }
-  // 内置翻译（第一次要下载模型，无头里不一定成）
+  // 内置翻译（第一次要下载模型，无头里不一定成）：点一个小词典里没有的词（点了才允许下载模型），
+  // 看弹出框里的译文是不是内置翻译给的
   const avail = await evalJs('SV.tr.builtinAvailability()');
-  const tc = await center('#btnTranslate');
-  await tap(tc.x, tc.y);
-  const builtinOk = await waitFor('SVApp.state().translated > 0 && SVApp.state().translated === SVApp.state().blocks', 90000, 500);
-  const sample = await evalJs(`[...document.querySelectorAll('#article .zh')].slice(0, 2).map((z) => z.textContent)`);
-  summary.builtinTranslate = { availability: avail, ok: builtinOk, sample, dialogOpen: await evalJs(`!!document.querySelector('dialog[open]')`) };
-  console.log('  内置翻译：', JSON.stringify({ avail, builtinOk, sample }));
-  if (builtinOk) await shot('desktop-builtin-translation');
+  const biIdx = await evalJs(`[...document.querySelectorAll('#article .body .w')].findIndex((w, i) => i > 8 && w.textContent.length > 6 && !SV.glossary.lookup(w.textContent))`);
+  const bw = await center('#article .body .w', Math.max(0, biIdx));
+  await tap(bw.x, bw.y);
+  const builtinOk = await waitFor(`SV.tr.builtinReady() && /浏览器内置翻译/.test(document.querySelector('#popup .eng')?.textContent || '')`, 90000, 500);
+  const sample = await evalJs(`document.querySelector('#popup .mt')?.textContent || ''`);
+  summary.builtinTranslate = { availability: avail, ok: builtinOk, word: bw.text, sample, dialogOpen: await evalJs(`!!document.querySelector('dialog[open]')`) };
+  console.log('  内置翻译：', JSON.stringify(summary.builtinTranslate));
+  if (builtinOk) await shot('desktop-builtin-word');
   await evalJs(`document.querySelectorAll('dialog[open]').forEach((d) => d.close('no'))`);
 
   // ================= 2. 电脑、模拟朗读、MyMemory 代答 =================
   console.log('\n== 2. 电脑 1600×900：模拟朗读、空格和点击暂停、男女声、在线翻译');
   check('页面重新打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true }));
-  // 没有内置翻译：不显示「全文翻译」按钮，在它的位置提示用浏览器自己的整页翻译
+  // 没有内置翻译：在列表和文章开头提示用浏览器自己的整页翻译（本站没有「全文翻译」按钮）
   await waitFor(`document.body.classList.contains('no-builtin')`, 5000);
-  const noBi = await evalJs(`({ btn: !document.querySelector('#btnTranslate').hidden, hint: [...document.querySelectorAll('#list .page-tr-hint')].filter((x) => x.offsetParent).map((x) => x.textContent).join('') })`);
-  check('没有内置翻译时不显示「全文翻译」按钮', !noBi.btn);
+  const noBi = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: [...document.querySelectorAll('#list .page-tr-hint')].filter((x) => x.offsetParent).map((x) => x.textContent).join('') })`);
+  check('没有内置翻译时也没有「全文翻译」按钮', !noBi.btn);
   check('列表上提示用浏览器自带的整页翻译', /整篇翻译：用浏览器自带的翻译功能/.test(noBi.hint), noBi.hint);
   await shot('desktop-no-builtin-list');
   check('打开一篇文章', await openFirstCard(0));
@@ -514,15 +519,19 @@ try {
   check('点「朗读」开始读，句子和词高亮', s.reader === 'speaking' && hl.sent && hl.word, `${s.reader} 第 ${s.si} 句第 ${s.wi} 词「${hl.word}」，声音 ${s.voice}`);
   check('默认用女声 Sofie', /Sofie/.test(s.voice || ''), s.voice);
   check('朗读时「暂停」按钮的瑞典文提示是 Pausa', (await evalJs(`document.querySelector('#btnPlay').dataset.sv`)) === 'Pausa');
-  // 正在读的词：浅色是整块黄底；深色（夜间）是黄色下划线，没有黄底，字是正文的颜色
+  // 正在读的词：浅色（日间）是红色下划线，深色（夜间）是黄色下划线；都没有色块底，字是正文的颜色，
+  // 高度和同一句里别的词一样（下划线不改行高和排版）
   const wordStyle = () => evalJs(`(() => { const w = document.querySelector('#article .w.current'); if (!w) return null;
     const c = getComputedStyle(w), a = getComputedStyle(document.querySelector('#article'));
-    return { bg: c.backgroundColor, line: c.textDecorationLine, lineColor: c.textDecorationColor, color: c.color, ink: a.color }; })()`);
+    const other = [...w.closest('.s').querySelectorAll('.w')].find((x) => x !== w);
+    return { bg: c.backgroundColor, shadow: c.boxShadow, line: c.textDecorationLine, lineColor: c.textDecorationColor, skip: c.textDecorationSkipInk, color: c.color, ink: a.color,
+      sameHeight: !other || Math.abs(w.getBoundingClientRect().height - other.getBoundingClientRect().height) < 0.5 }; })()`);
   const darkMode = (on) => send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: on ? 'dark' : 'light' }] });
   await darkMode(false);
   const lightW = await wordStyle();
-  // 黄底有 0.12 秒的渐显，模拟的声音刚换词时读到的是 rgba(255, 216, 77, 0.9x)，所以只比颜色不比透明度
-  check('浅色：正在读的词是整块黄底', lightW && /^rgba?\(255, 216, 77\b/.test(lightW.bg) && !/underline/.test(lightW.line), JSON.stringify(lightW));
+  check('浅色：正在读的词是一整条红色下划线，没有黄底，字是正文的颜色，不改行高',
+    lightW && lightW.bg === 'rgba(0, 0, 0, 0)' && lightW.shadow === 'none' && /underline/.test(lightW.line) && lightW.lineColor === 'rgb(211, 47, 47)' && lightW.skip === 'none' && lightW.color === lightW.ink && lightW.sameHeight, JSON.stringify(lightW));
+  await shot('desktop-light-reading');
   await darkMode(true);
   await sleep(150);
   const darkW = await wordStyle();
@@ -538,6 +547,9 @@ try {
   const s2b = await state();
   check('暂停后光标不动', s2b.si === pausedAt.si && s2b.wi === pausedAt.wi);
   check('暂停时「继续」按钮的瑞典文提示是 Fortsätt', (await evalJs(`document.querySelector('#btnPlay').dataset.sv`)) === 'Fortsätt');
+  const lightP = await wordStyle();
+  check('浅色暂停：停下的词是浅一些的红色下划线，没有底色',
+    lightP && lightP.bg === 'rgba(0, 0, 0, 0)' && /underline/.test(lightP.line) && lightP.lineColor === 'rgb(229, 115, 115)', JSON.stringify(lightP));
   await shot('desktop-paused');
   await darkMode(true);
   await sleep(150);
@@ -687,8 +699,8 @@ try {
   await sleep(300);
   check('手机上点「继续」接着读', (await state()).reader === 'speaking');
   await space();
-  // 没有内置翻译：不显示「全文翻译」按钮，提示安卓 Chrome 自己的整页翻译
-  const hintP = await evalJs(`({ btn: !document.querySelector('#btnTranslate').hidden, hint: document.querySelector('#article .page-tr-hint')?.offsetParent ? document.querySelector('#article .page-tr-hint').textContent : '' })`);
+  // 没有内置翻译：提示安卓 Chrome 自己的整页翻译（本站没有「全文翻译」按钮）
+  const hintP = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: document.querySelector('#article .page-tr-hint')?.offsetParent ? document.querySelector('#article .page-tr-hint').textContent : '' })`);
   check('手机上没有「全文翻译」按钮，提示安卓 Chrome 的「⋮ → 翻译…」', !hintP.btn && /点右上角 ⋮ →「翻译…」/.test(hintP.hint), JSON.stringify(hintP));
   // 往下滚：话题和朗读按钮粘在顶上，还点得到
   await evalJs('window.scrollTo(0, document.documentElement.scrollHeight)');

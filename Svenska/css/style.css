@@ -8,11 +8,9 @@
   --accent: #0b5cad;
   --accent-ink: #ffffff;
   --accent-soft: #e6f0fa;
-  --sun: #f5c518;
   --sent: rgba(11, 92, 173, 0.09);
-  --word: #ffd84d;
-  --word-ink: #111111;
-  --word-paused: #ffe9a3;
+  --word: #d32f2f;        /* 正在读的词的下划线：浅色（日间）是红色 */
+  --word-paused: #e57373; /* 暂停时停下的词：浅一些的红色 */
   --zh: #6b4e16;
   --easy-bg: #e3f2e5;
   --easy-ink: #1d6b2b;
@@ -40,7 +38,6 @@
     --accent-soft: #1d2b3b;
     --sent: rgba(94, 168, 245, 0.13);
     --word: #f5c518;
-    --word-ink: #111111;
     --word-paused: #8a6f14;
     --zh: #e2c48a;
     --easy-bg: #1d3323;
@@ -149,7 +146,6 @@ kbd {
   display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
 }
 .card .c-meta { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 13px; color: var(--muted); }
-.card .zh { font-size: calc(15px * var(--scale)); margin: 0; }
 .card.read .c-title { color: var(--muted); font-weight: 600; }
 .badge.done { background: var(--line); color: var(--muted); }
 .list-foot { margin: 18px 0 8px; }
@@ -201,11 +197,19 @@ main { padding: 6px var(--pad) calc(40px + env(safe-area-inset-bottom)); }
   body:not(.speaking) .article .w:hover { background: var(--accent-soft); }
 }
 .article .s.reading { background: var(--sent); border-radius: 5px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
-.article .w.current { background: var(--word); color: var(--word-ink); box-shadow: 0 0 0 2px var(--word); }
-body.paused .article .w.current { background: var(--word-paused); box-shadow: 0 0 0 2px var(--word-paused); color: inherit; }
+/* 正在读的词，浅色（日间）：红色下划线，字的颜色和底色不变（句子的淡蓝底照样透出来）。
+   下划线不跳过 g、j、p、y 的下伸部分（skip-ink: none），是一整条；只画在这个词上，词和词之间的空格不画，
+   所以挨着的两个词不会连成一条。下划线不占位置，行高和排版都不变。暂停时用浅一些的红色。 */
+.article .w.current {
+  text-decoration: underline;
+  text-decoration-color: var(--word);
+  text-decoration-thickness: max(2px, .12em);
+  text-underline-offset: .22em;
+  text-decoration-skip-ink: none;
+}
+body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 .article .w.picked { outline: 2px solid var(--accent); outline-offset: 1px; }
-/* 深色（夜间）：黑底上整块黄底太刺眼，正在读的词改成黄色下划线，字保持原来的颜色。
-   下划线不跳过 g、j、p、y 的下伸部分（skip-ink: none），是一整条。暂停时用暗一些的黄色。 */
+/* 深色（夜间）：黄色下划线，没有黄底，字保持原来的颜色。暂停时用暗一些的黄色。 */
 @media (prefers-color-scheme: dark) {
   .article .w.current,
   body.paused .article .w.current {
@@ -219,22 +223,6 @@ body.paused .article .w.current { background: var(--word-paused); box-shadow: 0 
   body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 }
 .article { touch-action: manipulation; }
-
-/* 中文译文 */
-.zh {
-  display: block; font-family: var(--zh-font); font-size: .86em; line-height: 1.65; font-weight: 400;
-  color: var(--zh); border-left: 3px solid var(--sun); padding: 2px 0 2px .7em; margin: .3em 0 .2em;
-}
-.zh.err { color: var(--muted); border-left-color: var(--line); }
-.zh.wait { color: var(--muted); }
-.tr-problem {
-  margin: 10px 0 4px; padding: 10px 14px; border-radius: 10px; border: 1px solid #e0b252; background: rgba(245, 197, 24, .12);
-  font-family: var(--ui-font); font-size: 15px; line-height: 1.6; color: var(--ink);
-}
-.tr-problem p { margin: 0 0 8px; }
-.tr-problem button { height: 38px; padding: 0 14px; font-size: 14px; }
-h1 .zh { font-size: .62em; }
-li .zh { margin-bottom: .1em; }
 
 /* ---------- 单词弹出框 ---------- */
 .popup {
@@ -270,7 +258,7 @@ li .zh { margin-bottom: .1em; }
   transition: transform .06s, box-shadow .06s, border-bottom-width .06s;
 }
 .player button:hover:not(:disabled) { filter: brightness(1.04); }
-.player button:active:not(:disabled), .player button.on {
+.player button:active:not(:disabled) {
   transform: translateY(2px); border-bottom-width: 2px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, .18);
 }
@@ -284,7 +272,6 @@ body.speaking .player .play { transform: translateY(2px); border-bottom-width: 2
 .player .play .i-pause { display: none; }
 body.speaking .player .play .i-play { display: none; }
 body.speaking .player .play .i-pause { display: inline; }
-.player button.on { color: var(--accent); }
 
 /* ---------- 提示 ---------- */
 .toast {

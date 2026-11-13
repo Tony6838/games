@@ -1,5 +1,5 @@
 // 用 Playwright 的 WebKit（Safari 的引擎，Windows 上也能跑）检查 Safari / iPhone / iPad 上的用法，
-// 重点：没有浏览器内置翻译时不显示「全文翻译」，提示浏览器自己的整页翻译；查词和本句译文走 MyMemory。
+// 重点：没有「全文翻译」按钮，没有浏览器内置翻译时提示浏览器自己的整页翻译；查词和本句译文走 MyMemory。
 // 最后在 Playwright 的 Firefox 里也看一下（没装就跳过）。
 //   node tests/webkit_check.mjs <截图目录> [网址] [real]
 // 不给网址时，自己在本机起静态服务器。MyMemory 默认由测试代答（不占真实额度）；最后加 real 时，
@@ -87,14 +87,11 @@ async function shot(page, name) {
 }
 const seen = (page) => page.evaluate(() => ({
   toast: document.querySelector('#toast').hidden ? '' : document.querySelector('#toast').textContent,
-  problem: document.querySelector('#article .tr-problem p')?.textContent || '',
-  zh: [...document.querySelectorAll('#article .zh:not(.wait)')].map((z) => z.textContent),
-  btn: document.querySelector('#btnTranslate .lbl').textContent,
   s: SVApp.state(),
 }));
-// 「全文翻译」按钮显示了没有；看得见的「整篇翻译：……」提示
+// 「全文翻译」按钮还在不在（应当没有）；看得见的「整篇翻译：……」提示
 const trState = (page, where) => page.evaluate((w) => ({
-  btn: !document.querySelector('#btnTranslate').hidden,
+  btn: !!document.querySelector('#btnTranslate'),
   hint: [...document.querySelectorAll(w + ' .page-tr-hint')].filter((x) => x.offsetParent).map((x) => x.textContent).join(''),
 }), where);
 const layout = (page) => page.evaluate(() => {
@@ -273,10 +270,10 @@ try {
     await fpage.goto(baseUrl);
     ok = await fpage.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 }).then(() => true, () => false);
     check('Firefox 上列出文章', ok, await fpage.evaluate(() => navigator.userAgent));
-    await fpage.waitForFunction(() => document.body.classList.contains('no-builtin') || !document.querySelector('#btnTranslate').hidden, null, { timeout: 5000 }).catch(() => {});
+    await fpage.waitForFunction(() => document.body.classList.contains('no-builtin') || typeof self.Translator !== 'undefined', null, { timeout: 5000 }).catch(() => {});
     tr = await trState(fpage, '#list');
     const hasApi = await fpage.evaluate(() => typeof self.Translator !== 'undefined');
-    check('Firefox：没有内置翻译时不显示按钮，提示「用地址栏的翻译图标」', hasApi ? tr.btn : (!tr.btn && /用地址栏的翻译图标/.test(tr.hint)), JSON.stringify({ hasApi, ...tr }));
+    check('Firefox：没有「全文翻译」按钮，没有内置翻译时提示「用地址栏的翻译图标」', !tr.btn && (hasApi || /用地址栏的翻译图标/.test(tr.hint)), JSON.stringify({ hasApi, ...tr }));
     await fpage.locator('#list .card').first().click();
     await fpage.waitForFunction(() => SVApp.state().view === 'article' && SVApp.state().sentences > 0, null, { timeout: 10000 });
     const fidx = await fpage.evaluate(() => [...document.querySelectorAll('#article .body .w')].findIndex((w) => w.textContent.length > 6 && !SV.glossary.lookup(w.textContent)));

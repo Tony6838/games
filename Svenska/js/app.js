@@ -1,4 +1,4 @@
-/* 界面：话题 → 文章列表 → 文章；朗读高亮、查词弹出框、全文翻译、设置。 */
+/* 界面：话题 → 文章列表 → 文章；朗读高亮、查词弹出框、设置。 */
 (function () {
   'use strict';
   const SV = window.SV;
@@ -25,9 +25,8 @@
   const save = () => SV.store.set(SET_KEY, S);
 
   const TOPICS = SV.sources.TOPICS;
-  // 「全文翻译」按钮只在浏览器有内置翻译（Translator API，今天是 Chrome、Edge 电脑版 138 起）时显示，
-  // 按功能检测，不看浏览器的名字：哪个浏览器以后有了这个接口，按钮就自动出现。整篇文章不再交给 MyMemory
-  // （Tony 定的，免费额度留给查词和本句译文）；没有内置翻译时，在按钮的位置提示用浏览器自己的整页翻译。
+  // 本站不翻译整篇文章：整篇用浏览器自己的整页翻译。没有内置翻译（Translator API，今天是 Chrome、Edge
+  // 电脑版 138 起）的浏览器，在列表和文章开头提示怎么用它自己的整页翻译。按功能检测，不看浏览器的名字。
   const UA = navigator.userAgent || '';
   const IS_IOS = /iP(hone|ad|od)/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1); // iPadOS 默认报成 Mac
   const IS_SAFARI = !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|MicroMessenger|YaBrowser|Mercury/i.test(UA) &&
@@ -36,26 +35,22 @@
     : /Firefox\/|FxiOS/.test(UA) ? '整篇翻译：用地址栏的翻译图标'
       : /Android/.test(UA) && /Chrome\//.test(UA) && !/EdgA|SamsungBrowser|OPR|YaBrowser|MicroMessenger/.test(UA) ? '整篇翻译：点右上角 ⋮ →「翻译…」'
         : '整篇翻译：用浏览器自带的翻译功能';
-  let builtinOk = false; // 内置翻译能不能用（瑞典语→中文），开始时查一次
-  const noWholeTranslate = () => !builtinOk;
+  // 内置翻译能不能用（瑞典语→中文），开始时查一次；整页翻译的提示一行跟着这个 class 显示或隐藏
   function setBuiltin(ok) {
-    builtinOk = ok;
-    document.body.classList.toggle('no-builtin', !ok); // 提示一行跟着这个 class 显示或隐藏
-    updateButtons();
+    document.body.classList.toggle('no-builtin', !ok);
   }
   const BATCH = 9; // 一批几篇
   const els = {
     topbar: $('#topbar'), topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'), tip: $('#tip'),
     popup: $('#popup'), toast: $('#toast'), player: $('#player'),
-    play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), translate: $('#btnTranslate'), next: $('#btnNext'),
+    play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), next: $('#btnNext'),
     back: $('#btnBack'), brand: $('#brand'), guide: $('#guide'),
   };
 
   // view：'loading' | 'list' | 'article' | 'message'
   const cur = {
-    topic: null, view: 'loading', batch: [], notices: [], more: false, batchNo: 0,
-    listZh: false, listTranslating: false, listScroll: 0,
-    item: null, model: null, translating: false, zhShown: true,
+    topic: null, view: 'loading', batch: [], notices: [], more: false, batchNo: 0, listScroll: 0,
+    item: null, model: null,
   };
   let loadToken = 0;
   let loading = false;
@@ -261,7 +256,7 @@
   }
 
   // ---------- 播放栏的按钮随页面变 ----------
-  function updateButtons(progress) {
+  function updateButtons() {
     const inArticle = cur.view === 'article' && !!cur.model;
     const inList = cur.view === 'list';
     // 朗读
@@ -274,34 +269,6 @@
       !inArticle ? '先在列表里选一篇文章'
         : st === 'speaking' ? '暂停（空格键也可以）'
           : st === 'paused' ? '从停下的词接着读（空格键也可以）' : '朗读这篇文章（空格键也可以）');
-    // 翻译
-    const tl = els.translate.querySelector('.lbl');
-    els.translate.hidden = noWholeTranslate();
-    els.translate.disabled = !(inArticle || inList);
-    if (inList) {
-      els.translate.classList.toggle('on', cur.listZh);
-      tl.textContent = cur.listTranslating ? (progress != null ? `翻译中 ${progress}%` : '翻译中…') : cur.listZh ? '隐藏译文' : '翻译标题';
-      if (cur.listTranslating) tip(els.translate, 'Översätter …', '正在把列表里的标题翻译成中文');
-      else if (cur.listZh) tip(els.translate, 'Dölj översättningen', '隐藏标题下面的中文');
-      else tip(els.translate, 'Översätt rubrikerna', '把列表里的标题翻译成中文');
-    } else {
-      const blocks = inArticle ? cur.model.blocks : [];
-      const done = blocks.filter((x) => x.zhEl).length;
-      els.translate.classList.toggle('on', done > 0 && cur.zhShown);
-      if (cur.translating) {
-        tl.textContent = progress != null ? `翻译中 ${progress}%` : '翻译中…';
-        tip(els.translate, 'Översätter …', '正在把整篇文章翻译成中文');
-      } else if (!done) {
-        tl.textContent = '全文翻译';
-        tip(els.translate, 'Översätt hela texten', '把整篇文章翻译成中文');
-      } else if (done < blocks.length) {
-        tl.textContent = '继续翻译';
-        tip(els.translate, 'Fortsätt översätta', '接着翻译还没译的段落');
-      } else {
-        tl.textContent = cur.zhShown ? '隐藏译文' : '显示译文';
-        tip(els.translate, cur.zhShown ? 'Dölj översättningen' : 'Visa översättningen', cur.zhShown ? '隐藏每段下面的中文' : '显示每段下面的中文');
-      }
-    }
     // 下一篇 / 换一批
     els.next.disabled = !(inArticle || inList);
     els.next.querySelector('.lbl').textContent = inList ? '换一批' : '下一篇';
@@ -407,7 +374,6 @@
     cur.more = b.more;
     cur.notices = notices;
     cur.batchNo = again ? cur.batchNo + 1 : 1;
-    cur.listZh = false;
     cur.listScroll = 0;
     // 网址里带了 ?a=文章编号：直接打开那一篇
     if (wantArticle) {
@@ -520,8 +486,6 @@
       try { history.pushState({ sv: 'article', id: item.id }, ''); } catch (e) { /* 不支持就算了 */ }
     }
     cur.item = item;
-    cur.translating = false;
-    cur.zhShown = true;
     SV.sources.markRead(item.id);
     if (useCloud()) SV.cloud.warm(); // 先下载语音 SDK、拿令牌（不花额度），点「朗读」时快一点
     const topic = cur.topic;
@@ -741,7 +705,7 @@
     openPopup({ wordEl, text: s.words[wi].text, pinned, si, wi });
   }
 
-  // 整句、整段、标题：浏览器内置翻译优先（Chrome、Edge 电脑版），没有的话用 MyMemory（默认开着）。
+  // 本句译文、选中的几个词：浏览器内置翻译优先（Chrome、Edge 电脑版），没有的话用 MyMemory（默认开着）。
   // 返回 { ok: true, online, mm } 或 { ok: false, why: 'disabled'（在「设置」里关了在线翻译） }
   async function decideOnline() {
     const avail = await SV.tr.builtinAvailability();
@@ -764,121 +728,6 @@
     save();
     syncSettingsForm();
     toast('已打开在线翻译（MyMemory）。不想用时，可以在顶部齿轮按钮「设置」里关掉。', 4000);
-  }
-
-  // ---------- 翻译出问题时，在页面上留一条说明（提示条几秒就消失，容易错过） ----------
-  // 全文翻译、翻译标题只用浏览器内置的翻译，所以这里的问题都是内置翻译的
-  function trProblemText(e) {
-    if (e && e.code === 'needGesture') return '浏览器的翻译模型还没下载好：再点一次「全文翻译」，开始下载。';
-    return '浏览器内置的翻译这次没成功' + (e && e.message ? '（' + e.message + '）' : '') + '。可以再试一次，或者用浏览器自带的「翻译成中文」（在网页上点右键）。';
-  }
-  function clearTrProblem() {
-    const old = els.article.querySelector('.tr-problem');
-    if (old) old.remove();
-  }
-  function showTrProblem(e, retry) {
-    const text = trProblemText(e);
-    const box = h('div', { class: 'tr-problem', role: 'alert', lang: 'zh-CN' }, h('p', null, text));
-    const acts = h('div', { class: 'next-row' });
-    acts.append(tip(h('button', { type: 'button', onclick: () => retry() }, '再试一次'), 'Försök igen', '再翻译一次'));
-    acts.append(tip(h('button', { type: 'button', onclick: () => box.remove() }, '关掉'), 'Stäng', '关掉这条说明'));
-    box.append(acts);
-    if (cur.view === 'list') {
-      toast(text, 6000);
-      els.notice.textContent = text;
-      els.notice.hidden = false;
-      return;
-    }
-    clearTrProblem();
-    const meta = els.article.querySelector('.meta');
-    if (meta) meta.after(box);
-    else els.article.prepend(box);
-    // 说明放在文章开头；看不见的话滚过去
-    const r = box.getBoundingClientRect();
-    const band = visibleBand();
-    if (r.top < band.top || r.bottom > band.bottom) box.scrollIntoView({ block: 'center', behavior: 'smooth' });
-  }
-
-  // ---------- 全文翻译（文章）/ 翻译标题（列表） ----------
-  async function translateAll() {
-    if (noWholeTranslate()) return; // 没有内置翻译时按钮不显示（整篇文章不交给 MyMemory）
-    if (cur.view === 'list') return translateTitles();
-    if (cur.view !== 'article' || !cur.model || cur.translating) return;
-    const model = cur.model;
-    const blocks = model.blocks;
-    const todo = blocks.filter((b) => !b.zhEl);
-    if (!todo.length) {
-      cur.zhShown = !cur.zhShown;
-      for (const b of blocks) b.zhEl.hidden = !cur.zhShown;
-      updateButtons();
-      return;
-    }
-    clearTrProblem();
-    cur.zhShown = true;
-    for (const b of blocks) if (b.zhEl) b.zhEl.hidden = false;
-    cur.translating = true;
-    updateButtons(0);
-    let n = 0;
-    let failure = null;
-    for (const b of todo) {
-      // 先放一个「翻译中…」，让人看见在翻哪一段
-      const zh = h('span', { class: 'zh wait', lang: 'zh-CN' }, '翻译中…');
-      b.el.append(zh);
-      try {
-        // online: false：整篇文章只交给浏览器内置的翻译，不交给 MyMemory
-        const r = await SV.tr.translate(b.text, 'text', { gesture: true, online: false, onDownload });
-        if (cur.model !== model) return;
-        zh.textContent = r.zh;
-        zh.className = 'zh';
-        b.zhEl = zh;
-      } catch (e) {
-        zh.remove();
-        failure = e;
-        break;
-      }
-      n++;
-      updateButtons(Math.round((n / todo.length) * 100));
-    }
-    if (cur.model !== model) return;
-    cur.translating = false;
-    updateButtons();
-    if (failure) showTrProblem(failure, translateAll);
-  }
-
-  async function translateTitles() {
-    if (cur.listTranslating) return;
-    const cards = [...els.list.querySelectorAll('.card')];
-    const done = cards.filter((c) => c.querySelector('.zh'));
-    if (cards.length && done.length === cards.length) {
-      cur.listZh = !cur.listZh;
-      for (const c of cards) c.querySelector('.zh').hidden = !cur.listZh;
-      updateButtons();
-      return;
-    }
-    const batch = cur.batch;
-    cur.listTranslating = true;
-    cur.listZh = true;
-    for (const c of done) c.querySelector('.zh').hidden = false;
-    updateButtons(0);
-    let n = 0;
-    let failure = null;
-    for (const c of cards) {
-      if (c.querySelector('.zh')) { n++; continue; }
-      const it = batch.find((x) => x.id === c.dataset.id);
-      try {
-        const r = await SV.tr.translate(it.title, 'text', { gesture: true, online: false, onDownload });
-        if (cur.batch !== batch) break;
-        c.querySelector('.c-title').after(h('span', { class: 'zh', lang: 'zh-CN' }, r.zh));
-      } catch (e) {
-        failure = e;
-        break;
-      }
-      n++;
-      updateButtons(Math.round((n / cards.length) * 100));
-    }
-    cur.listTranslating = false;
-    updateButtons();
-    if (failure) showTrProblem(failure, translateTitles);
   }
 
   // ---------- 事件 ----------
@@ -995,7 +844,6 @@
     else toast(`${want}：${voiceInfo.voice.name}`, 2500);
     if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
   });
-  els.translate.addEventListener('click', () => { els.translate.blur(); translateAll(); });
   els.next.addEventListener('click', () => {
     els.next.blur();
     if (cur.view === 'list') showTopic(cur.topic, true);
@@ -1131,7 +979,7 @@
     const u = SV.tr.mmUsage();
     let t;
     if (a === 'ready' || a === 'available') t = '浏览器内置翻译：可用（在本机翻译，文字不离开这台设备，不限量）。';
-    else if (a === 'downloadable' || a === 'downloading') t = '浏览器内置翻译：可用。第一次用时浏览器要下载瑞典语→中文的翻译模型（点「全文翻译」或点一个词就开始）。';
+    else if (a === 'downloadable' || a === 'downloading') t = '浏览器内置翻译：可用。第一次用时浏览器要下载瑞典语→中文的翻译模型（点一个词就开始）。';
     else t = '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）。';
     if (u.chars) t += ` 今天已用在线翻译约 ${u.chars} 个字符。`;
     $('#trNote').textContent = t;
@@ -1140,7 +988,7 @@
   // ---------- 开始 ----------
   document.documentElement.style.setProperty('--scale', S.scale);
   els.rate.querySelector('b').textContent = fmtRate(S.rate);
-  // 页面上固定的按钮的瑞典文提示。朗读、男女声、全文翻译、下一篇、返回列表随状态变，
+  // 页面上固定的按钮的瑞典文提示。朗读、男女声、下一篇、返回列表随状态变，
   // 由 updateButtons、refreshVoice、openArticle 再改；这里先给它们一个，免得哪个按钮没有提示。
   const STATIC_TIPS = [
     ['#btnSmaller', 'Mindre text', '字小一点'],
@@ -1151,7 +999,6 @@
     ['#btnPlay', 'Läs upp', '先在列表里选一篇文章'],
     ['#btnRate', 'Talhastighet', '语速：点一下换一档'],
     ['#btnVoice', S.gender === 'm' ? 'Manlig röst' : 'Kvinnlig röst', '切换男声、女声'],
-    ['#btnTranslate', 'Översätt hela texten', '把整篇文章翻译成中文'],
     ['#btnNext', 'Nästa artikel', '列表里的下一篇'],
     ['#btnTipClose', 'Jag förstår', '知道了，不再显示这条说明'],
     ['#btnTryVoice', 'Provlyssna', '试听这个声音'],
@@ -1167,7 +1014,7 @@
     if ($('#dlgSettings').open) fillVoiceSelect();
   });
   save();
-  // 内置翻译能不能用：决定显示「全文翻译」按钮，还是显示整页翻译的提示
+  // 内置翻译能不能用：没有时显示整页翻译的提示
   SV.tr.builtinAvailability().then((a) => setBuiltin(a !== 'unavailable'), () => setBuiltin(false));
   const params = new URLSearchParams(location.search);
   const first = TOPICS.find((t) => t.key === params.get('topic')) || TOPICS.find((t) => t.key === S.topic) || TOPICS[0];
@@ -1192,9 +1039,6 @@
       wordEvents: reader.wordEvents,
       sentences: cur.model ? cur.model.sentences.length : 0,
       blocks: cur.model ? cur.model.blocks.length : 0,
-      translated: cur.model ? cur.model.blocks.filter((b) => b.zhEl).length : 0,
-      translating: cur.translating,
-      listZh: els.list.querySelectorAll('.card .zh').length,
       engine: useCloud() ? 'cloud' : 'device',
       voice: useCloud() ? cloudVoice().name : voiceInfo.voice ? voiceInfo.voice.name : null,
       voiceGender: useCloud() ? cloudVoice().gender : voiceInfo.gender,

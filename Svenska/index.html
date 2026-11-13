@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="给学瑞典语的中文读者：按话题读今天的瑞典新闻，朗读并高亮正在读的词，点词看中文，可以翻译全文。">
+<meta name="description" content="给学瑞典语的中文读者：按话题读今天的瑞典新闻，朗读并高亮正在读的词，点词看中文。">
 <meta name="theme-color" content="#0b5cad">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -26,7 +26,7 @@
       <li>点一个话题，在列表里选一篇文章；再点一次同一个话题，换一批。</li>
       <li>点「朗读」听文章，正在读的词会高亮；按<kbd>空格</kbd>或点一下文章暂停，再按一次接着读。</li>
       <li>鼠标停在词上（手机上点一下词），显示中文；喇叭读这个词。</li>
-      <li>「全文翻译」（Chrome、Edge 电脑版）：每段下面显示中文；别的浏览器用它自带的整页翻译。</li>
+      <li>整篇翻译：用浏览器自带的整页翻译。</li>
       <li>「女声 / 男声」切换声音；声音、语速、字号和在线翻译在右上角的齿轮按钮「设置」里。</li>
     </ol>
     <span class="more">更多说明：右上角的「?」</span>
@@ -44,7 +44,7 @@
 
 <nav id="topbar" class="topbar" aria-label="话题和朗读">
   <div id="topics" class="topics" role="group" aria-label="话题"></div>
-  <div id="player" class="player" role="group" aria-label="朗读和翻译">
+  <div id="player" class="player" role="group" aria-label="朗读">
     <button type="button" id="btnPlay" class="play" aria-label="朗读">
       <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor"/></svg>
       <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4.5h4.2v15H6zM13.8 4.5H18v15h-4.2z" fill="currentColor"/></svg>
@@ -52,7 +52,6 @@
     </button>
     <button type="button" id="btnRate"><b>0.9×</b><span class="lbl">语速</span></button>
     <button type="button" id="btnVoice"><b>女</b><span class="lbl">女声</span></button>
-    <button type="button" id="btnTranslate"><b>译</b><span class="lbl">全文翻译</span></button>
     <button type="button" id="btnNext"><b>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12M12 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span class="lbl">下一篇</span></button>
   </div>
@@ -120,7 +119,7 @@
       <li><b>朗读</b>：点话题按钮后面那组立体按钮里的「朗读」（手机上在话题下面一行，往下滚时一直在顶上）。正在读的句子和单词会高亮，跟着往下走。</li>
       <li><b>暂停</b>：按<kbd>空格</kbd>，或者点一下文章。再按空格或点「继续」，从停下的地方接着读。</li>
       <li><b>查词</b>：鼠标停在词上，或者点一下词，就显示中文。喇叭读这个词，「从这里读」从这个词开始朗读，「本句译文」翻译这一整句。电脑上用鼠标选中几个词，也会翻译选中的部分。</li>
-      <li><b>全文翻译</b>：每段下面显示中文，先看懂大意再读原文；在列表里这个按钮翻译所有标题。<b>只有 Chrome、Edge 的电脑版有这个按钮</b>，用的是浏览器内置的翻译（在本机翻译，不限量）。别的浏览器在这个位置有一行提示，告诉你怎么用浏览器自己的整页翻译：Safari、iPhone、iPad 点地址栏「aA → 翻译成中文」；安卓的 Chrome 点右上角 ⋮ →「翻译…」；Firefox 用地址栏的翻译图标。</li>
+      <li><b>整篇翻译</b>：用浏览器自带的整页翻译。Safari、iPhone、iPad 点地址栏「aA → 翻译成中文」；安卓的 Chrome 点右上角 ⋮ →「翻译…」；Firefox 用地址栏的翻译图标。这些浏览器在列表和文章开头也有一行这样的提示。</li>
       <li><b>在线翻译</b>：浏览器没有内置翻译时，查词和「本句译文」自动用 MyMemory 在线翻译（默认开着）；不想用可以在顶部齿轮按钮「设置」里关掉。</li>
       <li><b>简易瑞典语</b>：最后一个话题，是 SR 专门用简单的瑞典语写的新闻；别的话题都是普通的瑞典新闻。</li>
       <li><b>声音</b>：点「女声 / 男声」切换；在「设置」里可以选具体的声音和语速。默认用云端自然语音（微软的 Sofie、Hillevi 女声，Mattias 男声），电脑、手机、任何浏览器上都一样，要联网；云端不通时自动改用设备自带的声音（Edge 浏览器有微软的 Sofie、Mattias，苹果设备有 Alva、Klara、Oskar）。在「设置」里也可以自己选用设备的声音。</li>
