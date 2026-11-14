@@ -11,25 +11,38 @@
   // 默认开着，只有在「设置」里取消勾选才关（false）。微软翻译不受这个开关管（微软不保存文字）。
   // engine：'cloud' 云端自然语音（js/config.js 设了 ttsUrl 才有）或 'device' 这台设备自己的声音；cloudVoice：云端选的声音；
   // cloudOffMonth：云端这个月的免费额度用完了（'2026-11'），这个月里直接用本机的声音，不再每次先试云端
-  // loop：循环朗读（读完这一篇从头再读），这个浏览器记住；存不了（隐私模式等）时只在这次打开的页面里有效
-  const DEFAULTS = { scale: 1, rate: 0.9, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, tip: true, topic: 'idag', loop: false };
-  const S = Object.assign({}, DEFAULTS, SV.store.get(SET_KEY, {}));
+  // after：读完一篇以后怎么办（播放栏上的一个按钮，点一下换一种）：'stop' 读完就停（默认）、'next' 接着读列表里的下一篇、
+  // 'loop' 本篇循环（从头再读）。旧版本的 loop: true（「循环」开着）当作 'loop'。
+  // rate：语速只有 0.8、0.9、1 三档（Tony 定的，2026-11-14）；ramp：循序渐进三连读（第 1 遍 0.8×、第 2 遍 0.9×、第 3 遍 1×）。
+  // 这些这个浏览器都记住；存不了（隐私模式等）时只在这次打开的页面里有效
+  const DEFAULTS = { scale: 1, rate: 0.9, ramp: false, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, tip: true, topic: 'idag', after: 'stop' };
+  const AFTER = ['stop', 'next', 'loop'];
+  const RATES = [0.8, 0.9, 1];
+  // 三连读的三遍：语速和为什么这样读
+  const RAMP = [{ rate: 0.8, why: '慢读，便于理解' }, { rate: 0.9, why: '中速，便于练习' }, { rate: 1, why: '正常速度' }];
+  let saved = SV.store.get(SET_KEY, {});
+  if (!saved || typeof saved !== 'object') saved = {};
+  const S = Object.assign({}, DEFAULTS, saved);
   delete S.level; // 旧版本的「简易优先」设置，不再用
+  if (!AFTER.includes(saved.after)) S.after = saved.loop === true ? 'loop' : 'stop'; // 旧版本的「循环」开关（看存下来的，不看默认值）
+  delete S.loop;
   // 设置的版本：第一版在说明框里点「不用」会把在线翻译一直关着（Safari 上点词只看到「在线翻译已关闭」）。
   // 现在在线翻译默认开着、不再先问，所以旧版本留下的状态一律改回默认一次；
   // 这个版本以后在「设置」里自己关掉的（v = 3），照样保留。
   if (S.v !== 3) { S.online = true; S.v = 3; }
   S.scale = SV.clamp(+S.scale || 1, 0.8, 1.8);
-  S.rate = SV.clamp(+S.rate || 0.9, 0.5, 1.3);
+  // 旧版本存的别的语速（0.5–1.3）改成最近的一档：0.7 → 0.8，1.1、1.25 → 1
+  const nearestRate = (r) => RATES.reduce((best, x) => (Math.abs(x - r) < Math.abs(best - r) - 1e-9 ? x : best), RATES[0]);
+  S.rate = nearestRate(+S.rate || 0.9);
+  S.ramp = S.ramp === true;
   if (!['f', 'm'].includes(S.gender)) S.gender = 'f';
   if (!['cloud', 'device'].includes(S.engine)) S.engine = 'cloud';
   if (S.online !== false) S.online = true;
-  S.loop = S.loop === true;
   const save = () => SV.store.set(SET_KEY, S);
 
   const TOPICS = SV.sources.TOPICS;
-  // 本站不翻译整篇文章：整篇用浏览器自己的整页翻译。没有内置翻译（Translator API，今天是 Chrome、Edge
-  // 电脑版 138 起）的浏览器，在列表和文章开头提示怎么用它自己的整页翻译。按功能检测，不看浏览器的名字。
+  // 本站不翻译整篇文章：整篇用浏览器自己的整页翻译。怎么用（这个浏览器的办法放在最前面）写在说明框「?」的「整篇翻译」里，
+  // 列表和文章上不再显示（Tony 定的，2026-11-14：「可以转移到帮助里，不需要在主页出现」）；「设置」的翻译说明里也有。
   const UA = navigator.userAgent || '';
   const IS_IOS = /iP(hone|ad|od)/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1); // iPadOS 默认报成 Mac
   const IS_SAFARI = !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|MicroMessenger|YaBrowser|Mercury/i.test(UA) &&
@@ -38,7 +51,8 @@
     : /Firefox\/|FxiOS/.test(UA) ? '整篇翻译：用地址栏的翻译图标'
       : /Android/.test(UA) && /Chrome\//.test(UA) && !/EdgA|SamsungBrowser|OPR|YaBrowser|MicroMessenger/.test(UA) ? '整篇翻译：点右上角 ⋮ →「翻译…」'
         : '整篇翻译：用浏览器自带的翻译功能';
-  // 内置翻译能不能用（瑞典语→中文），开始时查一次；整页翻译的提示一行跟着这个 class 显示或隐藏
+  const PAGE_TR_KNOWN = PAGE_TR_HINT !== '整篇翻译：用浏览器自带的翻译功能'; // 认出了是哪个浏览器
+  // 内置翻译能不能用（瑞典语→中文），开始时查一次，记在 body 的 no-builtin 上（给测试看，样子不跟着变）
   function setBuiltin(ok) {
     document.body.classList.toggle('no-builtin', !ok);
   }
@@ -46,8 +60,8 @@
   const els = {
     topbar: $('#topbar'), topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'), tip: $('#tip'),
     popup: $('#popup'), toast: $('#toast'), player: $('#player'),
-    play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), loop: $('#btnLoop'), next: $('#btnNext'),
-    back: $('#btnBack'), brand: $('#brand'), guide: $('#guide'),
+    play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), after: $('#btnAfter'), next: $('#btnNext'),
+    back: $('#btnBack'), brand: $('#brand'), guide: $('#guide'), topicSel: $('#topicSel'),
   };
 
   // view：'loading' | 'list' | 'article' | 'message'
@@ -138,14 +152,15 @@
   // ---------- 锁屏界面和媒体键（Media Session） ----------
   // 云端语音是普通的 audio：手机锁屏界面、安卓的通知栏、电脑的媒体键和系统的「正在播放」都能控制它：
   // 播放、暂停、停止、下一篇、上一篇。本机的声音（speechSynthesis）不是 audio，系统一般不显示这些控制。
-  // 没有这个接口的浏览器什么都不做。没有「循环」这个系统按钮，循环朗读只能在页面上开关。
+  // 没有这个接口的浏览器什么都不做。「读完以后」（读完就停、接着读下一篇、本篇循环）和三连读没有系统按钮，只能在页面上选。
+  // 三连读时，标题下面那一行前面写着第几遍（「第 2/3 遍 0.9× · 节目 · Sveriges Radio」）。
   const media = (typeof navigator !== 'undefined' && navigator.mediaSession) || null;
   function mediaMeta(item) {
     if (!media || typeof MediaMetadata === 'undefined') return;
     try {
       media.metadata = item ? new MediaMetadata({
         title: item.title,
-        artist: item.program + ' · Sveriges Radio',
+        artist: (S.ramp ? `第 ${ramp.pass + 1}/3 遍 ${fmtRate(curRate())} · ` : '') + item.program + ' · Sveriges Radio',
         album: '瑞典语读报',
         artwork: [192, 512].map((n) => ({ src: new URL(`icons/icon-${n}.png`, location.href).href, sizes: `${n}x${n}`, type: 'image/png' })),
       }) : null;
@@ -157,8 +172,38 @@
   }
   function mediaAction(name, fn) {
     if (!media || !media.setActionHandler) return;
-    try { media.setActionHandler(name, fn); } catch (e) { /* 这个浏览器不支持这个动作 */ }
+    // 按了锁屏界面、媒体键的按钮：读者在，「接着读下一篇」重新数（见 AUTO_NEXT_MAX）
+    try { media.setActionHandler(name, (d) => { userActed(); fn(d); }); } catch (e) { /* 这个浏览器不支持这个动作 */ }
   }
+
+  // ---------- 三连读、读完以后 ----------
+  // 三连读（S.ramp）：一篇读三遍，第 1 遍 0.8×（慢读，便于理解）、第 2 遍 0.9×（练习）、第 3 遍 1×（正常速度），
+  // 每遍之间停一下（GAP_MS），滚回开头。三遍读完以后，和不用三连读时一样按「读完以后」：停下、接着读下一篇（又从第 1 遍开始）、
+  // 本篇循环（三遍再来一次）。暂停、继续都在这一遍里；打开别的文章、下一篇、回到列表、停止，都回到第 1 遍。
+  const ramp = { pass: 0 }; // 正在读第几遍（0、1、2）
+  const curRate = () => (S.ramp ? RAMP[ramp.pass].rate : S.rate);
+  const fmtRate = (r) => (Math.round(r * 100) / 100).toFixed(2).replace(/0$/, '').replace(/\.0$/, '') + '×';
+  // 一篇（或三连读的一遍）读完，停一下再接着读（下一遍、下一篇、本篇循环）。等的时候 reader 是 hold() 的样子：
+  // 状态还是「正在读」，云端语音一直循环播静音（锁屏时也接得上）。按暂停、停止、打开别的文章、回到列表就不接着读了。
+  const GAP_MS = 1500;
+  let gap = null; // { tok, kind, timer }：等着接着读（停一下的定时器、或者正在取下一批）；kind 是 afterThis() 当时的回答
+  let gapTok = 0;
+  function cancelGap() {
+    if (gap) clearTimeout(gap.timer);
+    gap = null;
+    gapTok++;
+  }
+  // 这一遍（这一篇）读完以后做什么：'pass' 三连读的下一遍；不然按「读完以后」：'stop'、'next'、'loop'
+  const afterThis = () => (S.ramp && ramp.pass < RAMP.length - 1 ? 'pass' : S.after);
+  // 「接着读下一篇」没人管的时候最多连着自动读几篇：云端语音的免费额度所有读者共用（每月约 50 万个字符），
+  // 不让一台没人听的手机把一个话题的文章全读完。读者在页面上点了、按了键，或者按了锁屏界面的按钮，就从头数。
+  // 读完第 AUTO_NEXT_MAX 篇停下，说一声；点 ▶ 接着读下一篇。
+  const AUTO_NEXT_MAX = 10;
+  let autoNextMax = AUTO_NEXT_MAX; // 测试可以改小（SVApp.setAutoNextMax）
+  let autoCount = 0; // 读者没碰页面，连着自动打开、读了几篇
+  let capNext = false; // 停在了第 AUTO_NEXT_MAX 篇：点 ▶ 接着读下一篇
+  const userActed = () => { autoCount = 0; };
+  for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, userActed, true);
 
   let voiceInfo = { voice: null, gender: '?', exact: false };
   let cloudDown = false;
@@ -167,11 +212,28 @@
     blocks: () => (cur.view === 'article' && cur.model ? cur.model.blocks : []),
     voice: () => voiceInfo.voice,
     voiceName: () => cloudVoice().name,
-    rate: () => S.rate,
-    loop: () => S.loop === true,
+    rate: () => curRate(),
+    // 读完马上从头再读（reader 自己做，不停顿）：只有「本篇循环」而且不是三连读（三连读的三遍由下面的 onEnd 接着读）
+    loop: () => S.after === 'loop' && !S.ramp,
+    // 整篇读完（不是上面的循环）：要接着读（三连读的下一遍、下一篇、三连读的本篇循环）就回 true，reader 先 hold() 等着
+    onEnd: () => articleEnded(),
     onState: (st) => {
       document.body.classList.toggle('speaking', st === 'speaking');
       document.body.classList.toggle('paused', st === 'paused');
+      const pass0 = ramp.pass;
+      if (st !== 'speaking' && gap) {
+        const g = gap;
+        cancelGap();
+        if (st === 'paused') {
+          // 等着接着读的时候按了暂停：不接着读了，停在这一篇的开头（再点 ▶ 从头读）。三连读的两遍之间：再点 ▶ 读下一遍；
+          // 三遍都读完了（等着读下一篇、再来三遍）：回到第 1 遍（不读第四遍）
+          if (g.kind === 'pass') { if (S.ramp && ramp.pass < RAMP.length - 1) ramp.pass++; } else if (S.ramp && !g.at) ramp.pass = 0;
+          // 读的时候在这一批的最后一篇点了「下一篇」、正在取下一批：停在原来读到的地方
+          if (g.at) { reader.si = g.at.si; reader.wi = g.at.wi; highlight(g.at.si, g.at.wi, true); }
+        }
+      }
+      if (st === 'idle') ramp.pass = 0; // 停下了：下次从第 1 遍开始
+      if (ramp.pass !== pass0 && cur.item && S.ramp) mediaMeta(cur.item);
       mediaState(st);
       updateButtons();
     },
@@ -199,11 +261,16 @@
     const next = useCloud() ? cloudReader : deviceReader;
     if (next === reader) return;
     const { si, wi, state: was } = reader;
+    // 三连读：还在这一遍里（停下旧的声音会把它放回第 1 遍）。两遍之间换的：停在下一遍的开头；三遍都读完、等着读下一篇或再来时：第 1 遍
+    const g = reader.held ? gap : null;
+    let pass = ramp.pass;
+    if (g && g.kind === 'pass') pass = Math.min(pass + 1, RAMP.length - 1);
+    else if (g && S.ramp && !g.at) pass = 0;
     reader.stop();
     reader = next;
-    reader.si = si;
-    reader.wi = wi;
-    if (was !== 'idle') reader.setState('paused');
+    reader.si = g && g.at ? g.at.si : si;
+    reader.wi = g && g.at ? g.at.wi : wi;
+    if (was !== 'idle') { ramp.pass = pass; reader.setState('paused'); }
   }
 
   function cloudFailed(e) {
@@ -214,7 +281,7 @@
       : e && (e.code === 'forbidden' || e.code === 'auth') ? '云端语音的设置有问题（令牌服务或 Azure 密钥）'
         : e && e.code === 'network' ? '连不上云端语音'
           : '云端语音这次没成功';
-    toast(why + '，先改用这台设备自己的声音' + (was !== 'idle' ? '，点「继续」接着读。' : '。'), 6000);
+    toast(why + '，先改用这台设备自己的声音' + (was !== 'idle' ? '，点蓝色的 ▶ 按钮接着读。' : '。'), 6000);
     switchReader();
     refreshVoice();
   }
@@ -231,8 +298,9 @@
       g = voiceInfo.voice ? voiceInfo.gender : S.gender;
       name = voiceInfo.voice ? voiceInfo.voice.name : '';
     }
+    // 按钮上只有一个字（女 / 男）；读屏软件听到的是「女声」「男声」，提示里有瑞典文和现在的声音
     els.voice.querySelector('b').textContent = g === 'm' ? '男' : g === 'f' ? '女' : '声';
-    els.voice.querySelector('.lbl').textContent = g === 'm' ? '男声' : g === 'f' ? '女声' : '声音';
+    els.voice.setAttribute('aria-label', g === 'm' ? '男声' : g === 'f' ? '女声' : '声音');
     tip(els.voice, g === 'm' ? 'Manlig röst' : g === 'f' ? 'Kvinnlig röst' : 'Röst',
       name ? '现在的声音：' + name + '（点一下切换男声、女声）' : '这台设备没有瑞典语声音');
   }
@@ -281,49 +349,97 @@
       }
     }
     hidePopup();
+    if (capNext && reader.state === 'idle' && S.after === 'next') {
+      // 连着自动读了 AUTO_NEXT_MAX 篇停下了：点 ▶ 接着读下一篇（先「读起来」，下面的「下一篇」就打开下一篇接着读；
+      // 这一批的最后一篇时取下一批接着读）
+      capNext = false;
+      autoCount = 0;
+      reader.play(0, 0);
+      nextArticle();
+      return;
+    }
+    capNext = false;
+    if (S.ramp && reader.state === 'idle') toast(passText(), 3000);
     reader.toggle();
   }
+  // 三连读这一遍的说明（提示条、提示）：「三连读 第 2 遍：0.9×，中速，便于练习」
+  const passText = () => `三连读 第 ${ramp.pass + 1} 遍：${fmtRate(curRate())}，${RAMP[ramp.pass].why}`;
 
   // ---------- 播放栏的按钮随页面变 ----------
+  // 按钮上只有图标（Tony 定的，2026-11-14：「有图标就够了，这样可以有更大的阅读空间」）：
+  // 说明在 aria-label（读屏软件）和 tip() 的提示里（瑞典文 + 中文，电脑上鼠标停着、手机上按住半秒）。
+  const AFTER_INFO = {
+    stop: { sv: 'Stoppa efter artikeln', zh: '读完就停', tip: '读完这一篇就停（点一下换成「接着读下一篇」）', toast: '读完就停：读完这一篇就停下' },
+    next: { sv: 'Fortsätt med nästa artikel', zh: '接着读下一篇', tip: '读完这一篇，接着读列表里的下一篇（点一下换成「本篇循环」）', toast: '接着读下一篇：读完这一篇，自动打开列表里的下一篇接着读' },
+    loop: { sv: 'Upprepa artikeln', zh: '本篇循环', tip: '读完这一篇从头再读，一遍又一遍，直到按暂停（点一下换成「读完就停」）', toast: '本篇循环：读完这一篇从头再读，直到按暂停' },
+  };
   function updateButtons() {
     const inArticle = cur.view === 'article' && !!cur.model;
     const inList = cur.view === 'list';
-    // 朗读
+    // 朗读（▶ / ❚❚）
     const st = reader.state;
-    const playLbl = st === 'speaking' ? '暂停' : st === 'paused' ? '继续' : '朗读';
-    els.play.querySelector('.lbl').textContent = playLbl;
-    els.play.setAttribute('aria-label', playLbl);
+    els.play.setAttribute('aria-label', st === 'speaking' ? '暂停' : st === 'paused' ? '继续' : '朗读');
     els.play.disabled = !inArticle;
     tip(els.play, st === 'speaking' ? 'Pausa' : st === 'paused' ? 'Fortsätt' : 'Läs upp',
       !inArticle ? '先在列表里选一篇文章'
         : st === 'speaking' ? '暂停（空格键也可以）'
-          : st === 'paused' ? '从停下的词接着读（空格键也可以）' : '朗读这篇文章（空格键也可以）');
-    // 循环朗读：开关，任何时候都能按
-    els.loop.classList.toggle('on', S.loop);
-    els.loop.setAttribute('aria-pressed', S.loop ? 'true' : 'false');
-    tip(els.loop, S.loop ? 'Upprepa: på' : 'Upprepa',
-      S.loop ? '循环朗读开着：读完这一篇从头再读（点一下关掉）' : '循环朗读：读完这一篇从头再读，一遍又一遍（点一下打开）');
+          : st === 'paused' ? '从停下的地方接着读（空格键也可以）' : '朗读这篇文章（空格键也可以）');
+    // 语速：0.8× → 0.9× → 1× → 三连读 → 0.8×。三连读时按钮上是这一遍的语速和三级台阶（亮的是第几遍）
+    const r = curRate();
+    els.rate.querySelector('b').textContent = fmtRate(r);
+    els.rate.classList.toggle('ramp', S.ramp);
+    els.rate.dataset.pass = S.ramp ? String(ramp.pass + 1) : '';
+    if (S.ramp) {
+      els.rate.setAttribute('aria-label', `语速：三连读，第 ${ramp.pass + 1} 遍，${fmtRate(r)}`);
+      tip(els.rate, 'Steg för steg: läs tre gånger', `循序渐进三连读：现在第 ${ramp.pass + 1} 遍，${fmtRate(r)}（第 1 遍 0.8× 慢读，第 2 遍 0.9× 练习，第 3 遍 1× 正常速度；点一下换成 0.8×）`);
+    } else {
+      els.rate.setAttribute('aria-label', `语速 ${fmtRate(r)}`);
+      tip(els.rate, 'Talhastighet ' + fmtRate(r).replace('.', ','), r === 1 ? '语速 1×（点一下换成循序渐进三连读：0.8×、0.9×、1× 各读一遍）' : `语速 ${fmtRate(r)}（点一下换一档：0.8×、0.9×、1×、三连读）`);
+    }
+    // 读完以后：读完就停 → 接着读下一篇 → 本篇循环，任何时候都能按
+    const a = AFTER_INFO[S.after];
+    els.after.dataset.mode = S.after;
+    els.after.classList.toggle('on', S.after !== 'stop');
+    els.after.setAttribute('aria-label', '读完以后：' + a.zh); // 三种状态：读屏软件听 aria-label，不用 aria-pressed
+    tip(els.after, a.sv, '读完以后：' + a.tip);
     // 下一篇 / 换一批
     els.next.disabled = !(inArticle || inList);
-    els.next.querySelector('.lbl').textContent = inList ? '换一批' : '下一篇';
-    if (inList) tip(els.next, 'Fler artiklar', `「${cur.topic ? cur.topic.zh : ''}」的下一批文章（再点一次话题也可以）`);
+    els.next.setAttribute('aria-label', inList ? '换一批' : '下一篇');
+    if (inList) tip(els.next, 'Fler artiklar', `「${cur.topic ? cur.topic.zh : ''}」的下一批文章`);
     else tip(els.next, 'Nästa artikel', st === 'speaking' ? '列表里的下一篇，接着朗读' : '列表里的下一篇');
   }
 
   // ---------- 话题 ----------
+  // 电脑、平板上是一排话题按钮；手机上是标题旁边的下拉菜单（css/style.css 按屏幕宽度显示其中一个），
+  // 两个都用 TOPICS 这一张表做，选了以后都走 chooseTopic。再点一次同一个话题换一批（菜单里选同一个不算换，
+  // 手机上换一批用列表最下面的「换一批」或播放栏最右边的按钮）。
+  // 正在取文章（loading）时再点同一个话题不算「换一批」（还没列出来）；但「接着读下一篇」在取下一批时（还有 gap），
+  // 和平常一样换一批（朗读停下，列出下一批）
+  function chooseTopic(t) {
+    showTopic(t, cur.topic === t && (!loading || !!gap) && (cur.view === 'list' || cur.view === 'article'));
+  }
   function renderChips() {
     els.topics.textContent = '';
+    els.topicSel.textContent = '';
     for (const t of TOPICS) {
       const b = h('button', { type: 'button', class: 'chip' + (t.key === 'latt' ? ' extra' : ''), 'data-topic': t.key }, t.zh);
       tip(b, t.sv, `看「${t.zh}」的新闻`);
       b.addEventListener('click', () => {
         b.blur();
-        showTopic(t, cur.topic === t && !loading && (cur.view === 'list' || cur.view === 'article'));
+        chooseTopic(t);
       });
       els.topics.append(b);
+      els.topicSel.append(h('option', { value: t.key, lang: 'zh-CN' }, t.zh));
     }
   }
+  tip(els.topicSel, 'Välj ämne', '选话题');
+  els.topicSel.addEventListener('change', () => {
+    const t = TOPICS.find((x) => x.key === els.topicSel.value);
+    els.topicSel.blur();
+    if (t) chooseTopic(t);
+  });
   function markChip(topic, busy) {
+    if (topic) els.topicSel.value = topic.key;
     for (const b of els.topics.children) {
       const on = !!topic && b.dataset.topic === topic.key;
       b.classList.toggle('active', on);
@@ -354,18 +470,33 @@
     setView('message');
   }
 
-  // again：再点一次同一个话题 → 下一批
-  async function showTopic(topic, again) {
+  const dropArticleHistory = () => {
+    if (history.state && history.state.sv === 'article') { try { history.replaceState(null, ''); } catch (e) { /* 忽略 */ } }
+  };
+  // again：再点一次同一个话题 → 下一批。
+  // auto：读的时候读完了这一批的最后一篇（接着读下一篇），或者在最后一篇点了「下一篇」：取下一批，打开第一篇接着读。
+  // 取的时候文章还在，朗读等着（reader.hold()，锁屏时也接得上）；这时按了暂停、停止、打开了别的，下一批就不列出来，页面不动。
+  // 取不到：朗读停下、说一声，文章还在；这个话题的文章都列过了（下一批从最新的重新开始）：和「下一篇」一样列出来，朗读停下
+  async function showTopic(topic, again, auto = 0) {
+    try {
+      await loadTopicAndShow(topic, again, auto);
+    } finally {
+      // 接着读下一批时出了意外（抛了异常）：别让朗读一直「等着」（放着静音，锁屏界面一直是「正在播放」）
+      if (auto && gap && gap.tok === auto) { gap = null; if (reader.held) reader.stop(); }
+    }
+  }
+  async function loadTopicAndShow(topic, again, auto) {
     const token = ++loadToken;
     loading = true;
-    reader.stop();
+    if (!auto) { cancelGap(); reader.stop(); capNext = false; }
     hidePopup();
     cur.topic = topic;
     S.topic = topic.key;
     save();
     markChip(topic, true);
-    // 从文章直接换话题：浏览器的「后退」不再回到那篇文章
-    if (history.state && history.state.sv === 'article') { try { history.replaceState(null, ''); } catch (e) { /* 忽略 */ } }
+    // 从文章直接换话题：浏览器的「后退」不再回到那篇文章（接着读下一批时，等列出来了再改）
+    if (!auto) dropArticleHistory();
+    const stillAuto = () => !!gap && gap.tok === auto && reader.state === 'speaking' && reader.held && cur.view === 'article';
     const bar = h('i');
     if (!again) {
       els.notice.hidden = true;
@@ -387,6 +518,21 @@
     if (token !== loadToken) return;
     loading = false;
     markChip(topic, false);
+    if (auto && !stillAuto()) { // 等的时候暂停了、停了、打开了别的：不列下一批
+      if (gap && gap.tok === auto) gap = null;
+      if (reader.held && !gap) reader.stop();
+      return;
+    }
+    if (auto && !res.cands.length) {
+      // 取不到：朗读停下，文章还在。读的时候点了「下一篇」才取的：停在原来读到的地方（暂停），点 ▶ 接着读
+      const at = gap && gap.at;
+      const pass = ramp.pass;
+      gap = null;
+      reader.stop();
+      if (at) { ramp.pass = pass; reader.si = at.si; reader.wi = at.wi; reader.setState('paused'); highlight(at.si, at.wi, true); }
+      toast((res.error ? '没能取到下一批文章（网络不通，或者 SR 的服务器暂时拒绝了）' : `「${topic.zh}」没有更多文章了`) + (at ? '，停在刚才读到的地方。' : '，朗读停下。'), 6000);
+      return;
+    }
     if (!res.cands.length) {
       if (res.error) {
         message(h('p', null, '没能从瑞典广播电台（Sveriges Radio）取到新闻。'),
@@ -409,6 +555,21 @@
     cur.notices = notices;
     cur.batchNo = again ? cur.batchNo + 1 : 1;
     cur.listScroll = 0;
+    if (auto) {
+      dropArticleHistory();
+      if (b.restarted || !b.items.length) {
+        // 这个话题最近的文章都列过了：和「下一篇」一样列出来（从最新的重新开始），朗读停下
+        gap = null;
+        renderList();
+        window.scrollTo({ top: 0 });
+        toast(`「${topic.zh}」最近的文章都列过了，朗读停下。`, 6000);
+        return;
+      }
+      renderList(true);
+      window.scrollTo({ top: 0 });
+      readOn(b.items[0], true);
+      return;
+    }
     // 网址里带了 ?a=文章编号：直接打开那一篇
     if (wantArticle) {
       const it = res.cands.map((c) => c.item).find((x) => x.id === wantArticle);
@@ -437,16 +598,18 @@
     return t.length > 220 ? t.slice(0, 210).replace(/\s+\S*$/, '') + ' …' : t;
   }
 
-  function renderList() {
-    reader.stop();
+  // keep：接着读下一批（showTopic 的 auto）时，朗读不停（马上打开下一批的第一篇接着读）
+  function renderList(keep) {
+    if (!keep) { cancelGap(); reader.stop(); }
     hidePopup();
     const topic = cur.topic;
     const read = SV.sources.readSet();
     els.list.textContent = '';
     els.list.append(h('div', { class: 'list-head' },
       h('h2', null, topic.zh),
-      h('span', null, `第 ${cur.batchNo} 批 · ${cur.batch.length} 篇 · 选一篇来读；再点一次「${topic.zh}」换一批`)));
-    els.list.append(h('p', { class: 'safari-hint page-tr-hint', lang: 'zh-CN' }, PAGE_TR_HINT));
+      h('span', null, `第 ${cur.batchNo} 批 · ${cur.batch.length} 篇 · 选一篇来读；`,
+        h('span', { class: 'wide-only' }, `再点一次「${topic.zh}」换一批`),
+        h('span', { class: 'narrow-only' }, '点最下面的「换一批」换一批'))));
     const ol = h('ol', { class: 'cards' });
     for (const it of cur.batch) {
       const a = h('a', { class: 'card' + (read.has(it.id) ? ' read' : ''), href: '?topic=' + topic.key + '&a=' + encodeURIComponent(it.id), 'data-id': it.id },
@@ -490,7 +653,9 @@
   function backToList(fromHistory) {
     if (cur.view !== 'article') return;
     if (!fromHistory && history.state && history.state.sv === 'article') { history.back(); return; }
+    cancelGap();
     reader.stop();
+    capNext = false;
     hidePopup();
     hlW = null;
     const read = SV.sources.readSet();
@@ -511,8 +676,11 @@
   window.addEventListener('popstate', () => { if (cur.view === 'article') backToList(true); });
 
   // ---------- 文章 ----------
-  function openArticle(item, push) {
-    reader.stop();
+  // keep：接着读下一篇（readOn）：朗读不停（reader 等着，马上从头读新的这一篇），锁屏时也接得上
+  function openArticle(item, push, keep) {
+    if (!keep) { cancelGap(); reader.stop(); }
+    ramp.pass = 0; // 三连读从第 1 遍开始
+    capNext = false;
     hidePopup();
     hlW = null;
     if (cur.view === 'list') cur.listScroll = window.scrollY;
@@ -542,7 +710,6 @@
       h('span', { lang: 'sv' }, item.program),
       h('span', null, when(item, true)),
       h('a', { href: item.link, target: '_blank', rel: 'noopener' }, '原文 ↗')));
-    art.append(h('p', { class: 'safari-hint page-tr-hint', lang: 'zh-CN' }, PAGE_TR_HINT));
     const title = h('h1');
     const body = h('div', { class: 'body' });
     art.append(title, body);
@@ -562,8 +729,9 @@
     window.scrollTo({ top: 0 });
   }
 
-  // 「下一篇」（播放栏、文章末尾、锁屏界面的「下一首」）：列表里的下一篇；最后一篇之后换下一批（这时停下）。
-  // 正在朗读时，打开下一篇后接着朗读，开着循环朗读就循环读新的这一篇；暂停着或没在读时只打开，不读。
+  // 「下一篇」（播放栏、文章末尾、锁屏界面的「下一首」）：列表里的下一篇；最后一篇之后换下一批。
+  // 正在朗读时，打开下一篇后接着朗读（「读完以后」照旧，三连读从第 1 遍开始）；在这一批的最后一篇，取下一批，打开第一篇接着读。
+  // 暂停着或没在读时只打开（最后一篇之后列出下一批），不读。
   function nextArticle() {
     if (!cur.topic) return;
     const reading = reader.state === 'speaking';
@@ -571,10 +739,79 @@
     if (idx >= 0 && idx < cur.batch.length - 1) {
       openArticle(cur.batch[idx + 1], false);
       if (reading) startReading();
+    } else if (reading && cur.view === 'article') {
+      // at：读到哪里了（取不到下一批、或者取的时候按了暂停，就停在这里）
+      const at = { si: reader.si, wi: reader.wi };
+      cancelGap();
+      reader.hold();
+      gap = { tok: ++gapTok, kind: 'next', timer: 0, at };
+      toast('这一批读完了，正在取下一批文章…', 3000);
+      showTopic(cur.topic, true, gap.tok);
     } else {
-      if (history.state && history.state.sv === 'article') { try { history.replaceState(null, ''); } catch (e) { /* 忽略 */ } }
+      dropArticleHistory();
       showTopic(cur.topic, true);
     }
+  }
+
+  // 一篇（三连读的一遍）读完了（reader 的 onEnd）：要接着读就回 true（reader 先 hold() 等着），停一下（GAP_MS）再读：
+  // 三连读的下一遍、「读完以后」是「接着读下一篇」或「本篇循环」（不用三连读时的本篇循环由 reader 自己马上从头读，不到这里）。
+  function articleEnded() {
+    if (cur.view !== 'article' || !cur.model || !cur.topic) return false;
+    const what = afterThis();
+    if (what === 'stop') return false;
+    if (what === 'next' && autoCount >= autoNextMax) {
+      // 读者没碰页面，已经连着自动读了 AUTO_NEXT_MAX 篇：停下（免得没人听时把一个话题的文章全读完，花掉大家共用的额度）
+      capNext = true;
+      toast(`已经连续读了 ${autoNextMax} 篇，停下了；点 ▶ 接着读`, 10000);
+      return false;
+    }
+    cancelGap();
+    const tok = ++gapTok;
+    gap = { tok, kind: what, timer: setTimeout(() => { if (gap && gap.tok === tok) { gap.timer = 0; goOn(tok); } }, GAP_MS) };
+    if (what === 'pass') toast(`第 ${ramp.pass + 1} 遍读完了`, GAP_MS);
+    return true;
+  }
+  // 停够了：接着读。到这时再看一遍「读完以后」和三连读（等的时候可能换过）
+  function goOn(tok) {
+    if (!gap || gap.tok !== tok) return;
+    if (reader.state !== 'speaking' || !reader.held || cur.view !== 'article' || !cur.model) { // 已经不在等了
+      gap = null;
+      if (reader.held) reader.stop();
+      return;
+    }
+    let what = afterThis();
+    if (what === 'pass' && gap.kind !== 'pass') what = S.after; // 等的时候才换成三连读：这一篇算读完了，按「读完以后」
+    if (what === 'pass') { ramp.pass++; readAgain(passText()); return; }
+    if (what === 'loop') { ramp.pass = 0; readAgain(S.ramp ? '本篇循环，三连读再来一次：' + passText() : '本篇循环：从头再读'); return; }
+    if (what === 'next') {
+      autoCount++; // 读者没碰页面，又自动打开了一篇（到 AUTO_NEXT_MAX 篇就停，见 articleEnded）
+      const idx = cur.item ? cur.batch.indexOf(cur.item) : -1;
+      if (idx >= 0 && idx < cur.batch.length - 1) { readOn(cur.batch[idx + 1], false); return; }
+      // 这一批的最后一篇：和「下一篇」一样取下一批，打开第一篇接着读
+      toast('这一批读完了，正在取下一批文章…', 3000);
+      showTopic(cur.topic, true, tok);
+      return;
+    }
+    gap = null;
+    reader.stop(); // 等的时候换成了「读完就停」
+  }
+  // 从头再读这一篇（三连读的下一遍、本篇循环）：滚回开头，用这一遍的语速
+  function readAgain(msg) {
+    gap = null;
+    window.scrollTo({ top: 0 });
+    toast(msg, 3000);
+    if (cur.item) mediaMeta(cur.item);
+    reader.play(0, 0);
+    updateButtons();
+  }
+  // 接着读下一篇：打开它（滚到顶上，和手动打开一样），用同一个声音从头读（三连读从第 1 遍开始）。
+  // 朗读一直没停（等的时候云端语音放着静音），锁屏时也接得上；锁屏界面换成新的标题
+  function readOn(item, push) {
+    gap = null;
+    openArticle(item, push, true);
+    if (!cur.model || !cur.model.sentences.length) { reader.stop(); toast('下一篇没有正文，朗读停下。', 5000); return; }
+    toast('下一篇：' + item.title + (S.ramp ? '（三连读 第 1 遍 0.8×）' : ''), 4000);
+    reader.play(0, 0);
   }
   // 锁屏界面的「上一首」：列表里的上一篇（正在读时接着读）；已经是第一篇时，正在读的话从头再读这一篇
   function prevArticle() {
@@ -585,6 +822,7 @@
       openArticle(cur.batch[idx - 1], false);
       if (reading) startReading();
     } else if (reading) {
+      cancelGap(); // 读完了正在停一下：不接着读下一篇了，从头再读这一篇
       reader.play(0, 0);
     }
   }
@@ -998,21 +1236,23 @@
 
   // 播放栏
   els.play.addEventListener('click', () => { els.play.blur(); startReading(); });
-  // 循环朗读：读完这一篇从头再读，直到按暂停、点「下一篇」（接着循环读下一篇）或者把它关掉；
-  // 读的时候关掉，这一遍读完就停
-  els.loop.addEventListener('click', () => {
-    els.loop.blur();
-    S.loop = !S.loop;
+  // 读完以后：读完就停 → 接着读下一篇 → 本篇循环 → 读完就停（像音乐播放器的「重复」按钮）。读的时候也能换，
+  // 这一篇读完时按新的来（本篇循环换成别的：这一遍读完就按别的）
+  els.after.addEventListener('click', () => {
+    els.after.blur();
+    S.after = AFTER[(AFTER.indexOf(S.after) + 1) % AFTER.length];
+    capNext = false;
     save();
     updateButtons();
-    toast(S.loop ? '循环朗读：开。读完这一篇从头再读，直到按暂停' : '循环朗读：关。读完这一遍就停', 2500);
+    toast(AFTER_INFO[S.after].toast, 2500);
   });
-  const RATES = [0.6, 0.75, 0.9, 1, 1.15];
+  // 语速：0.8× → 0.9× → 1× → 三连读 → 0.8×。读的时候点：马上换（离开三连读就用 0.8× 接着读；换成三连读，现在读的算第 1 遍）
   els.rate.addEventListener('click', () => {
     els.rate.blur();
-    const next = RATES.find((r) => r > S.rate + 0.01);
-    setRate(next || RATES[0]);
-    toast('语速 ' + fmtRate(S.rate), 1500);
+    if (S.ramp) setRate(RATES[0], false);
+    else if (S.rate >= RATES[RATES.length - 1]) setRate(RATES[0], true);
+    else setRate(RATES[RATES.indexOf(S.rate) + 1], false);
+    toast(S.ramp ? '循序渐进三连读：一篇读三遍，0.8× 慢读理解 → 0.9× 练习 → 1× 正常速度' : '语速 ' + fmtRate(S.rate), S.ramp ? 3500 : 1500);
   });
   els.voice.addEventListener('click', () => {
     els.voice.blur();
@@ -1027,7 +1267,7 @@
     else if (!voiceInfo.voice) toast('这台设备上没有瑞典语声音（详见「设置」）');
     else if (!voiceInfo.exact) toast(`这台设备没有瑞典语${want}，现在用的是 ${voiceInfo.voice.name}`, 5000);
     else toast(`${want}：${voiceInfo.voice.name}`, 2500);
-    if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
+    if (reader.state === 'speaking' && !reader.held) reader.play(reader.si, reader.wi);
   });
   els.next.addEventListener('click', () => {
     els.next.blur();
@@ -1035,16 +1275,19 @@
     else if (cur.view === 'article') nextArticle();
   });
 
-  // 顶栏
-  const fmtRate = (r) => (Math.round(r * 100) / 100).toFixed(2).replace(/0$/, '') + '×';
-  function setRate(r) {
-    S.rate = SV.clamp(Math.round(r * 100) / 100, 0.5, 1.3);
+  // 语速（0.8、0.9、1）和三连读（rampOn）：播放栏的按钮、设置里的选项都走这里
+  function setRate(r, rampOn) {
+    const was = S.ramp;
+    S.rate = nearestRate(r);
+    S.ramp = !!rampOn;
+    if (S.ramp !== was) ramp.pass = 0; // 换成三连读：现在读的算第 1 遍；离开三连读：不再分遍
     save();
-    els.rate.querySelector('b').textContent = fmtRate(S.rate);
     syncSettingsForm();
-    // 云端的声音直接改播放速度；本机的声音要从当前的词重新读
+    updateButtons();
+    if (cur.item) mediaMeta(cur.item);
+    // 云端的声音直接改播放速度；本机的声音要从当前的词重新读（等着接着读的时候不用：下一遍、下一篇开始时用新的语速）
     if (reader.rateChanged) reader.rateChanged();
-    else if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
+    else if (reader.state === 'speaking' && !reader.held) reader.play(reader.si, reader.wi);
   }
   function setScale(v) {
     S.scale = SV.clamp(Math.round(v * 10) / 10, 0.8, 1.8);
@@ -1056,6 +1299,10 @@
   $('#btnSmaller').addEventListener('click', () => setScale(S.scale - 0.1));
   $('#btnBigger').addEventListener('click', () => setScale(S.scale + 0.1));
   $('#btnHelp').addEventListener('click', () => { const d = $('#dlgHelp'); if (d.showModal) d.showModal(); });
+  // 说明框「整篇翻译」：认得出的浏览器，它的办法放在最前面（Safari、iPhone 是「点地址栏『aA → 翻译成中文』」）；
+  // 认不出的不说「你现在用的浏览器：用浏览器自带的翻译功能」，只列各个浏览器的办法
+  $('#helpTrHint').textContent = PAGE_TR_KNOWN ? '你现在用的浏览器：' + PAGE_TR_HINT.replace('整篇翻译：', '') + '。' : '';
+  $('#helpTrOthers').textContent = PAGE_TR_KNOWN ? '别的浏览器：' : '比如：';
   $('#btnSettings').addEventListener('click', () => {
     const d = $('#dlgSettings');
     fillVoiceSelect();
@@ -1125,7 +1372,7 @@
     }
     save();
     refreshVoice();
-    if (reader.state === 'speaking') reader.play(reader.si, reader.wi);
+    if (reader.state === 'speaking' && !reader.held) reader.play(reader.si, reader.wi);
   });
   // 声音来源：云端自然语音 / 这台设备自己的声音。选回云端时，之前出过的错不算，再试一次
   for (const r of document.querySelectorAll('#engineRow input[name="engine"]')) {
@@ -1140,9 +1387,16 @@
     });
   }
   $('#btnTryVoice').addEventListener('click', () => reader.speakText('Hej! Välkommen. Här kan du läsa nyheter på svenska.'));
-  const rngRate = $('#rngRate');
+  // 语速：0.8×、0.9×、1×、循序渐进三连读，和播放栏上的语速按钮是同一个设置
+  const rateRadios = [...document.querySelectorAll('#rateRow input[name="rate"]')];
+  for (const r of rateRadios) {
+    r.addEventListener('change', () => {
+      if (!r.checked) return;
+      if (r.value === 'ramp') setRate(RATES[0], true);
+      else setRate(+r.value, false);
+    });
+  }
   const rngFont = $('#rngFont');
-  rngRate.addEventListener('input', () => setRate(+rngRate.value));
   rngFont.addEventListener('input', () => setScale(+rngFont.value));
   $('#chkOnline').addEventListener('change', (e) => {
     S.online = !!e.target.checked;
@@ -1151,8 +1405,7 @@
   });
   $('#btnClearHistory').addEventListener('click', () => { SV.sources.clearHistory(); toast('阅读记录已清除'); });
   function syncSettingsForm() {
-    rngRate.value = S.rate;
-    $('#outRate').textContent = fmtRate(S.rate);
+    for (const r of rateRadios) r.checked = S.ramp ? r.value === 'ramp' : +r.value === S.rate;
     rngFont.value = S.scale;
     $('#outFont').textContent = Math.round(S.scale * 100) + '%';
     $('#chkOnline').checked = S.online !== false;
@@ -1170,15 +1423,14 @@
     const lead = az === 'off' ? '浏览器内置翻译：可用' : '微软翻译用不了时，用浏览器内置翻译';
     if (a === 'ready' || a === 'available') t += lead + '（在本机翻译，文字不离开这台设备，不限量）。';
     else if (a === 'downloadable' || a === 'downloading') t += lead + '。第一次用时浏览器要下载瑞典语→中文的翻译模型（点一个词就开始）。';
-    else t += '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：' + (az === 'off' ? '' : '微软翻译用不了时，') + '查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）。';
+    else t += '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：' + (az === 'off' ? '' : '微软翻译用不了时，') + '查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能' + (PAGE_TR_KNOWN ? '（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）' : '') + '。';
     if (u.chars) t += ` 今天已用 MyMemory 在线翻译约 ${u.chars} 个字符。`;
     $('#trNote').textContent = t;
   }
 
   // ---------- 开始 ----------
   document.documentElement.style.setProperty('--scale', S.scale);
-  els.rate.querySelector('b').textContent = fmtRate(S.rate);
-  // 页面上固定的按钮的瑞典文提示。朗读、男女声、下一篇、返回列表随状态变，
+  // 页面上固定的按钮的瑞典文提示。朗读、语速、男女声、读完以后、下一篇、返回列表随状态变，
   // 由 updateButtons、refreshVoice、openArticle 再改；这里先给它们一个，免得哪个按钮没有提示。
   const STATIC_TIPS = [
     ['#btnSmaller', 'Mindre text', '字小一点'],
@@ -1189,7 +1441,7 @@
     ['#btnPlay', 'Läs upp', '先在列表里选一篇文章'],
     ['#btnRate', 'Talhastighet', '语速：点一下换一档'],
     ['#btnVoice', S.gender === 'm' ? 'Manlig röst' : 'Kvinnlig röst', '切换男声、女声'],
-    ['#btnLoop', 'Upprepa', '循环朗读：读完这一篇从头再读'],
+    ['#btnAfter', AFTER_INFO[S.after].sv, '读完以后：' + AFTER_INFO[S.after].tip],
     ['#btnNext', 'Nästa artikel', '列表里的下一篇'],
     ['#btnTipClose', 'Jag förstår', '知道了，不再显示这条说明'],
     ['#btnTryVoice', 'Provlyssna', '试听这个声音'],
@@ -1198,6 +1450,7 @@
     ['#dlgHelp .dlg-actions button', 'Okej', '关闭说明'],
   ];
   for (const [sel, sv, zh] of STATIC_TIPS) { const b = $(sel); if (b) tip(b, sv, zh); }
+  updateButtons();
   renderChips();
   els.tip.hidden = !S.tip;
   SV.speech.onVoices(() => {
@@ -1213,6 +1466,7 @@
 
   // 给自动测试看的状态（不影响使用）
   window.SVApp = {
+    setAutoNextMax: (n) => { autoNextMax = n > 0 ? n : AUTO_NEXT_MAX; }, // 测试用：连着自动读几篇就停（平常是 AUTO_NEXT_MAX）
     state: () => ({
       topic: cur.topic && cur.topic.key,
       view: cur.view,
@@ -1228,8 +1482,18 @@
       si: reader.si,
       wi: reader.wi,
       wordEvents: reader.wordEvents,
-      loop: S.loop === true,
+      after: S.after,
+      loop: S.after === 'loop',
       loops: reader.loops || 0,
+      held: !!reader.held, // 读完了，等着接着读（三连读的下一遍、下一篇）
+      autoCount, // 读者没碰页面，连着自动读了几篇
+      capNext, // 连着自动读够了、停下了
+      gap: gap ? gap.kind : '', // 等着做什么：'pass'、'next'、'loop'
+      ramp: S.ramp,
+      pass: ramp.pass + 1, // 三连读的第几遍
+      rate: curRate(), // 现在用的语速
+      audioRate: reader.audio ? reader.audio.playbackRate : null, // 云端语音的 audio 真的在用的播放速度
+      more: cur.more,
       block: cur.model && cur.model.sentences[reader.si] ? cur.model.sentences[reader.si].block : -1,
       hidden: document.hidden,
       cloudCache: SV.cloud && SV.cloud.cacheSize ? SV.cloud.cacheSize() : 0,

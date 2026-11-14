@@ -1,5 +1,5 @@
 // 调关键词用：在无头 Edge 里取一遍各话题的 SR 源，列出每个话题的候选文章和得分（今天的标 *，简易的标「易」）。
-//   node tools/topic_report.mjs [话题键，比如 elbilar] [每个话题列几篇，默认 8]
+//   node tools/topic_report.mjs [话题键，比如 klimat] [每个话题列几篇，默认 8]
 // 每个 SR 源只取一次（页面里有缓存），所有话题加起来二十几个请求。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';

@@ -12,13 +12,15 @@
 //      窗口最小化时接着读；点一个词试内置翻译。
 //   2. 电脑 1600×900、模拟的朗读（假的 Sofie / Mattias，按词发 boundary 事件）、没有内置翻译、
 //      MyMemory 由测试代答（不占真实额度）：朗读高亮（只标词：浅色红色下划线、深色黄色下划线，句子不标，排版不动）、空格暂停继续、
-//      窗口最小化时不暂停、点文章暂停、从这里读、换男女声、没有内置翻译时提示整页翻译、本句译文走 MyMemory、
-//      发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）、本机的声音循环朗读。
-//   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：列表和文章不横向溢出、再点话题换一批、点词弹框不出屏、点屏幕暂停、
-//      有整页翻译的提示、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」。
+//      窗口最小化时不暂停、点文章暂停、从这里读、换男女声、没有内置翻译时整页翻译的办法在说明框里、本句译文走 MyMemory、
+//      发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）、本机的声音：本篇循环、接着读下一篇、三连读。
+//   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：去掉了的话题「电动车」、标题旁边的话题菜单、列表和文章不横向溢出、「换一批」按钮换一批、点词弹框不出屏、点屏幕暂停、
+//      整页翻译的办法在说明框里、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」、320 / 375 / 430 像素宽的顶栏。
 //   4. 云端语音：合成、播放、跟着播放进度标词、缓存、换声音、出错时改用本机的声音。
 //   5. 云端语音：页面藏起来时一段接一段读下去、回来时标记在正在读的词上、锁屏界面和媒体键（Media Session）、
-//      循环朗读（重读不再合成）、「下一首」接着读下一篇、关掉循环这一遍读完就停。
+//      本篇循环（重读不再合成）、「下一首」接着读下一篇、换成读完就停这一遍读完就停。
+//   5b. 读完以后（读完就停 → 接着读下一篇 → 本篇循环）、语速（只有 0.8×、0.9×、1×）和循序渐进三连读：旧设置的迁移、按钮的样子和 aria-label、
+//      接着读下一篇（停一下、页面藏着时、暂停 / 停止 / 回到列表 / 下一首、这一批的最后一篇、都列过了、取不到）、三连读的三遍和读完以后。
 //   6. 电脑：翻译的顺序（假的 /translate、假的内置翻译）：微软翻译 → 连不上、超时时用内置翻译、30 秒里不再问 → 额度用完时 6 小时不再问；
 //      按这一句选词义（js/sense.js）：只有一个意思直接显示；几个意思时自动显示整句译文，确定（标签）时意思和译文里都画蓝色下划线
 //      （深色模式另一种蓝），弹出框不跳不变大小、不盖住词；拿不准不画；结果回来时弹出框已经换了、关了，真的没放进去。
@@ -234,7 +236,7 @@ const FAKE_SPEECH = `(() => {
     let i = 0;
     const step = () => {
       if (speaking !== u) return;
-      if (i < words.length) { fire(u, 'boundary', { name: 'word', charIndex: words[i].index, charLength: words[i][0].length }); i++; timer = setTimeout(step, 160); }
+      if (i < words.length) { fire(u, 'boundary', { name: 'word', charIndex: words[i].index, charLength: words[i][0].length }); i++; timer = setTimeout(step, window.__speechWordMs || 160); }
       else { speaking = null; fire(u, 'end'); run(); }
     };
     timer = setTimeout(step, 40);
@@ -310,7 +312,10 @@ async function layoutReport(sel) {
       columns: cards.length ? cards.filter((t) => t === cards[0]).length : 0,
       playerFits: btns.every((r) => r.left >= 0 && r.right <= de.clientWidth + 0.5),
       chipsScrollable: chips.scrollWidth > chips.clientWidth, chipsW: chips.scrollWidth,
-      cutText: [...document.querySelectorAll('#player button .lbl')].filter((l) => l.scrollWidth > l.clientWidth + 1).map((l) => l.textContent),
+      // 播放栏的按钮只有图标（和语速、女 / 男这样的一两个字）：没有说明文字，按钮里的东西不截断
+      cutText: [...document.querySelectorAll('#player button')].filter((b) => b.scrollWidth > b.clientWidth + 1).map((b) => b.id),
+      labels: document.querySelectorAll('#player .lbl').length,
+      faces: [...document.querySelectorAll('#player button')].map((b) => b.innerText.trim()),
     };
   })()`);
 }
@@ -332,6 +337,38 @@ await send('Log.enable');
 await send('Network.enable');
 
 const listReady = (key) => `window.SVApp && !SVApp.state().loading && ${key ? `SVApp.state().topic === ${JSON.stringify(key)} && ` : ''}(SVApp.state().view === 'list' || SVApp.state().view === 'message')`;
+// 选话题：电脑上点话题按钮；手机上用标题旁边的下拉菜单（系统自己的选择器在无头里点不开：改它的值、发 change，和选了一样）
+async function pickTopic(key) {
+  if (await evalJs(`!!document.querySelector('#topics .chip[data-topic="${key}"]')?.offsetParent`)) {
+    const c = await center(`#topics .chip[data-topic="${key}"]`);
+    await tap(c.x, c.y);
+    return;
+  }
+  await evalJs(`(() => { const s = document.querySelector('#topicSel'); s.value = ${JSON.stringify(key)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+}
+// 顶栏（标题、话题菜单、「← 列表」、工具按钮）：排成几行、有没有出屏或横向溢出、有没有截字；
+// 话题菜单里哪些话题的名字放不下（末尾是省略号）
+async function headerFit() {
+  return evalJs(`(() => { const de = document.documentElement;
+    const items = [...document.querySelectorAll('header.top .brand, header.top .topic-sel, header.top .back-btn, header.top .tools')].filter((e) => e.offsetParent);
+    const rs = items.map((e) => e.getBoundingClientRect());
+    const mids = rs.map((r) => (r.top + r.bottom) / 2);
+    const rows = mids.filter((m, i) => mids.findIndex((x) => Math.abs(x - m) < 10) === i).length;
+    const sel = document.querySelector('#topicSel');
+    let selCut = [];
+    if (sel.offsetParent) {
+      const cs = getComputedStyle(sel);
+      const room = sel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const sp = document.createElement('span');
+      sp.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:' + cs.font;
+      document.body.append(sp);
+      selCut = [...sel.options].filter((o) => { sp.textContent = o.textContent; return sp.getBoundingClientRect().width > room + 0.5; }).map((o) => o.textContent);
+      sp.remove();
+    }
+    return { rows, overflow: de.scrollWidth > de.clientWidth || rs.some((r) => r.left < -0.5 || r.right > de.clientWidth + 0.5),
+      clipped: [...document.querySelectorAll('header.top button')].filter((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1).map((e) => e.id || e.className),
+      items: items.map((e) => e.id || e.className.split(' ')[0]), selCut, height: Math.round(document.querySelector('header.top').getBoundingClientRect().height) }; })()`);
+}
 async function openFirstCard(index = 0) {
   const c = await center('#list .card', index);
   if (!c) return false;
@@ -415,8 +452,7 @@ const shiftTime = (ms) => evalJs(`(() => { if (!window.__realNow) { window.__rea
 async function articleWithSenses(need, freshSi = 0) {
   for (const topic of ['idag', 'sverige', 'politik', 'varlden', 'ekonomi']) {
     if (topic !== 'idag' || (await state()).topic !== 'idag') {
-      const c = await center(`#topics .chip[data-topic="${topic}"]`);
-      await tap(c.x, c.y);
+      await pickTopic(topic);
       if (!(await waitFor(listReady(topic), 40000))) continue;
     }
     const n = (await state()).batch.length;
@@ -445,7 +481,13 @@ function wordPicker(pool) {
     // 能挑的词，每次在一个新的句子里
     pickable() { const w = pool.find((x) => x.pickable && !usedSi.has(x.si)); if (w) usedSi.add(w.si); return w; },
     // 有几个意思、但不能挑的词（有单字或括号说明的意思），在一个新的句子里
-    unpickable() { const w = pool.find((x) => x.n >= 2 && !x.pickable && !usedSi.has(x.si)); if (w) usedSi.add(w.si); return w; },
+    // 先找没有能挑的词的句子：免得用掉能挑的词的句子，后面的 pickable() 不够用（看当天的文章，以前偶尔会这样）
+    unpickable() {
+      const ok = (x) => x.n >= 2 && !x.pickable && !usedSi.has(x.si);
+      const w = pool.find((x) => ok(x) && !pool.some((y) => y.si === x.si && y.pickable)) || pool.find(ok);
+      if (w) usedSi.add(w.si);
+      return w;
+    },
     single() { return pool.find((x) => x.gl && x.n === 1); },
   };
 }
@@ -492,8 +534,8 @@ async function translationChecks() {
   const stored = await evalJs(`JSON.parse(localStorage.getItem('sv.trw.v1')).kommunen`);
   check('单词的缓存：新存的记着是哪个翻译给的', stored && stored.e === 'azure' && stored.z === '〔微软〕kommunen', JSON.stringify(stored));
 
-  const pool = await articleWithSenses(6);
-  check('翻译：找到一篇有六句以上带「能挑的词」、也有不能挑的多义词的文章', !!pool, pool ? (await state()).title : '几个话题里都没有');
+  const pool = await articleWithSenses(7); // 六次 pickable() 和一次 unpickable() 各用掉一句：要七句（只要六句时，看当天的文章偶尔不够）
+  check('翻译：找到一篇有七句以上带「能挑的词」、也有不能挑的多义词的文章', !!pool, pool ? (await state()).title : '几个话题里都没有');
   if (!pool) return;
   const pick = wordPicker(pool);
 
@@ -942,7 +984,7 @@ try {
   let ta = await tipAudit();
   check('列表页：每个按钮都有瑞典文提示（title 第一行是瑞典文）', ta.n >= 30 && !ta.bad.length, `${ta.n} 个按钮${ta.bad.length ? '，没有的：' + ta.bad.join('、') : ''}`);
   const chipTips = await evalJs(`[...document.querySelectorAll('#topics .chip')].map((b) => b.dataset.sv)`);
-  check('21 个话题按钮各有自己的瑞典文名字', chipTips.length === 21 && new Set(chipTips).size === 21, chipTips.join('、'));
+  check('20 个话题按钮各有自己的瑞典文名字（「电动车」去掉了）', chipTips.length === 20 && new Set(chipTips).size === 20, chipTips.join('、'));
   const iconTip = await evalJs(`document.querySelector('#btnSettings').title`);
   check('提示是两行：瑞典文，然后是中文说明', /^Inställningar\n设置/.test(iconTip), JSON.stringify(iconTip));
   // 云端语音用的微软 Speech SDK：固定版本，完整性校验（integrity）对得上，真的能从 CDN 加载
@@ -960,12 +1002,15 @@ try {
     const keyCss = getComputedStyle(document.querySelector('#btnRate'));
     return { sameRow: Math.abs((last.top + last.bottom) / 2 - (play.top + play.bottom) / 2) < 6, after: play.left > last.right,
       chipBottom: chipCss.borderBottomWidth, keyBottom: keyCss.borderBottomWidth, keyBg: keyCss.backgroundImage.slice(0, 15),
-      translateBtn: !!document.querySelector('#btnTranslate'), players: document.querySelectorAll('#player button').length, hint: !!document.querySelector('#list .page-tr-hint').offsetParent };
+      translateBtn: !!document.querySelector('#btnTranslate'), players: document.querySelectorAll('#player button').length, hint: !!document.querySelector('.page-tr-hint, .safari-hint'), help: document.querySelector('#helpTrHint').textContent, others: document.querySelector('#helpTrOthers').textContent };
   })()`);
   check('电脑上朗读按钮组紧跟在「简易瑞典语」后面、同一行', ctl.sameRow && ctl.after, JSON.stringify(ctl));
   check('朗读按钮是立体的样子（渐变、加厚的下边），和话题按钮不同', parseFloat(ctl.keyBottom) >= 3 && parseFloat(ctl.chipBottom) <= 1 && /gradient/.test(ctl.keyBg), JSON.stringify(ctl));
-  check('没有「全文翻译」按钮（朗读按钮组是朗读、语速、男女声、循环、下一篇）', !ctl.translateBtn && ctl.players === 5, JSON.stringify(ctl));
-  check('有内置翻译时不显示整页翻译的提示', availStart !== 'unavailable' && !ctl.hint, `${availStart} ${JSON.stringify(ctl)}`);
+  check('没有「全文翻译」按钮（朗读按钮组是朗读、语速、男女声、读完以后、下一篇）', !ctl.translateBtn && ctl.players === 5, JSON.stringify(ctl));
+  // 只有图标：朗读、读完以后、下一篇上没有字，语速是「0.9×」，男女声是一个字；说明在 aria-label 和提示里
+  check('电脑上播放栏的按钮只有图标，没有说明文字，都有 aria-label', lay.labels === 0 && lay.faces.join('|') === '|0.9×|' + lay.faces[2] + '||' && /^[女男声]$/.test(lay.faces[2]) && !lay.cutText.length
+    && (await evalJs(`[...document.querySelectorAll('#player button')].every((b) => (b.getAttribute('aria-label') || '').length >= 2)`)), JSON.stringify({ faces: lay.faces, cut: lay.cutText }));
+  check('列表上没有整页翻译的提示；说明框「?」里：认不出的浏览器（无头 Edge）不说「你现在用的浏览器」，只列各个浏览器的办法（比如：…）', availStart !== 'unavailable' && !ctl.hint && ctl.help === '' && ctl.others === '比如：', `${availStart} ${JSON.stringify(ctl)}`);
   const topicKeys = await evalJs('SV.sources.TOPICS.map((t) => t.key)');
   for (let i = 0; i < topicKeys.length; i++) {
     const key = topicKeys[i];
@@ -1095,9 +1140,9 @@ try {
   check('页面重新打开', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true }));
   // 没有内置翻译：在列表和文章开头提示用浏览器自己的整页翻译（本站没有「全文翻译」按钮）
   await waitFor(`document.body.classList.contains('no-builtin')`, 5000);
-  const noBi = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: [...document.querySelectorAll('#list .page-tr-hint')].filter((x) => x.offsetParent).map((x) => x.textContent).join('') })`);
+  const noBi = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: !!document.querySelector('.page-tr-hint, .safari-hint'), help: document.querySelector('#helpTrHint').textContent, others: document.querySelector('#helpTrOthers').textContent })`);
   check('没有内置翻译时也没有「全文翻译」按钮', !noBi.btn);
-  check('列表上提示用浏览器自带的整页翻译', /整篇翻译：用浏览器自带的翻译功能/.test(noBi.hint), noBi.hint);
+  check('没有内置翻译时：列表上不提示整页翻译，说明框「?」的整篇翻译里列着各个浏览器的办法（认不出这个浏览器，不说「用浏览器自带的翻译功能」这种绕圈的话）', !noBi.hint && noBi.help === '' && noBi.others === '比如：', JSON.stringify(noBi));
   await shot('desktop-no-builtin-list');
   check('打开一篇文章', await openFirstCard(0));
   const pc2 = await center('#btnPlay');
@@ -1213,7 +1258,7 @@ try {
   check('点「语速」改变语速', Math.abs(s.settings.rate - 1) < 0.01, String(s.settings.rate));
   // 「本句译文」用 MyMemory（测试代答）
   await evalJs(`document.querySelector('#popup').hidden || document.querySelector('#main').click()`);
-  check('文章页上也有整页翻译的提示', await evalJs(`!!document.querySelector('#article .page-tr-hint').offsetParent`));
+  check('文章页上也没有整页翻译的提示（在说明框里）', await evalJs(`!document.querySelector('#article .page-tr-hint, #article .safari-hint') && !/整篇翻译：/.test(document.querySelector('#article').textContent)`));
   const ws5 = await center('#article .body .w', 4);
   await tap(ws5.x, ws5.y);
   await sleep(400);
@@ -1244,10 +1289,12 @@ try {
     check('鼠标选中几个词，弹出它们的中文', !!pr && pr.word && pr.word.includes(' ') && pr.mt.length > 0, pr ? `${pr.word} → ${pr.mt}` : '');
     await shot('desktop-selection');
   }
-  // 循环朗读，本机的声音：开着「循环」时，读完最后一句从头再读（读完关掉，后面几轮照常）
+  // 本篇循环，本机的声音：「读完以后」点两下（读完就停 → 接着读下一篇 → 本篇循环），读完最后一句从头再读（读完换回读完就停，后面几轮照常）
   await evalJs(`document.querySelector('#popup').hidden || document.querySelector('#main').click()`);
-  const lbD = await center('#btnLoop');
+  const lbD = await center('#btnAfter');
   await tap(lbD.x, lbD.y);
+  await tap(lbD.x, lbD.y);
+  check('本机的声音：「读完以后」点两下是「本篇循环」', (await state()).after === 'loop', (await state()).after);
   const lastD = await evalJs(`(() => { const ss = document.querySelectorAll('#article .s'); return [...document.querySelectorAll('#article .w')].indexOf(ss[ss.length - 1].querySelector('.w')); })()`);
   const lwD = await center('#article .w', lastD);
   await tap(lwD.x, lwD.y);
@@ -1256,22 +1303,85 @@ try {
   const loopsD0 = (await state()).loops;
   const loopedD = await waitFor(`SVApp.state().loops > ${loopsD0} && SVApp.state().reader === 'speaking'`, 20000, 100);
   st = await state();
-  check('本机的声音：开着「循环」，读完最后一句从头再读这一篇', loopedD && st.si <= 2, `第 ${st.loops} 遍，第 ${st.si} 句`);
+  check('本机的声音：本篇循环，读完最后一句从头再读这一篇', loopedD && st.si <= 2, `第 ${st.loops} 遍，第 ${st.si} 句`);
   await space();
-  const lbD2 = await center('#btnLoop');
+  const lbD2 = await center('#btnAfter');
   await tap(lbD2.x, lbD2.y);
-  check('本机的声音：再点「循环」关掉', (await state()).settings.loop === false);
+  check('本机的声音：再点一下回到「读完就停」', (await state()).settings.after === 'stop');
+  // 接着读下一篇，本机的声音：读完最后一句，停一下，打开列表里的下一篇，从标题读起
+  await tap(lbD2.x, lbD2.y);
+  const idD = (await state()).id;
+  const lwD2 = await center('#article .w', lastD);
+  await tap(lwD2.x, lwD2.y);
+  await sleep(300);
+  await clickButtonText('#popup .acts button', '从这里读');
+  const nextD = await waitFor(`(() => { const s = SVApp.state(); return s.id !== ${JSON.stringify(idD)} && s.id === s.batch[s.batch.indexOf(${JSON.stringify(idD)}) + 1] && s.reader === 'speaking' && !s.held; })()`, 30000, 100);
+  await sleep(300);
+  st = await state();
+  const nD = await evalJs(`({ h1: document.querySelector('#article h1').textContent, said: __speechLog.slice(-6).map((x) => x.text), toast: document.querySelector('#toast').textContent, y: scrollY })`);
+  check('本机的声音：「接着读下一篇」读完打开列表里的下一篇，从标题读起（滚回顶上，提示「下一篇：标题」）',
+    nextD && nD.said.some((t) => nD.h1.startsWith(t.slice(0, 20))) && nD.toast.startsWith('下一篇：' + st.title) && nD.y < 120, `${st.title}；读了 ${JSON.stringify(nD.said.slice(0, 2))}；${nD.toast}`);
+  await evalJs('window.__ms.stop()');
+  // 三连读，本机的声音：语速按钮 1× → 三连读；读三遍，每遍的语速是 0.8、0.9、1，读完就停（读完以后是「读完就停」）
+  await tap(lbD2.x, lbD2.y); // 接着读下一篇 → 本篇循环
+  await tap(lbD2.x, lbD2.y); // → 读完就停
+  await evalJs('window.__speechWordMs = 8');
+  const rcD = await center('#btnRate');
+  await tap(rcD.x, rcD.y);
+  st = await state();
+  check('本机的声音：语速 1× 再点是三连读（第 1 遍 0.8×）', st.ramp && st.pass === 1 && st.rate === 0.8 && st.after === 'stop', JSON.stringify({ ramp: st.ramp, pass: st.pass, rate: st.rate, after: st.after }));
+  const logD = await evalJs('__speechLog.length');
+  const pcD = await center('#btnPlay');
+  await tap(pcD.x, pcD.y);
+  const rampD = await waitFor(`SVApp.state().reader === 'idle'`, 150000, 250);
+  const ratesD = await evalJs(`__speechLog.slice(${logD}).map((x) => x.rate)`);
+  const titleD = await evalJs(`document.querySelector('#article h1').textContent`);
+  const startsD = await evalJs(`__speechLog.slice(${logD}).filter((x) => ${JSON.stringify(titleD)}.startsWith(x.text.slice(0, 20))).length`);
+  const runsD = ratesD.filter((r, i) => i === 0 || r !== ratesD[i - 1]);
+  check('本机的声音：三连读读三遍，语速依次是 0.8、0.9、1（每遍从标题读起），读完就停', rampD && runsD.join() === '0.8,0.9,1' && startsD === 3 && (await state()).pass === 1,
+    `语速 ${runsD.join(' → ')}，${ratesD.length} 句，标题读了 ${startsD} 遍`);
+  await tap(rcD.x, rcD.y); // 三连读 → 0.8×
+  await tap(rcD.x, rcD.y); // → 0.9×
+  check('本机的声音：语速按钮离开三连读是 0.8×，再点 0.9×', !(await state()).ramp && (await state()).settings.rate === 0.9);
+  await evalJs('window.__speechWordMs = 0');
 
   // ================= 3. 手机 390×844 触摸 =================
   console.log('\n== 3. 手机 390×844 触摸');
+  // 「电动车」这个话题去掉了：浏览器里存着它（上次看的话题、列过哪些）时，改用默认的话题，记录丢掉，不出错
+  const ELB = `try { if (!sessionStorage.getItem('elb')) { const st = JSON.parse(localStorage.getItem('sv.settings.v1') || '{}'); st.topic = 'elbilar'; localStorage.setItem('sv.settings.v1', JSON.stringify(st));
+    const m = JSON.parse(localStorage.getItem('sv.shown.v1') || '{}'); m.elbilar = ['sr1', 'sr2']; localStorage.setItem('sv.shown.v1', JSON.stringify(m)); sessionStorage.setItem('elb', '1'); } } catch (e) {}`;
+  check('手机上打开页面：存着去掉了的话题「电动车」', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA, initJs: ELB }));
+  const elb = await evalJs(`({ topic: SVApp.state().topic, shown: Object.keys(JSON.parse(localStorage.getItem('sv.shown.v1') || '{}')), zh: document.documentElement.textContent.includes('电动车'),
+    topics: SV.sources.TOPICS.length, keyLeft: SV.sources.TOPICS.some((t) => t.key === 'elbilar') })`);
+  check('存着的话题是「电动车」（去掉了）：打开「今日要闻」，它的记录丢掉了；页面上（话题按钮、菜单、说明）哪里也没有「电动车」',
+    elb.topic === 'idag' && !elb.shown.includes('elbilar') && !elb.zh && !elb.keyLeft && elb.topics === 20, JSON.stringify(elb));
+  check('网址里是 ?topic=elbilar：也打开「今日要闻」', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA, query: '?topic=elbilar' }) && (await state()).topic === 'idag', (await state()).topic);
   check('手机上打开页面（安卓 Chrome 的用户代理）', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA }));
   const ml = await layoutReport('#list');
   summary.phoneListLayout = ml;
   check('手机上列表没有横向溢出', ml.scrollW <= ml.vw, `${ml.scrollW} <= ${ml.vw}`);
   check('手机上列表用满宽度、一列', ml.boxW >= ml.vw - 40 && ml.columns === 1, `列表 ${ml.boxW}px / 视口 ${ml.vw}px，${ml.columns} 列`);
-  check('手机上朗读按钮都在屏幕内、字没有被截断', ml.playerFits && !ml.cutText.length, ml.cutText.join(','));
-  check('手机上话题一行，可以横着滑', ml.chipsScrollable, `话题条宽 ${ml.chipsW}px`);
+  check('手机上朗读按钮都在屏幕内、没有说明文字、里面的东西没有被截断', ml.playerFits && !ml.cutText.length && ml.labels === 0, ml.cutText.join(',') + ' ' + ml.faces.join('|'));
+  const mBtn = await evalJs(`[...document.querySelectorAll('#player button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })`);
+  check('手机上播放栏的按钮一样宽、至少 40 像素高（好点）', mBtn.every(([w, h]) => h >= 40 && w >= 44 && Math.abs(w - mBtn[0][0]) <= 1), JSON.stringify(mBtn));
+  // 手机上话题是标题旁边的下拉菜单（话题按钮那一行不显示，省一行），选项和话题按钮是同一张表
+  const selP = await evalJs(`(() => { const s = document.querySelector('#topicSel'); const r = s.getBoundingClientRect(); const b = document.querySelector('#brand').getBoundingClientRect();
+    return { shown: !!s.offsetParent, chipsShown: !!document.querySelector('#topics .chip').offsetParent, sameRow: Math.abs((r.top + r.bottom) / 2 - (b.top + b.bottom) / 2) < 8, value: s.value, h: Math.round(r.height),
+      opts: [...s.options].map((o) => o.value + ':' + o.textContent).join(), chips: [...document.querySelectorAll('#topics .chip')].map((c) => c.dataset.topic + ':' + c.textContent).join() }; })()`);
+  check('手机上话题是标题旁边的下拉菜单（话题按钮那一行不显示），选项和话题按钮一样，选着现在的话题',
+    selP.shown && !selP.chipsShown && selP.sameRow && selP.opts === selP.chips && selP.value === (await state()).topic && selP.h >= 36, JSON.stringify(selP).slice(0, 240));
+  const hdP = await headerFit();
+  summary.phoneHeader = hdP;
+  check('手机 390 像素宽：标题、话题菜单和工具按钮在一行，不出屏、不截字，菜单里「今日要闻」放得下', hdP.rows === 1 && !hdP.overflow && !hdP.clipped.length && !hdP.selCut.includes('今日要闻'), JSON.stringify(hdP));
+  const barP = await evalJs(`Math.round(document.querySelector('#topbar').getBoundingClientRect().height)`);
+  check('手机上粘在顶上的只有朗读按钮一行（不到 60 像素高）', barP < 60, `${barP}px`);
   await shot('phone-list');
+  // 在菜单里选另一个话题：和点话题按钮一样
+  await pickTopic('politik');
+  const selOk = await waitFor(listReady('politik'), 40000);
+  check('手机上在菜单里选「政治」，列出政治的文章，菜单上是「政治」', selOk && (await evalJs(`document.querySelector('#topicSel').selectedOptions[0].textContent`)) === '政治', (await state()).topic);
+  await pickTopic('idag');
+  await waitFor(listReady('idag'), 40000);
   // 手机上没有悬停：按住按钮半秒显示瑞典文提示，松手不算点击（男女声不变）
   const gender0 = (await state()).settings.gender;
   const vbP = await center('#btnVoice');
@@ -1282,13 +1392,14 @@ try {
   await sleep(400);
   check('手机上按住按钮半秒，显示瑞典文提示，在屏幕内', lp && /röst/.test(lp.text) && lp.inView, JSON.stringify(lp));
   check('手机上按住看提示，松手不算点击', (await state()).settings.gender === gender0, `${gender0} → ${(await state()).settings.gender}`);
-  // 再点当前话题：换一批
+  // 换一批：手机上菜单里选同一个话题不算换，用播放栏最右边的按钮（列表页上是「换一批」）
   const b1 = (await state()).batch;
-  const activeChip = await center('#topics .chip.active');
-  await tap(activeChip.x, activeChip.y);
+  const nbP = await center('#btnNext');
+  check('手机上列表页播放栏最右边的按钮是「换一批」', (await evalJs(`document.querySelector('#btnNext').getAttribute('aria-label') + ' ' + document.querySelector('#btnNext').dataset.sv`)) === '换一批 Fler artiklar');
+  await tap(nbP.x, nbP.y);
   await waitFor(`${listReady('')} && SVApp.state().batchNo === 2`, 20000);
   const b2 = (await state()).batch;
-  check('手机上再点当前话题，换一批', b2.length > 0 && !b2.some((id) => b1.includes(id)), `${b2.length} 篇`);
+  check('手机上点播放栏最右边的「换一批」，换一批', b2.length > 0 && !b2.some((id) => b1.includes(id)), `${b2.length} 篇`);
   check('手机上点一篇打开文章', await openFirstCard(0), (await state()).title);
   const ma = await layoutReport('#article');
   summary.phoneArticleLayout = ma;
@@ -1326,8 +1437,8 @@ try {
   check('手机上点「继续」接着读', (await state()).reader === 'speaking');
   await space();
   // 没有内置翻译：提示安卓 Chrome 自己的整页翻译（本站没有「全文翻译」按钮）
-  const hintP = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: document.querySelector('#article .page-tr-hint')?.offsetParent ? document.querySelector('#article .page-tr-hint').textContent : '' })`);
-  check('手机上没有「全文翻译」按钮，提示安卓 Chrome 的「⋮ → 翻译…」', !hintP.btn && /点右上角 ⋮ →「翻译…」/.test(hintP.hint), JSON.stringify(hintP));
+  const hintP = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: !!document.querySelector('.page-tr-hint, .safari-hint'), help: document.querySelector('#helpTrHint').textContent })`);
+  check('手机上没有「全文翻译」按钮，文章上不提示整页翻译，说明框里写着安卓 Chrome 的「⋮ → 翻译…」', !hintP.btn && !hintP.hint && /点右上角 ⋮ →「翻译…」/.test(hintP.help), JSON.stringify(hintP));
   // 往下滚：话题和朗读按钮粘在顶上，还点得到
   await evalJs('window.scrollTo(0, document.documentElement.scrollHeight)');
   await sleep(400);
@@ -1352,10 +1463,11 @@ try {
   const gP = await evalJs(`(() => { const g = document.querySelector('#guide'); if (g.hidden) return null; const r = g.getBoundingClientRect(); return { on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight, text: g.innerText.slice(0, 20) }; })()`);
   check('手机上点标题打开「怎么用」，在屏幕内', gP && gP.on && /怎么用/.test(gP.text), JSON.stringify(gP));
   await shot('phone-guide');
-  const metaP = await center('#article .meta');
-  await tap(metaP.x, metaP.y);
+  // 点「怎么用」外面（正文左边的空白，不是词）：关上
+  const outP = await evalJs(`(() => { const g = document.querySelector('#guide').getBoundingClientRect(); return { x: 6, y: Math.round(Math.min(innerHeight - 30, g.bottom + 30)) }; })()`);
+  await tap(outP.x, outP.y);
   await sleep(300);
-  check('手机上点别处关上「怎么用」', await evalJs(`document.querySelector('#guide').hidden`));
+  check('手机上点别处关上「怎么用」', await evalJs(`document.querySelector('#guide').hidden`), JSON.stringify(outP));
   await clickButtonText('#btnBack', '列表');
   await waitFor(`SVApp.state().view === 'list'`, 5000);
   check('手机上「← 返回列表」', (await state()).view === 'list');
@@ -1375,7 +1487,25 @@ try {
   await sleep(400);
   check('手机上对话框里按住按钮，提示显示在对话框上面', lp2 && /Provlyssna/.test(lp2.text) && lp2.inDialog && lp2.inView, JSON.stringify(lp2));
   check('手机上按住「试听」看提示，松手不试听', (await evalJs('__speechLog.length')) === spoken0);
+  // 设置里的语速：只有 0.8×、0.9×、1× 和三连读
+  const rateOpts = await evalJs(`[...document.querySelectorAll('#rateRow input[name="rate"]')].map((r) => r.value + (r.checked ? '*' : ''))`);
+  check('设置里的语速只有 0.8×、0.9×、1× 和循序渐进三连读，选着现在的语速', rateOpts.map((x) => x.replace('*', '')).join() === '0.8,0.9,1,ramp' && rateOpts.filter((x) => x.endsWith('*')).length === 1, rateOpts.join(' '));
   await evalJs(`document.querySelector('#dlgSettings').close()`);
+  // 别的手机宽度（320、375、430 像素）：顶栏不出屏、不横向滚动、不截字；375 以上列表页一行（标题、话题菜单、工具按钮），
+  // 320 时话题菜单自己一行；文章页一行（标题、「← 列表」、工具按钮，不显示话题菜单）
+  for (const [w, hh] of [[320, 568], [375, 667], [430, 932]]) {
+    await openPage({ width: w, height: hh, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA });
+    const hl = await headerFit();
+    if (w === 320) await shot('phone-320-list');
+    await openFirstCard(0);
+    const ha = await headerFit();
+    const la = await layoutReport('#article');
+    if (w === 320) await shot('phone-320-article');
+    summary['phoneHeader' + w] = { list: hl, article: ha };
+    check(`手机 ${w} 像素宽：列表页（${hl.rows} 行）和文章页（${ha.rows} 行）的顶栏不出屏、不横向滚动、不截字，播放栏在屏幕内`,
+      !hl.overflow && !ha.overflow && !hl.clipped.length && !ha.clipped.length && ha.rows === 1 && !ha.items.includes('topicSel') && (w < 360 || hl.rows === 1) && hl.items.includes('topicSel')
+      && !hl.selCut.includes('今日要闻') && la.playerFits && la.scrollW <= la.vw, JSON.stringify({ list: hl, article: ha }));
+  }
 
   // ================= 4. 云端自然语音（假的微软 SDK 和假的令牌服务） =================
   console.log('\n== 4. 电脑 1600×900：云端自然语音');
@@ -1528,12 +1658,13 @@ try {
   await evalJs('window.__ms.play()');
   await waitFor(`SVApp.state().reader === 'speaking'`, 5000);
   check('锁屏界面的「播放」：从停下的词接着读', (await state()).reader === 'speaking');
-  // 循环朗读：打开开关，从最后一段读起，读完从头再读；第二遍不再合成
-  const lb = await center('#btnLoop');
+  // 本篇循环：「读完以后」点两下（读完就停 → 接着读下一篇 → 本篇循环），从最后一段读起，读完从头再读；第二遍不再合成
+  const lb = await center('#btnAfter');
   await tap(lb.x, lb.y);
-  const loopOn = await evalJs(`({ loop: SVApp.state().settings.loop, pressed: document.querySelector('#btnLoop').getAttribute('aria-pressed'), sv: document.querySelector('#btnLoop').dataset.sv,
-    stored: (() => { try { return JSON.parse(localStorage.getItem('sv.settings.v1')).loop; } catch (e) { return null; } })() })`);
-  check('「循环」按钮：按下去开着，瑞典文提示是 Upprepa: på，这个浏览器记住了', loopOn.loop === true && loopOn.pressed === 'true' && loopOn.sv === 'Upprepa: på' && loopOn.stored === true, JSON.stringify(loopOn));
+  await tap(lb.x, lb.y);
+  const loopOn = await evalJs(`({ after: SVApp.state().settings.after, pressed: document.querySelector('#btnAfter').getAttribute('aria-pressed'), on: document.querySelector('#btnAfter').classList.contains('on'), sv: document.querySelector('#btnAfter').dataset.sv, label: document.querySelector('#btnAfter').getAttribute('aria-label'),
+    stored: (() => { try { return JSON.parse(localStorage.getItem('sv.settings.v1')).after; } catch (e) { return null; } })() })`);
+  check('「读完以后」按钮：本篇循环，按下去的样子，瑞典文提示是 Upprepa artikeln，这个浏览器记住了', loopOn.after === 'loop' && loopOn.on && loopOn.pressed === null && loopOn.sv === 'Upprepa artikeln' && loopOn.label === '读完以后：本篇循环' && loopOn.stored === 'loop', JSON.stringify(loopOn));
   await evalJs('window.__ttsWordMs = 25');
   const lastW = await evalJs(`(() => { const ps = [...document.querySelectorAll('#article .body p, #article .body li')].filter((p) => p.querySelector('.w')); const w = ps[ps.length - 1].querySelector('.w'); return [...document.querySelectorAll('#article .body .w')].indexOf(w); })()`);
   const lwc = await center('#article .body .w', lastW);
@@ -1570,15 +1701,357 @@ try {
     st.id !== idL && st.id === st.batch[st.batch.indexOf(idL) + 1] && st.reader === 'speaking' && st.loop === true && st.cloudCache <= 3 && st.media && st.media.title === st.title,
     `合成好的段落 ${cacheBefore} → ${st.cloudCache}；${st.title}`);
   await evalJs('window.__ttsWordMs = 25');
-  // 关掉循环：这一遍读完就停
-  const lb2 = await center('#btnLoop');
+  // 换成读完就停：这一遍读完就停
+  const lb2 = await center('#btnAfter');
   await tap(lb2.x, lb2.y);
   const loopsOff = (await state()).loops;
-  check('再点「循环」：关掉', (await state()).settings.loop === false && (await evalJs(`document.querySelector('#btnLoop').getAttribute('aria-pressed')`)) === 'false');
+  check('再点「读完以后」：读完就停', (await state()).settings.after === 'stop' && !(await evalJs(`document.querySelector('#btnAfter').classList.contains('on')`)));
   const ended = await waitFor(`SVApp.state().reader === 'idle'`, 120000, 500);
   st = await state();
-  check('关掉循环以后：这一遍读完就停，不再从头读', ended && st.loops === loopsOff && (await evalJs('navigator.mediaSession.playbackState')) === 'none', `${st.reader}，第 ${st.loops} 遍`);
+  check('换成读完就停以后：这一遍读完就停，不再从头读', ended && st.loops === loopsOff && (await evalJs('navigator.mediaSession.playbackState')) === 'none', `${st.reader}，第 ${st.loops} 遍`);
   await shot('desktop-loop-off-idle');
+
+  // ================= 5b. 读完以后、语速和三连读（云端语音：假的 SDK 和令牌服务） =================
+  console.log('\n== 5b. 电脑 1600×900：读完以后（读完就停 → 接着读下一篇 → 本篇循环）、语速和循序渐进三连读（云端语音，假的 SDK）');
+  // 旧版本的设置：「循环」开着、语速 0.7 → 本篇循环、0.8×；存回去的设置里没有 loop
+  const OLD = `try { if (!sessionStorage.getItem('old')) { localStorage.setItem('sv.settings.v1', JSON.stringify({ v: 3, loop: true, rate: 0.7, topic: 'idag', engine: 'cloud' })); sessionStorage.setItem('old', '1'); } } catch (e) {}`;
+  check('读完以后：页面打开（旧版本的设置）', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true, initJs: OLD }));
+  const mig = await evalJs(`(() => { const st = JSON.parse(localStorage.getItem('sv.settings.v1')); const b = document.querySelector('#btnAfter'); return { after: SVApp.state().after, rate: SVApp.state().settings.rate, mode: b.dataset.mode,
+    pressed: b.classList.contains('on') ? 'on' : 'off', face: document.querySelector('#btnRate b').textContent, storedLoop: 'loop' in st, storedAfter: st.after, storedRate: st.rate }; })()`);
+  check('旧版本「循环」开着、语速 0.7：变成「本篇循环」、0.8×，存回去的设置里没有 loop', mig.after === 'loop' && mig.mode === 'loop' && mig.pressed === 'on' && mig.rate === 0.8 && mig.face === '0.8×' && !mig.storedLoop && mig.storedAfter === 'loop' && mig.storedRate === 0.8, JSON.stringify(mig));
+  // 「读完以后」点一下换一种：本篇循环 → 读完就停 → 接着读下一篇 → 本篇循环；图标、瑞典文提示、读屏软件听到的、提示条都跟着变
+  const afterNow = () => evalJs(`(() => { const b = document.querySelector('#btnAfter'); return { mode: b.dataset.mode, pressed: (b.classList.contains('on') ? 'on' : 'off') + (b.hasAttribute('aria-pressed') ? '+aria-pressed' : ''), label: b.getAttribute('aria-label'), sv: b.dataset.sv,
+    icon: [...b.querySelectorAll('svg')].filter((x) => getComputedStyle(x).display !== 'none').map((x) => x.getAttribute('class')).join(), color: getComputedStyle(b).color,
+    toast: document.querySelector('#toast').textContent, stored: JSON.parse(localStorage.getItem('sv.settings.v1')).after }; })()`);
+  // 点播放栏上的按钮（每次重新找位置：读的时候页面在滚，粘在顶上的播放栏位置会变）
+  const press = async (sel) => { const c = await center(sel); await tap(c.x, c.y); };
+  const cyc = [];
+  for (let k = 0; k < 3; k++) { await press('#btnAfter'); cyc.push(await afterNow()); }
+  check('「读完以后」点一下换一种：读完就停 → 接着读下一篇 → 本篇循环，图标、瑞典文提示、aria-label、提示条、存的设置都跟着变',
+    cyc.map((x) => x.mode + '/' + x.icon + '/' + x.pressed + '/' + x.stored).join(' ') === 'stop/i-stop/off/stop next/i-next/on/next loop/i-loop/on/loop'
+    && cyc[0].label === '读完以后：读完就停' && cyc[1].label === '读完以后：接着读下一篇' && cyc[2].label === '读完以后：本篇循环'
+    && cyc[0].sv === 'Stoppa efter artikeln' && cyc[1].sv === 'Fortsätt med nästa artikel' && cyc[2].sv === 'Upprepa artikeln'
+    && /^读完就停/.test(cyc[0].toast) && /^接着读下一篇/.test(cyc[1].toast) && /^本篇循环/.test(cyc[2].toast) && cyc[0].color !== cyc[1].color, JSON.stringify(cyc.map((x) => [x.mode, x.icon, x.label, x.color])));
+  // 语速按钮：0.8× → 0.9× → 1× → 三连读 → 0.8×，只有这几种；读屏软件听到语速，三连读时是「三连读，第 1 遍，0.8×」
+  const rateNow = () => evalJs(`(() => { const b = document.querySelector('#btnRate'); return b.querySelector('b').textContent + (getComputedStyle(b.querySelector('.steps')).display !== 'none' ? '+台阶' + b.dataset.pass : '') + '|' + b.getAttribute('aria-label'); })()`);
+  const rcyc = [await rateNow()];
+  for (let k = 0; k < 4; k++) { await press('#btnRate'); rcyc.push(await rateNow()); }
+  check('语速按钮只有 0.8× → 0.9× → 1× → 三连读 → 0.8×，aria-label 跟着变',
+    rcyc.join(' ; ') === '0.8×|语速 0.8× ; 0.9×|语速 0.9× ; 1×|语速 1× ; 0.8×+台阶1|语速：三连读，第 1 遍，0.8× ; 0.8×|语速 0.8×', rcyc.join(' ; '));
+  await press('#btnAfter'); // 本篇循环 → 读完就停
+  await press('#btnAfter'); // → 接着读下一篇
+  check('重新打开网页：还是「接着读下一篇」、0.8×', await openPage({ width: 1600, height: 900, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true })
+    && (await state()).after === 'next' && (await state()).rate === 0.8 && !(await state()).ramp, JSON.stringify({ after: (await state()).after, rate: (await state()).rate }));
+  // 播放栏的按钮上没有说明文字，aria-label 跟着状态变（列表页上「下一篇」是「换一批」，朗读时「朗读」是「暂停」）
+  const lbl = () => evalJs(`[...document.querySelectorAll('#player button')].map((b) => b.getAttribute('aria-label')).join('|')`);
+  const lblList = await lbl();
+  check('列表页：播放栏没有说明文字，aria-label 是「朗读、语速、男女声、读完以后、换一批」', (await evalJs(`document.querySelectorAll('#player .lbl').length`)) === 0 && /^朗读\|语速 0\.8×\|[女男]声\|读完以后：接着读下一篇\|换一批$/.test(lblList), lblList);
+
+  // ---- 接着读下一篇 ----
+  check('接着读下一篇：打开第一篇', await openFirstCard(0));
+  await evalJs('window.__ttsWordMs = 25');
+  // 读这一篇的最后一段（点那一段的第一个词，「从这里读」）
+  const readLast = async () => {
+    await evalJs(`window.__ms.pause && SVApp.state().reader === 'speaking' && window.__ms.pause()`);
+    const i = await evalJs(`(() => { const ps = [...document.querySelectorAll('#article .body p, #article .body li')].filter((p) => p.querySelector('.w')); const w = ps[ps.length - 1].querySelector('.w'); return [...document.querySelectorAll('#article .body .w')].indexOf(w); })()`);
+    const c = await center('#article .body .w', i);
+    await tap(c.x, c.y);
+    await sleep(300);
+    return clickButtonText('#popup .acts button', '从这里读');
+  };
+  await press('#btnPlay');
+  await sleep(300);
+  const lblRead = await lbl();
+  check('朗读时 aria-label：「朗读」变成「暂停」，「换一批」变成「下一篇」', /^暂停\|.*\|下一篇$/.test(lblRead), lblRead);
+  let id0 = (await state()).id;
+  await readLast();
+  const heldOk = await waitFor(`SVApp.state().held && SVApp.state().gap === 'next'`, 30000, 50);
+  const tHeld = Date.now();
+  const atGap = await state();
+  const gapInfo = await evalJs(`({ playing: navigator.mediaSession.playbackState, word: !!document.querySelector('#article .w.current'), audio: (() => { const a = [...document.querySelectorAll('audio')]; return a.length; })() })`);
+  check('读完这一篇：停一下，还在这一篇，锁屏界面还是「正在播放」（云端语音放着静音）', heldOk && atGap.id === id0 && atGap.reader === 'speaking' && gapInfo.playing === 'playing' && !gapInfo.word, JSON.stringify({ id: atGap.id, reader: atGap.reader, ...gapInfo }));
+  const synth0 = (await evalJs('window.__ttsLog.length'));
+  const advanced = await waitFor(`(() => { const s = SVApp.state(); return s.id !== ${JSON.stringify(id0)} && s.reader === 'speaking' && !s.held; })()`, 10000, 50);
+  const tAdv = Date.now() - tHeld;
+  await sleep(400);
+  st = await state();
+  const adv = await evalJs(`({ toast: document.querySelector('#toast').textContent, y: Math.round(scrollY), h1: document.querySelector('#article h1').textContent, first: window.__ttsLog[${synth0}] && window.__ttsLog[${synth0}].text })`);
+  check('停一下（约 1.5 秒）以后打开列表里的下一篇，滚到顶上，提示「下一篇：标题」，从标题读起，锁屏界面换成新的标题',
+    advanced && st.id === st.batch[st.batch.indexOf(id0) + 1] && tAdv >= 1000 && tAdv < 4000 && adv.toast === '下一篇：' + st.title && adv.y < 150 && adv.first === adv.h1 && st.media && st.media.title === st.title && st.media.state === 'playing',
+    `${(tAdv / 1000).toFixed(1)} 秒；${adv.toast}；scrollY ${adv.y}；先合成「${(adv.first || '').slice(0, 30)}」`);
+  await shot('desktop-auto-next');
+  // 页面藏起来（窗口最小化）时也接着读下一篇
+  id0 = st.id;
+  await readLast();
+  await minimize(true);
+  let hidAll = true;
+  let hidAdv = false;
+  for (let k = 0; k < 60 && !hidAdv; k++) {
+    await sleep(500);
+    const x = await evalJs(`({ hidden: document.hidden, s: SVApp.state() })`);
+    hidAll = hidAll && x.hidden;
+    hidAdv = x.s.id !== id0 && x.s.id === x.s.batch[x.s.batch.indexOf(id0) + 1] && x.s.reader === 'speaking' && !x.s.held && x.s.media && x.s.media.title === x.s.title;
+  }
+  await minimize(false);
+  check('页面藏起来（窗口最小化）时：读完这一篇，接着读下一篇，锁屏界面换成新的标题', hidAll && hidAdv, `藏着：${hidAll}，${(await state()).title}`);
+  // 停一下的时候按暂停（锁屏界面的暂停也一样）：不接着读，停在这一篇的开头；再按 ▶ 从头读这一篇
+  id0 = (await state()).id;
+  await readLast();
+  await waitFor(`SVApp.state().held`, 30000, 50);
+  await evalJs('window.__ms.pause()');
+  await sleep(2500);
+  st = await state();
+  check('停一下的时候按暂停：不接着读下一篇，停在这一篇（锁屏界面「已暂停」）', st.id === id0 && st.reader === 'paused' && !st.held && !st.gap && (await evalJs('navigator.mediaSession.playbackState')) === 'paused', JSON.stringify({ id: st.id === id0, reader: st.reader, gap: st.gap }));
+  await space();
+  await sleep(500);
+  st = await state();
+  check('再按空格：从这一篇的开头读', st.id === id0 && st.reader === 'speaking' && st.si <= 2, `第 ${st.si} 句`);
+  // 停一下的时候按停止：也不接着读
+  await readLast();
+  await waitFor(`SVApp.state().held`, 30000, 50);
+  await evalJs('window.__ms.stop()');
+  await sleep(2500);
+  st = await state();
+  check('停一下的时候按停止：不接着读下一篇', st.id === id0 && st.reader === 'idle', st.reader);
+  // 停一下的时候按锁屏界面的「下一首」：马上打开下一篇接着读
+  await press('#btnPlay');
+  await readLast();
+  await waitFor(`SVApp.state().held`, 30000, 50);
+  const tN = Date.now();
+  await evalJs('window.__ms.nexttrack()');
+  const nOk = await waitFor(`(() => { const s = SVApp.state(); return s.id !== ${JSON.stringify(id0)} && s.reader === 'speaking'; })()`, 5000, 50);
+  check('停一下的时候按「下一首」：马上打开下一篇接着读', nOk && Date.now() - tN < 1400, `${Date.now() - tN} 毫秒`);
+  // 停一下的时候回到列表：不接着读
+  id0 = (await state()).id;
+  await readLast();
+  await waitFor(`SVApp.state().held`, 30000, 50);
+  await clickButtonText('#btnBack', '列表');
+  await sleep(2500);
+  st = await state();
+  check('停一下的时候回到列表：不接着读', st.view === 'list' && st.reader === 'idle' && !st.gap, `${st.view} ${st.reader}`);
+
+  // ---- 这一批的最后一篇：和「下一篇」一样取下一批，打开第一篇接着读 ----
+  // （SR 的源里还有没列过的文章时；都列过了时，和「下一篇」一样列出来，朗读停下：下面另外假装一次）
+  await evalJs(`(() => { window.__nbOrig = SV.sources.nextBatch; window.__ltOrig = SV.sources.loadTopic; SV.sources.nextBatch = (...a) => (window.__nb = window.__nbOrig(...a)); })()`);
+  const lastCard = async () => {
+    if ((await state()).view === 'article') { await clickButtonText('#btnBack', '列表'); await waitFor(`SVApp.state().view === 'list'`, 5000); }
+    return openFirstCard((await state()).batch.length - 1);
+  };
+  await lastCard();
+  let bn0 = (await state()).batchNo;
+  id0 = (await state()).id;
+  await press('#btnPlay');
+  await readLast();
+  const eob = await waitFor(`(() => { const s = SVApp.state(); return (s.batchNo > ${bn0} && s.view === 'article' && s.reader === 'speaking' && !s.held) || (s.view === 'list' && s.reader === 'idle'); })()`, 60000, 100);
+  st = await state();
+  const nb = await evalJs(`window.__nb ? { restarted: window.__nb.restarted, n: window.__nb.items.length } : null`);
+  const eobToast = await evalJs(`document.querySelector('#toast').textContent`);
+  check(nb && nb.restarted ? '这一批的最后一篇读完：这个话题的文章都列过了，和「下一篇」一样列出来（从最新的重新开始），朗读停下'
+    : '这一批的最后一篇读完：取下一批，打开它的第一篇接着读',
+  eob && nb && (nb.restarted ? st.view === 'list' && st.reader === 'idle' && /都列过了/.test(eobToast)
+    : st.view === 'article' && st.batchNo === bn0 + 1 && st.id === st.batch[0] && st.reader === 'speaking' && eobToast.startsWith('下一篇：')), `${JSON.stringify(nb)} 第 ${st.batchNo} 批 ${st.view} ${st.reader}「${eobToast}」`);
+  await evalJs(`window.__ms.pause && window.__ms.pause()`);
+  // 假装这个话题的文章都列过了：列出来（从最新的重新开始），朗读停下，说一声
+  await evalJs(`SV.sources.nextBatch = (...a) => (window.__nb = Object.assign(window.__nbOrig(...a), { restarted: true }))`);
+  await lastCard();
+  bn0 = (await state()).batchNo;
+  await press('#btnPlay');
+  await readLast();
+  const rs1 = await waitFor(`SVApp.state().view === 'list' && SVApp.state().reader === 'idle'`, 60000, 100);
+  check('这一批的最后一篇读完、文章都列过了：和「下一篇」一样列出来，朗读停下，提示「都列过了」', rs1 && (await state()).batchNo === bn0 + 1 && /都列过了，朗读停下/.test(await evalJs(`document.querySelector('#toast').textContent`)), await evalJs(`document.querySelector('#toast').textContent`));
+  // 假装取不到下一批：文章还在，朗读停下，说一声（不会一直重试）
+  await evalJs(`(() => { SV.sources.nextBatch = window.__nbOrig; SV.sources.loadTopic = async () => ({ cands: [], failed: 4, total: 4, error: new Error('test') }); })()`);
+  await lastCard();
+  id0 = (await state()).id;
+  await press('#btnPlay');
+  await readLast();
+  const lf = await waitFor(`SVApp.state().reader === 'idle'`, 60000, 100);
+  await sleep(2000);
+  st = await state();
+  check('取不到下一批：文章还在，朗读停下，提示取不到（不再重试）', lf && st.view === 'article' && st.id === id0 && st.reader === 'idle' && /没能取到下一批文章/.test(await evalJs(`document.querySelector('#toast').textContent`)), `${st.view} ${st.reader}`);
+  // 换回真的取源，nextBatch 还是记下结果的那个（上一步假装「都列过了」留下的 __nb 清掉）
+  await evalJs(`(() => { SV.sources.loadTopic = window.__ltOrig; SV.sources.nextBatch = (...a) => (window.__nb = window.__nbOrig(...a)); window.__nb = null; })()`);
+  // 读的时候在这一批的最后一篇点「下一篇」：也取下一批，打开第一篇接着读（不是只列出来）
+  await press('#btnPlay');
+  await sleep(500);
+  bn0 = (await state()).batchNo;
+  await press('#btnNext');
+  const mn = await waitFor(`(() => { const s = SVApp.state(); return (s.batchNo > ${bn0} && s.view === 'article' && s.reader === 'speaking') || (s.view === 'list' && s.reader === 'idle'); })()`, 60000, 100);
+  st = await state();
+  const nb2 = await evalJs(`window.__nb ? window.__nb.restarted : null`);
+  check('读的时候在这一批的最后一篇点「下一篇」：取下一批，打开第一篇接着读（文章都列过了时列出来、停下）', mn && (nb2 ? st.view === 'list' : st.view === 'article' && st.id === st.batch[0] && st.reader === 'speaking'), `restarted ${nb2}，${st.view} ${st.reader}`);
+  await evalJs(`window.__ms.stop && window.__ms.stop()`);
+  // 读的时候在最后一篇点「下一篇」、取不到下一批：停在刚才读到的地方（暂停），不是这一篇的开头；再按 ▶ 从那里接着读
+  await evalJs(`SV.sources.loadTopic = async () => ({ cands: [], failed: 4, total: 4, error: new Error('test') })`);
+  await lastCard();
+  await press('#btnPlay');
+  await waitFor(`SVApp.state().si >= 1 && SVApp.state().reader === 'speaking'`, 30000, 50);
+  await press('#btnNext');
+  const kf = await waitFor(`SVApp.state().reader === 'paused'`, 10000, 50);
+  st = await state();
+  const kfx = await evalJs(`({ toast: document.querySelector('#toast').textContent, word: document.querySelector('#article .w.current')?.textContent || '' })`);
+  check('读的时候在最后一篇点「下一篇」、取不到下一批：停在刚才读到的地方（暂停，不是开头），说一声', kf && st.view === 'article' && st.si >= 1 && !!kfx.word && /停在刚才读到的地方/.test(kfx.toast), `第 ${st.si} 句「${kfx.word}」 ${kfx.toast}`);
+  const keep = { si: st.si, wi: st.wi };
+  await press('#btnPlay');
+  await sleep(400);
+  st = await state();
+  check('再按 ▶：从那里接着读', st.reader === 'speaking' && st.si >= keep.si, `第 ${keep.si} 句 → 第 ${st.si} 句`);
+  // 取下一批的时候按暂停：也停在刚才读到的地方，取回来了也不列出来
+  await evalJs(`SV.sources.loadTopic = (...a) => new Promise((r) => setTimeout(() => r(window.__ltOrig(...a)), 4000))`);
+  bn0 = (await state()).batchNo;
+  id0 = (await state()).id;
+  await press('#btnNext');
+  await sleep(500);
+  const fetching = await state();
+  await evalJs('window.__ms.pause()');
+  await sleep(300);
+  const pz = await state();
+  await sleep(4500);
+  st = await state();
+  check('取下一批的时候按暂停：停在刚才读到的地方，取回来了也不列下一批', fetching.held && fetching.loading && pz.reader === 'paused' && pz.si >= keep.si && st.view === 'article' && st.id === id0 && st.batchNo === bn0 && st.reader === 'paused',
+    JSON.stringify({ held: fetching.held, loading: fetching.loading, si: pz.si, view: st.view, batchNo: st.batchNo }));
+  // 「下一篇」正在取下一批的时候点现在的话题按钮：和平常一样换一批（朗读停下，列出下一批），不是再列一遍这一批
+  const batch0 = (await state()).batch.join();
+  await press('#btnPlay');
+  await sleep(300);
+  await press('#btnNext');
+  await sleep(500);
+  const fetching2 = await state();
+  const chipA = await center('#topics .chip.active');
+  await tap(chipA.x, chipA.y);
+  const chipOk = await waitFor(`(() => { const s = SVApp.state(); return s.view === 'list' && !s.loading && s.batchNo === ${bn0 + 1}; })()`, 30000, 100);
+  st = await state();
+  check('「下一篇」正在取下一批时点现在的话题按钮：和平常一样换一批（朗读停下，列出下一批）', fetching2.loading && fetching2.held && chipOk && st.reader === 'idle' && !st.gap && st.batch.join() !== batch0,
+    JSON.stringify({ loading: fetching2.loading, view: st.view, batchNo: st.batchNo, reader: st.reader }));
+  await evalJs(`SV.sources.loadTopic = window.__ltOrig`);
+  // 接着读下一篇最多连着自动读 AUTO_NEXT_MAX 篇（测试里改成 2）：读者没碰页面就停下，说一声；按了键（或者点了）从头数；点 ▶ 接着读下一篇
+  await evalJs(`SVApp.setAutoNextMax(2); window.__ttsWordMs = 8`);
+  await openFirstCard(0);
+  const capIds = (await state()).batch;
+  await readLast();
+  const cap1 = await waitFor(`SVApp.state().id === ${JSON.stringify(capIds[1])} && SVApp.state().reader === 'speaking' && !SVApp.state().held`, 60000, 50);
+  const cnt1 = (await state()).autoCount;
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, nativeVirtualKeyCode: 16 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Shift', code: 'ShiftLeft', windowsVirtualKeyCode: 16, nativeVirtualKeyCode: 16 });
+  const cnt2 = (await state()).autoCount;
+  check('接着读下一篇：自动打开一篇数一篇，按了键就从头数', cap1 && cnt1 === 1 && cnt2 === 0, `${cnt1} → ${cnt2}`);
+  const capped = await waitFor(`SVApp.state().capNext && SVApp.state().reader === 'idle'`, 150000, 100);
+  st = await state();
+  const capToast = await evalJs(`document.querySelector('#toast').textContent`);
+  check('读者没碰页面，又连着自动读了 2 篇（AUTO_NEXT_MAX，测试里改小）：读完第 2 篇停下，说「已经连续读了 2 篇，停下了；点 ▶ 接着读」',
+    capped && st.id === capIds[3] && st.autoCount === 2 && /已经连续读了 2 篇，停下了；点 ▶ 接着读/.test(capToast) && (await evalJs('navigator.mediaSession.playbackState')) === 'none', `${st.title}；${capToast}`);
+  await shot('desktop-auto-next-cap');
+  await press('#btnPlay');
+  const capGo = await waitFor(`SVApp.state().id === ${JSON.stringify(capIds[4])} && SVApp.state().reader === 'speaking'`, 15000, 50);
+  st = await state();
+  check('停下以后点 ▶：接着读下一篇，从头数', capGo && st.autoCount === 0 && !st.capNext, JSON.stringify({ id: st.id === capIds[4], count: st.autoCount }));
+  await evalJs(`window.__ms.stop(); SVApp.setAutoNextMax(0); window.__ttsWordMs = 25`);
+
+  // ---- 循序渐进三连读 ----
+  await evalJs('window.__ttsWordMs = 8');
+  if ((await state()).view !== 'article') await openFirstCard(0);
+  // 读完以后换成「读完就停」（现在是接着读下一篇：点两下），语速换成三连读（现在是 0.8×：点三下）
+  await press('#btnAfter');
+  await press('#btnAfter');
+  for (let k = 0; k < 3; k++) await press('#btnRate');
+  st = await state();
+  check('三连读：语速按钮上是 0.8× 和台阶（第 1 遍），读完以后是「读完就停」', st.ramp && st.pass === 1 && st.rate === 0.8 && st.after === 'stop', JSON.stringify({ ramp: st.ramp, pass: st.pass, rate: st.rate, after: st.after }));
+  // 读一次三连读，记下每一遍：第几遍、语速（audio 真的用的播放速度）、从第几句开始、提示条、锁屏界面
+  async function rampRun(until, ms = 150000) {
+    const seen = [];
+    let last = '';
+    const t0 = Date.now();
+    while (Date.now() - t0 < ms) {
+      const x = await evalJs(`({ s: SVApp.state(), toast: document.querySelector('#toast').hidden ? '' : document.querySelector('#toast').textContent, steps: document.querySelector('#btnRate').dataset.pass })`);
+      const k = `${x.s.id}|${x.s.pass}|${x.s.reader}|${x.s.held}`;
+      if (k !== last) { seen.push({ id: x.s.id, pass: x.s.pass, reader: x.s.reader, held: x.s.held, gap: x.s.gap, rate: x.s.rate, si: x.s.si, toast: x.toast, steps: x.steps, artist: x.s.media && x.s.media.artist }); last = k; }
+      if (x.s.reader === 'speaking' && !x.s.held && seen.length) {
+        const cur = seen[seen.length - 1];
+        if (!cur.audioRate || Date.now() - t0 > 0) cur.audioRate = x.s.audioRate;
+      }
+      if (await evalJs(until)) break;
+      await sleep(80);
+    }
+    return seen;
+  }
+  const passes = (seen) => seen.filter((x) => x.reader === 'speaking' && !x.held).map((x) => `${x.pass}@${x.audioRate}`);
+  const idR = (await state()).id;
+  await press('#btnPlay');
+  const synthR0 = await evalJs('window.__ttsLog.length');
+  let seen = await rampRun(`SVApp.state().reader === 'idle'`);
+  const synthR = await evalJs(`window.__ttsLog.slice(${synthR0}).map((x) => x.text)`);
+  check('三连读 + 读完就停：读三遍，语速（audio 的播放速度）依次是 0.8、0.9、1，每遍之间停一下，读完就停',
+    passes(seen).join(' ') === '1@0.8 2@0.9 3@1' && seen.filter((x) => x.held && x.gap === 'pass').length === 2 && seen[seen.length - 1].reader === 'idle' && seen.every((x) => x.id === idR), JSON.stringify(seen.map((x) => [x.pass, x.reader, x.held, x.audioRate, x.gap])));
+  const p2R = seen.find((x) => x.pass === 2 && x.reader === 'speaking' && !x.held) || {};
+  check('三连读：第 2 遍开始时滚回开头、提示「第 2 遍：0.9×」，按钮上的台阶亮到第 2 级，锁屏界面写着「第 2/3 遍」', p2R.si <= 1 && /第 2 遍：0\.9×/.test(p2R.toast) && p2R.steps === '2' && /^第 2\/3 遍 0\.9×/.test(p2R.artist || ''), JSON.stringify(p2R));
+  check('三连读：第 2、3 遍不再合成（三遍只向 Azure 合成一次）', synthR.length === new Set(synthR).size, `合成 ${synthR.length} 段`);
+  // 两遍之间按暂停：不读下一遍；再按 ▶ 读下一遍（0.9×），从开头
+  await press('#btnPlay');
+  await waitFor(`SVApp.state().held && SVApp.state().gap === 'pass'`, 60000, 50);
+  await evalJs('window.__ms.pause()');
+  await sleep(2500);
+  st = await state();
+  check('三连读：两遍之间按暂停，不读下一遍（停在开头，下一遍是第 2 遍 0.9×）', st.reader === 'paused' && !st.held && st.pass === 2 && st.rate === 0.9 && st.si === 0, JSON.stringify({ reader: st.reader, pass: st.pass, rate: st.rate, si: st.si }));
+  await press('#btnPlay');
+  await sleep(600);
+  st = await state();
+  check('三连读：再按 ▶ 读第 2 遍，0.9×，从开头', st.reader === 'speaking' && st.pass === 2 && st.audioRate === 0.9 && st.si <= 2, JSON.stringify({ pass: st.pass, audioRate: st.audioRate, si: st.si }));
+  await shot('desktop-ramp-pass2');
+  // 读的时候点语速：马上换（离开三连读是 0.8×，接着读，不重新合成）；再点到三连读：现在读的算第 1 遍
+  const synthQ = await evalJs('window.__ttsLog.length');
+  await press('#btnRate');
+  await sleep(300);
+  st = await state();
+  check('三连读时读着点语速：离开三连读，0.8× 接着读，不重新合成', !st.ramp && st.rate === 0.8 && st.audioRate === 0.8 && st.reader === 'speaking' && (await evalJs('window.__ttsLog.length')) === synthQ, JSON.stringify({ ramp: st.ramp, rate: st.rate, audioRate: st.audioRate, reader: st.reader }));
+  // 再点到三连读（0.9× → 1× → 三连读）：从开头读、词放慢（重新合成），免得这篇文章正好在点的时候读完
+  await evalJs('window.__ms.stop(); SV.cloud.forget(); window.__ttsWordMs = 220');
+  await press('#btnPlay');
+  await waitFor(`SVApp.state().reader === 'speaking' && !!document.querySelector('#article .w.current')`, 8000);
+  for (let k = 0; k < 3; k++) await press('#btnRate');
+  await sleep(300);
+  st = await state();
+  check('读着点到三连读：现在读的算第 1 遍，0.8×', st.ramp && st.pass === 1 && st.audioRate === 0.8 && st.reader === 'speaking' && !st.held, JSON.stringify({ ramp: st.ramp, pass: st.pass, audioRate: st.audioRate, held: st.held }));
+  await evalJs('window.__ms.stop(); SV.cloud.forget(); window.__ttsWordMs = 8');
+  check('停止以后回到第 1 遍', (await state()).pass === 1 && (await state()).reader === 'idle');
+  // 三连读 + 本篇循环：三遍读完，三遍再来一次（第 1 遍 0.8×，还是这一篇）
+  await press('#btnAfter'); // 读完就停 → 接着读下一篇
+  await press('#btnAfter'); // → 本篇循环
+  await press('#btnPlay');
+  seen = await rampRun(`(() => { const s = SVApp.state(); const t = document.querySelector('#toast').textContent; return s.reader === 'speaking' && !s.held && s.pass === 1 && t.startsWith('本篇循环，三连读再来一次'); })()`);
+  check('三连读 + 本篇循环：三遍（0.8、0.9、1）读完，这一篇再来三连读，从第 1 遍 0.8× 开始',
+    passes(seen).join(' ').startsWith('1@0.8 2@0.9 3@1 1@') && seen[seen.length - 1].pass === 1 && seen[seen.length - 1].rate === 0.8 && seen.every((x) => x.id === idR), JSON.stringify(seen.map((x) => [x.pass, x.reader, x.held, x.audioRate])));
+  await evalJs('window.__ms.stop()');
+  // 三连读 + 接着读下一篇：三遍读完，打开下一篇，又从第 1 遍 0.8× 开始
+  await press('#btnAfter'); // 本篇循环 → 读完就停
+  await press('#btnAfter'); // → 接着读下一篇
+  await press('#btnPlay');
+  seen = await rampRun(`(() => { const s = SVApp.state(); return s.id !== ${JSON.stringify(idR)} && s.reader === 'speaking' && !s.held; })()`);
+  st = await state();
+  check('三连读 + 接着读下一篇：三遍读完，打开下一篇，从第 1 遍 0.8× 读起（提示里写着三连读第 1 遍）',
+    passes(seen).join(' ').startsWith('1@0.8 2@0.9 3@1') && st.id !== idR && st.pass === 1 && st.rate === 0.8 && st.reader === 'speaking' && /下一篇：.*三连读 第 1 遍/.test(await evalJs(`document.querySelector('#toast').textContent`)),
+    JSON.stringify(seen.map((x) => [x.pass, x.reader, x.held, x.audioRate])) + ' ' + st.title);
+  await shot('desktop-ramp-next');
+  // 三遍都读完、等着读下一篇的时候按暂停：不接着读，回到第 1 遍（再按 ▶ 从这一篇的开头读 0.8×，不读第四遍）
+  const idQ = (await state()).id;
+  const heldQ = await waitFor(`SVApp.state().held && SVApp.state().gap === 'next'`, 150000, 50);
+  await evalJs('window.__ms.pause()');
+  await sleep(2500);
+  st = await state();
+  check('三连读：三遍读完、等着读下一篇时按暂停，不接着读，回到第 1 遍（0.8×），不读第四遍', heldQ && st.reader === 'paused' && st.id === idQ && st.pass === 1 && st.rate === 0.8 && st.si === 0, JSON.stringify({ reader: st.reader, pass: st.pass, rate: st.rate, si: st.si }));
+  await press('#btnPlay');
+  const q0 = await state(); // 马上看一次读到哪里（一个词 8 毫秒，等久了已经读到后面去了）
+  await sleep(400);
+  st = await state();
+  check('再按 ▶：这一篇第 1 遍，0.8×，从开头读', st.reader === 'speaking' && st.id === idQ && st.pass === 1 && st.audioRate === 0.8 && q0.si <= 2, JSON.stringify({ pass: st.pass, audioRate: st.audioRate, si0: q0.si }));
+  // 下一篇（手动）：回到第 1 遍；回到列表也是
+  await evalJs('window.__ms.stop()');
+  await press('#btnRate'); // 三连读 → 0.8×
+  await press('#btnRate'); // → 0.9×
+  await press('#btnAfter'); // 接着读下一篇 → 本篇循环
+  await press('#btnAfter'); // → 读完就停
+  st = await state();
+  check('测试完换回 0.9×、读完就停', !st.ramp && st.rate === 0.9 && st.after === 'stop', JSON.stringify({ ramp: st.ramp, rate: st.rate, after: st.after }));
+  await evalJs('window.__ttsWordMs = 220');
 
   // ================= 6、7. 翻译：微软翻译、按这一句选词义（函数在文件后面） =================
   await translationChecks();

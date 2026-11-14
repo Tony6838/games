@@ -16,7 +16,9 @@
   // zh：话题按钮上的中文名；sv：瑞典文名，是话题按钮的瑞典文提示（每个按钮都有瑞典文提示）。
   // 关键词写法：普通词按词头匹配（regering 也匹配 regeringen、regeringsbildning），
   // 「=」开头的必须整词相同，「_」表示词组里的空格，「+」开头的算两倍分。都用小写。
-  // all：这些节目的文章不看关键词，全部属于这个话题。min：至少要几分才算（默认 3，见 score）。strict：不够分时不拿沾边的文章充数。core：「+」词至少要出现几次（标题里出现算两次）。
+  // all：这些节目的文章不看关键词，全部属于这个话题。min：至少要几分才算（默认 3，见 score）。
+  // strict：不够分时不拿沾边的文章充数；core：「+」词至少要出现几次（标题里出现算两次）。这两个现在没有话题用（用过它们的「电动车」2026-11-14 去掉了）。
+  // 手机上话题不是一排按钮，是标题旁边的下拉菜单（js/app.js 的 renderChips 用这同一张表做按钮和菜单）。
   // 简易瑞典语只是最后一个单独的话题，别的话题都用普通的新闻。
   const TOPICS = [
     { key: 'idag', zh: '今日要闻', sv: 'Dagens nyheter', feeds: [83, 5526, 1637, 5335], all: [83, 5526, 1637, 5335], kw: '' },
@@ -59,10 +61,6 @@
     {
       key: 'teknik', zh: '科技', sv: 'Teknik', feeds: [...G, 4090], all: [4090],
       kw: '=ai artificiell_intelligens teknik techbolag techjätte =app =appen =appar internet mobiltelefon =mobilen smartphone dator datacenter robot =chip =chipet chipjätte halvledar nvidia =apple google microsoft =meta tiktok spotify ericsson samsung openai chatgpt cyber hackare hackar it-attack it-säkerhet digital bredband =5g algoritm sociala_medier instagram facebook youtube =musk drönare satellit datorspel tv-spel',
-    },
-    {
-      key: 'elbilar', zh: '电动车', sv: 'Elbilar', feeds: [...G, 3345, 2778, 104, 109, 412], all: [], min: 5, strict: true, core: 2,
-      kw: '+elbil +elfordon +laddstolp +laddinfrastruktur +laddbox +snabbladd +laddplats +laddhybrid +tesla +polestar +=byd +xpeng +=nio +elbuss +ellastbil elektrifiering volvo_cars =volvo =batteri =batterier batterifabrik northvolt fossilfri bensin diesel drivmedel bilindustri biltillverkare bilförsäljning fordonsskatt vätgas',
     },
     {
       key: 'vetenskap', zh: '科学', sv: 'Vetenskap', feeds: [83, 412, 406, 3345], all: [412, 406],
@@ -305,7 +303,7 @@
     const k = item._tok;
     const ti = countHits(k.t, k.tj, topic.kws);
     const bo = countHits(k.b, k.bj, topic.kws);
-    // core：「+」词至少要出现几次（标题里的算两次）。电动车话题里只顺带提一句电动车的能源文章不算
+    // core：「+」词至少要出现几次（标题里的算两次），只顺带提一句的文章不算（现在没有话题用它）
     if (topic.core && 2 * ti.core + bo.core < topic.core) return s;
     return s + 3 * ti.hits + bo.hits;
   }
@@ -362,6 +360,19 @@
     SV.store.remove(READ_KEY);
     SV.session.remove(BATCH_KEY);
   }
+  // 去掉了的话题（「电动车」elbilar，2026-11-14）留下的「列过哪些」：打开网页时丢掉（SV.store 读写都包在 try/catch 里）
+  function pruneTopics() {
+    const keys = new Set(TOPICS.map((t) => t.key));
+    for (const [store, key] of [[SV.store, SHOWN_KEY], [SV.session, BATCH_KEY]]) {
+      const m = store.get(key, null);
+      if (!m || typeof m !== 'object') continue;
+      const gone = Object.keys(m).filter((k) => !keys.has(k));
+      if (!gone.length) continue;
+      for (const k of gone) delete m[k];
+      store.set(key, m);
+    }
+  }
+  pruneTopics();
 
   // again=false：打开话题时，这个标签页里已经有这个话题的一批（比如刚刷新过网页），就还给这一批。
   // again=true：再点一次话题，换下一批。
@@ -377,7 +388,9 @@
     }
     let shown = new Set(getShown(topic.key));
     let pool = sorted.filter((c) => !shown.has(c.item.id));
+    let restarted = false; // 都列过了，从最新的重新开始（接着读下一批时，朗读这时停下）
     if (!pool.length) {
+      restarted = true;
       shown = new Set();
       pool = sorted;
       notices.push('这个话题最近的文章都列过了，从最新的重新开始。');
@@ -391,7 +404,7 @@
     setShown(topic.key, [...shown, ...items.map((it) => it.id)]);
     batches[topic.key] = items.map((it) => it.id);
     SV.session.set(BATCH_KEY, batches);
-    return { items, notices, more: pool.length > items.length };
+    return { items, notices, more: pool.length > items.length, restarted };
   }
 
   SV.sources = { TOPICS, EASY, loadTopic, nextBatch, markRead, readSet, clearHistory, fetchFeed, parseFeed, cleanHtml, score, tokens };

@@ -5,7 +5,9 @@
      不在网页、也不在仓库里。没有设置 Worker 地址（js/config.js 的 ttsUrl）时，整个模块不用，只用本机的声音。
    - 用微软官方的 Speech SDK（固定版本，带完整性校验）合成一整段（一个段落一次），拿到 MP3 和每个词的音频时间，
      用普通的 <audio> 播放，按播放进度高亮正在读的词。所以 iPhone 上也能跟着高亮单词。
-   - 和本机朗读（js/speech.js 的 Reader）用同一套接口：play(si, wi)、pause、resume、toggle、stop、speakText、kick。
+   - 和本机朗读（js/speech.js 的 Reader）用同一套接口：play(si, wi)、pause、resume、toggle、stop、speakText、kick、hold。
+     整篇读完时问 hooks.onEnd()：app.js 要接着读下一篇（「读完以后」是「接着读下一篇」）就 hold()，等着它打开下一篇再 play(0, 0)，
+     中间 audio 一直循环播静音，锁屏时也接得上。
      暂停就是 audio.pause()；继续、「从这里读」在已经合成的这一段里直接跳到那个词，不再合成。
    - 合成过的段落按「声音 + 文字」放在内存里，读第二遍（循环朗读、继续、喇叭）不再花额度；换文章时 forget() 全部放掉。
      读的时候提前合成后面两段。
@@ -172,6 +174,7 @@
       this.clip = null; // { block, url, words: [{ t, si, wi }] }
       this.raf = 0;
       this.loops = 0; // 循环朗读从头读了几遍（给测试看）
+      this.held = false; // 整篇读完，等着 app.js 打开下一篇（hold）
       this.audio = new Audio();
       this.wordAudio = new Audio();
       this.audio.preload = 'auto';
@@ -259,9 +262,10 @@
     }
 
     // 下一段还没合成好时，在同一个 audio 上循环播一小段静音，保住「正在播放」：
-    // 手机锁屏、后台标签页里，停下来的 audio 之后可能不让再播
+    // 手机锁屏、后台标签页里，停下来的 audio 之后可能不让再播。已经在循环播静音时不动它（不重新加载、不再 play）
     bridge() {
       const a = this.audio;
+      if (a.loop && a.getAttribute('src') === SILENCE && !a.paused) return;
       try {
         a.loop = true;
         a.src = SILENCE;
@@ -276,6 +280,7 @@
       const sentences = this.h.sentences();
       if (!sentences.length) return;
       if (si >= sentences.length) { si = 0; wi = 0; }
+      this.held = false;
       const gen = ++this.gen;
       this.wordGen++;
       this.wordAudio.pause();
@@ -328,7 +333,7 @@
         if (gen !== this.gen) return;
         this.gen++;
         this.setState('paused');
-        this.h.onError(e && e.name === 'NotAllowedError' ? '浏览器不让自动播放，请再点一次「继续」' : '播放出错：' + ((e && e.message) || e));
+        this.h.onError(e && e.name === 'NotAllowedError' ? '浏览器不让自动播放，请再点一次蓝色的 ▶ 按钮' : '播放出错：' + ((e && e.message) || e));
         return;
       }
       if (gen !== this.gen && this.state !== 'speaking') a.pause();
@@ -368,7 +373,7 @@
       this.update();
     }
 
-    // 一段读完：接着读下一段；整篇读完时，开着循环朗读就从头再读，不然停下
+    // 一段读完：接着读下一段；整篇读完时，「本篇循环」就从头再读；「接着读下一篇」时等着 app.js 打开下一篇（hold）；不然停下
     onEnded() {
       if (this.state !== 'speaking' || !this.clip || this.audio.getAttribute('src') !== this.clip.url) return;
       const gen = this.gen;
@@ -377,7 +382,11 @@
       while (bi < blocks.length && !blocks[bi].sentences.length) bi++;
       if (bi >= blocks.length) {
         bi = this.h.loop && this.h.loop() ? this.firstBlock() : -1;
-        if (bi < 0) { this.finish(); return; }
+        if (bi < 0) {
+          if (this.h.onEnd && this.h.onEnd()) this.hold();
+          else this.finish();
+          return;
+        }
         this.loops++;
       }
       const si = blocks[bi].sentences[0];
@@ -395,8 +404,35 @@
       this.h.onFail(e);
     }
 
+    // 整篇读完、app.js 要接着读（三连读的下一遍；「读完以后」是「接着读下一篇」；读的时候在这一批最后一篇点了「下一篇」）：
+    // 状态还是「正在读」，同一个 audio 循环播静音，保住「正在播放」和锁屏界面（手机锁屏时停下来的 audio 之后可能不让再播，
+    // 页面也会被挂起）；app.js 打开下一篇（或者滚回开头）后调 play(0, 0)。
+    // 等的时候按暂停：不接着读，停在这一篇的开头（再点 ▶ 从头读；三连读时是下一遍，app.js 定）。
+    hold() {
+      this.gen++;
+      this.wordGen++;
+      this.held = true;
+      cancelAnimationFrame(this.raf);
+      this.wordAudio.pause();
+      this.clip = null;
+      this.si = 0;
+      this.wi = 0;
+      this.bridge();
+      this.h.onPosition(-1, -1, false);
+    }
+
     pause() {
       if (this.state !== 'speaking') return;
+      if (this.held) {
+        this.gen++;
+        this.held = false;
+        this.audio.loop = false;
+        this.audio.pause();
+        this.si = 0;
+        this.wi = 0;
+        this.setState('paused');
+        return;
+      }
       this.gen++;
       cancelAnimationFrame(this.raf);
       this.audio.loop = false;
@@ -421,6 +457,7 @@
 
     finish() {
       this.gen++;
+      this.held = false;
       cancelAnimationFrame(this.raf);
       this.si = 0;
       this.wi = 0;
@@ -431,6 +468,7 @@
     stop() {
       this.gen++;
       this.wordGen++;
+      this.held = false;
       cancelAnimationFrame(this.raf);
       this.audio.loop = false;
       this.audio.pause();

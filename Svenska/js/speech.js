@@ -2,7 +2,8 @@
    一次读一句（长句再按逗号切开）：
    - 每句开始时报告位置（页面滚到这一句，句子本身不标出来）；声音支持 boundary 事件的，再跟着标出正在读的词；
    - 一句读完在 onend 里接着读下一句（不用定时器，后台标签页里定时器会被放慢到一秒一次）；整篇读完时，
-     开着循环朗读（hooks.loop()）就从头再读；
+     「本篇循环」（hooks.loop()）就从头再读；app.js 要接着读（三连读的下一遍、下一篇：hooks.onEnd() 回 true）时 hold()，
+     状态还是「正在读」，等它调 play(0, 0)；
    - 页面藏起来时不停：电脑上切到别的标签页、窗口最小化，Chrome、Edge 接着读；手机锁屏时系统会停掉 speechSynthesis，
      回到前台时 kick() 从停下的词接着读（锁屏后继续读要用云端语音，它是普通的 audio）；
    - 暂停用 cancel() 而不是 pause()（安卓的 Chrome 不支持 pause），继续时从停下的那个词重新读；
@@ -95,6 +96,7 @@
       this.wordEvents = false; // 这个声音有没有给过词的 boundary 事件
       this.keep = null; // 保持对当前 utterance 的引用（Chrome 会提前回收，结果 onend 不来）
       this.loops = 0; // 循环朗读从头读了几遍（给测试看）
+      this.held = false; // 整篇读完，等着 app.js 接着读（hold）
     }
 
     available() { return !!synth; }
@@ -111,6 +113,7 @@
       const sentences = this.h.sentences();
       if (!sentences.length) return;
       if (si >= sentences.length) { si = 0; wi = 0; }
+      this.held = false;
       this.gen++;
       synth.cancel();
       this.si = si;
@@ -151,7 +154,11 @@
         this.si++;
         this.wi = 0;
         if (this.si >= this.h.sentences().length) {
-          if (!(this.h.loop && this.h.loop())) { this.finish(); return; }
+          if (!(this.h.loop && this.h.loop())) {
+            if (this.h.onEnd && this.h.onEnd()) this.hold();
+            else this.finish();
+            return;
+          }
           this.si = 0; // 循环朗读：从头再读这一篇
           this.loops++;
         }
@@ -162,14 +169,35 @@
         if (e.error === 'interrupted' || e.error === 'canceled') return;
         this.gen++;
         this.setState('paused');
-        this.h.onError(e.error === 'not-allowed' ? '浏览器不让自动朗读，请再点一次「继续」' : '朗读出错：' + (e.error || '未知原因'));
+        this.h.onError(e.error === 'not-allowed' ? '浏览器不让自动朗读，请再点一次蓝色的 ▶ 按钮' : '朗读出错：' + (e.error || '未知原因'));
       };
       this.keep = u;
       synth.speak(u);
     }
 
+    // app.js 要接着读（三连读的下一遍、下一篇）：状态还是「正在读」，等它调 play(0, 0)。
+    // 也可以在读的半路调（读的时候在这一批的最后一篇点「下一篇」、要先取下一批）：先停下正在读的这一句
+    hold() {
+      this.gen++;
+      this.held = true;
+      if (synth) synth.cancel();
+      this.si = 0;
+      this.wi = 0;
+      this.h.onPosition(-1, -1, false);
+    }
+
     pause() {
       if (this.state !== 'speaking') return;
+      // 等着接着读（hold）的时候暂停：不接着读，停在这一篇的开头；再点 ▶ 从头读（三连读时是下一遍，app.js 定）
+      if (this.held) {
+        this.gen++;
+        this.held = false;
+        synth.cancel();
+        this.si = 0;
+        this.wi = 0;
+        this.setState('paused');
+        return;
+      }
       this.gen++;
       synth.cancel();
       // 声音不报告词的位置时，只能从这一句开头重读
@@ -183,7 +211,7 @@
 
     // 页面回到前台：系统在后台停掉了朗读（手机锁屏等）的话，从停下的词接着读
     kick() {
-      if (this.state !== 'speaking' || !synth) return;
+      if (this.state !== 'speaking' || !synth || this.held) return;
       if (synth.paused) { synth.resume(); return; }
       if (!synth.speaking && !synth.pending) this.play(this.si, this.wi);
     }
@@ -196,6 +224,7 @@
 
     finish() {
       this.gen++;
+      this.held = false;
       this.si = 0;
       this.wi = 0;
       this.setState('idle');
@@ -204,6 +233,7 @@
 
     stop() {
       this.gen++;
+      this.held = false;
       if (synth) synth.cancel();
       this.si = 0;
       this.wi = 0;

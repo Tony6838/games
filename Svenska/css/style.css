@@ -106,7 +106,7 @@ kbd {
 
 /* ---------- 话题和朗读按钮：一起粘在顶上 ---------- */
 /* 电脑上话题按钮和朗读按钮排在一行里自动折行，朗读按钮组紧跟在最后一个话题「简易瑞典语」后面；
-   手机上话题一行横着滑，朗读按钮另起一行。 */
+   手机上话题按钮不显示（话题在标题旁边的下拉菜单里），粘在顶上的只有朗读按钮一行。 */
 .topbar {
   position: sticky; top: 0; z-index: 5;
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
@@ -268,10 +268,11 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 .popup .eng { margin-top: 6px; font-size: 11px; color: var(--muted); }
 
 /* ---------- 朗读按钮组：立体的按键样子，和扁平的话题按钮区分开 ---------- */
+/* 按钮上只有图标（Tony 定的，2026-11-14，给文章多留地方），说明在提示和 aria-label 里。宽度固定，换状态时不跳 */
 .player { display: flex; align-items: center; gap: 8px; flex: none; margin-left: 10px; }
 .player button {
-  height: 40px; min-width: 0; padding: 0 14px;
-  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 40px; min-width: 48px; padding: 0 10px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
   font-size: 15px; white-space: nowrap;
   border-radius: 9px; border: 1px solid var(--key-edge); border-bottom-width: 4px;
   background: linear-gradient(180deg, var(--key-top), var(--key-bottom));
@@ -279,14 +280,28 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
   transition: transform .06s, box-shadow .06s, border-bottom-width .06s;
 }
 .player button:hover:not(:disabled) { filter: brightness(1.04); }
-/* 按下去的样子；开关按钮（「循环」）开着时一直是按下去的样子，字是主题色 */
+/* 按下去的样子；「读完以后」不是「读完就停」时一直是按下去的样子，图标是主题色 */
 .player button:active:not(:disabled), .player button.on {
   transform: translateY(2px); border-bottom-width: 2px;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, .18);
 }
 .player button.on { color: var(--accent); }
 .player button b { font-size: 16px; display: inline-flex; align-items: center; }
-.player button svg { width: 20px; height: 20px; }
+.player button svg { width: 22px; height: 22px; flex: none; }
+.player .play { min-width: 56px; }
+/* 语速：宽度放得下「0.9×」和三连读的台阶；三连读时字和台阶是主题色，亮到第几级就是第几遍 */
+.player .rate { min-width: 70px; }
+.player .rate .steps { display: none; width: 11px; height: 11px; }
+.player .rate.ramp { color: var(--accent); }
+.player .rate.ramp .steps { display: block; }
+.player .rate .steps rect { fill: currentColor; opacity: .28; }
+.player .rate[data-pass="1"] .s1,
+.player .rate[data-pass="2"] .s1, .player .rate[data-pass="2"] .s2,
+.player .rate[data-pass="3"] rect { opacity: 1; }
+/* 读完以后：三个图标，只显示现在这一种；读完就停是灰色的（像音乐播放器关着的「重复」） */
+.player .after svg { display: none; }
+.player .after[data-mode="stop"] .i-stop, .player .after[data-mode="next"] .i-next, .player .after[data-mode="loop"] .i-loop { display: block; }
+.player .after[data-mode="stop"] { color: var(--muted); }
 .player .play {
   color: #fff; font-weight: 700; border-color: #08427e;
   background: linear-gradient(180deg, #3d8be0, #0b5cad); box-shadow: 0 2px 4px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255, 255, 255, .35);
@@ -294,7 +309,7 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 body.speaking .player .play { transform: translateY(2px); border-bottom-width: 2px; box-shadow: inset 0 2px 5px rgba(0, 0, 0, .35); }
 .player .play .i-pause { display: none; }
 body.speaking .player .play .i-play { display: none; }
-body.speaking .player .play .i-pause { display: inline; }
+body.speaking .player .play .i-pause { display: block; }
 
 /* ---------- 提示 ---------- */
 .toast {
@@ -327,11 +342,12 @@ dialog:not([open]) { display: none; } /* 老的 Safari（iOS 15.4 以前）不�
 .dlg h3 { margin: 14px 0 6px; font-size: 16px; }
 .dlg section + section { border-top: 1px solid var(--line); margin-top: 12px; }
 .dlg .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.dlg select { flex: 1 1 220px; min-width: 0; max-width: 100%; height: 40px; font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 0 6px; }
+.dlg select { flex: 1 1 220px; min-width: 0; max-width: 100%; height: 40px; font: inherit; font-size: 16px; /* 小于 16 像素 iPhone 会放大页面 */ border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 0 6px; }
 .dlg input[type="range"] { flex: 1 1 160px; }
 .dlg .row button, .dlg section > button { height: 40px; padding: 0 14px; }
 .dlg .check { display: flex; gap: 8px; align-items: flex-start; }
 .dlg .engine { margin: 2px 0 10px; }
+.dlg .rates { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 2px 0; }
 .dlg .engine .check { margin: 4px 0; }
 .dlg .check input { margin-top: 5px; }
 .dlg .note { color: var(--muted); font-size: 14px; margin: 6px 0; }
@@ -341,37 +357,68 @@ dialog:not([open]) { display: none; } /* 老的 Safari（iOS 15.4 以前）不�
 .dlg-actions button { height: 42px; padding: 0 18px; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 
+/* 手机上的话题：标题旁边的下拉菜单（系统自己的选择器）。电脑、平板上不显示，用话题按钮 */
+.topic-sel { display: none; }
+/* 只在电脑、平板上（wide-only）或只在手机上（narrow-only）显示的说明文字 */
+.narrow-only { display: none; }
+
 /* ---------- 窄屏（手机竖着） ---------- */
 @media (max-width: 760px) {
+  .wide-only { display: none; }
+  .narrow-only { display: inline; }
   .tagline { display: none; }
-  .brand-row { gap: 6px 10px; }
+  /* 顶栏一行：标题、话题菜单（列表页）或「← 列表」（文章页），工具按钮靠右（375–430 像素宽都放得下）；
+     放不下时换行，不会横向溢出（320 像素宽时话题菜单自己一行，见下面） */
+  .top { justify-content: flex-start; gap: 6px; padding-top: 8px; }
+  .brand-row { display: contents; }
+  .brand { font-size: 18px; letter-spacing: .5px; }
   .brand-row .back-btn { height: 36px; padding: 0 10px; font-size: 14px; }
   .brand-row .back-btn .long { display: none; }
   .brand-row .back-btn .short { display: inline; }
+  .tools { margin-left: auto; gap: 4px; }
+  .icon-btn { min-width: 34px; height: 36px; padding: 0 4px; }
   .guide { left: 12px; }
+  /* 宽度固定（换话题时不跳），长的名字（简易瑞典语）末尾是省略号 */
+  .topic-sel {
+    /* 16 像素：iPhone 的 Safari 碰到小于 16 像素的输入框、菜单会把页面放大（还不缩回去） */
+    display: block; flex: none; width: 5.9em; min-width: 0; height: 36px; padding: 0 16px 0 8px;
+    font: inherit; font-size: 16px; font-weight: 600; color: var(--accent);
+    border: 1px solid var(--accent); border-radius: 999px; background-color: var(--accent-soft);
+    /* 小三角（两个渐变拼的，跟着主题色变，日间、夜间都看得清） */
+    background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
+    background-position: calc(100% - 12px) 55%, calc(100% - 7px) 55%;
+    background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
+    -webkit-appearance: none; appearance: none; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; cursor: pointer;
+  }
+  .topic-sel option { color: var(--ink); background: var(--card); font-weight: 400; }
+  /* 文章页上不显示话题菜单（标题、「← 列表」和工具按钮一行放不下它），回到列表再选 */
+  body[data-view="article"] .topic-sel { display: none; }
+  /* 话题按钮那一行没有了（话题在标题旁边的菜单里），粘在顶上的只剩朗读按钮 */
+  .topics { display: none; }
+  .topbar { padding-top: 6px; padding-bottom: 8px; }
+  /* 手机上五个按钮平分一行，高 40 像素（以前图标下面有字，48 像素） */
+  .player { flex: 1 1 auto; margin-left: 0; gap: 6px; }
+  .player button, .player .play, .player .rate { flex: 1 1 0; min-width: 0; height: 40px; padding: 0 2px; }
+  .player .rate .steps { width: 10px; height: 10px; }
   .list-head h2 { font-size: 19px; }
   .card { padding: 12px 14px; }
   .card .c-title { font-size: calc(17px * var(--scale)); }
   .card .c-first { font-size: calc(15px * var(--scale)); -webkit-line-clamp: 2; }
-  .brand { font-size: 19px; }
-  .top { padding-top: 8px; }
-  .icon-btn { min-width: 36px; height: 36px; padding: 0 6px; }
-  .topbar { flex-direction: column; align-items: stretch; flex-wrap: nowrap; gap: 6px; padding-top: 6px; padding-bottom: 8px; }
-  .topics { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
-  .topics::-webkit-scrollbar { display: none; }
-  .chip { height: 36px; padding: 0 13px; font-size: 15px; }
-  .player { margin-left: 0; gap: 6px; }
-  .player button { flex: 1 1 0; flex-direction: column; gap: 0; height: 48px; font-size: 12px; padding: 0 2px; }
-  .player button b { font-size: 15px; line-height: 1.15; }
-  .player button svg { width: 18px; height: 18px; }
   .popup { font-size: 15px; }
 }
-@media (max-width: 360px) {
-  .tools { gap: 4px; }
+/* 375 像素宽（iPhone SE、mini）：标题、话题菜单和工具按钮再挤一点，还是一行 */
+@media (max-width: 389px) {
+  .brand { letter-spacing: 0; }
+  .tools { gap: 3px; }
+  .icon-btn { min-width: 33px; }
 }
-.safari-hint { margin: 4px 0 0; font-family: var(--ui-font); font-size: 14px; color: var(--muted); }
+/* 很窄的手机（320 像素宽）：标题、「← 列表」和工具按钮挤一挤放在一行，话题菜单换到下一行 */
+@media (max-width: 359px) {
+  .top { gap: 6px; }
+  .brand { font-size: 16px; letter-spacing: 0; }
+  .brand-row .back-btn { padding: 0 8px; }
+  .tools { gap: 3px; }
+  .icon-btn { min-width: 31px; padding: 0 3px; }
+  .topic-sel { order: 5; }
+}
 .popup .on-btn { margin-top: 6px; height: 34px; padding: 0 12px; font-size: 14px; }
-/* 「整篇翻译：……」只在没有浏览器内置翻译时显示（app.js 给 body 加 no-builtin） */
-.page-tr-hint { display: none; }
-body.no-builtin .page-tr-hint { display: block; }
-.list .page-tr-hint { margin: -6px 0 12px; }

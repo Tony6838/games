@@ -1,8 +1,9 @@
 // 用 Playwright 的 WebKit（Safari 的引擎，Windows 上也能跑）检查 Safari / iPhone / iPad 上的用法，
 // 重点：没有「全文翻译」按钮，没有浏览器内置翻译时提示浏览器自己的整页翻译；查词和本句译文走 MyMemory；
-// 「循环」开关（记住、浏览器不让存时照样能用）；微软翻译（假的 /translate）和按这一句选词义的下划线在 WebKit 里的样子。
+// 「读完以后」按钮（读完就停 / 接着读下一篇 / 本篇循环：记住、浏览器不让存时照样能用、旧版本的「循环」开关改过来）；
+// 语速按钮（只有 0.8×、0.9×、1× 和三连读，旧版本的别的语速改成最近的一档）；微软翻译（假的 /translate）和按这一句选词义的下划线在 WebKit 里的样子。
 // 微软翻译默认当作连不上（假的 /translate 让请求失败），别的检查照旧走 MyMemory。
-// 最后在 Playwright 的 Firefox 里也看一下（没装就跳过），包括云端语音（假的 SDK）的后台朗读、循环朗读和锁屏界面的动作。
+// 最后在 Playwright 的 Firefox 里也看一下（没装就跳过），包括云端语音（假的 SDK）的后台朗读、本篇循环、页面藏着时接着读下一篇和锁屏界面的动作。
 //   node tests/webkit_check.mjs <截图目录> [网址] [real]
 // 不给网址时，自己在本机起静态服务器。MyMemory 默认由测试代答（不占真实额度）；最后加 real 时，
 // 「真实翻译」那一项真的去问 MyMemory（一个词和一句话，很少的额度）。
@@ -117,14 +118,24 @@ const seen = (page) => page.evaluate(() => ({
 // 「全文翻译」按钮还在不在（应当没有）；看得见的「整篇翻译：……」提示
 const trState = (page, where) => page.evaluate((w) => ({
   btn: !!document.querySelector('#btnTranslate'),
-  hint: [...document.querySelectorAll(w + ' .page-tr-hint')].filter((x) => x.offsetParent).map((x) => x.textContent).join(''),
+  hint: [...document.querySelectorAll(w + ' .page-tr-hint, ' + w + ' .safari-hint')].length + /整篇翻译：/.test(document.querySelector(w).textContent),
+  help: document.querySelector('#helpTrHint').textContent, // 说明框「?」的整篇翻译里，这个浏览器的办法（认不出的浏览器是空的）
+  others: document.querySelector('#helpTrOthers').textContent, // 后面列各个浏览器的办法：「别的浏览器：」或者「比如：」
 }), where);
-// 「循环」按钮的样子和存下来的设置
-const loopState = (page) => page.evaluate(() => {
-  const b = document.querySelector('#btnLoop');
+// 「读完以后」按钮（读完就停 / 接着读下一篇 / 本篇循环）的样子和存下来的设置
+const afterState = (page) => page.evaluate(() => {
+  const b = document.querySelector('#btnAfter');
   let stored = null;
-  try { stored = JSON.parse(localStorage.getItem('sv.settings.v1')).loop; } catch (e) { stored = 'blocked'; }
-  return { exists: !!b, sv: b && b.dataset.sv, pressed: b && b.getAttribute('aria-pressed'), loop: SVApp.state().settings.loop, stored };
+  try { stored = JSON.parse(localStorage.getItem('sv.settings.v1')).after; } catch (e) { stored = 'blocked'; }
+  return { exists: !!b, sv: b && b.dataset.sv, pressed: b && (b.classList.contains('on') ? 'on' : 'off') + (b.hasAttribute('aria-pressed') ? '+aria-pressed' : ''), label: b && b.getAttribute('aria-label'), mode: b && b.dataset.mode,
+    icon: b ? [...b.querySelectorAll('svg')].filter((s) => getComputedStyle(s).display !== 'none').map((s) => s.getAttribute('class')).join() : '', after: SVApp.state().settings.after, stored };
+});
+// 语速按钮：上面的字、三连读的台阶、读屏软件听到的
+const rateState = (page) => page.evaluate(() => {
+  const b = document.querySelector('#btnRate');
+  const steps = b.querySelector('.steps');
+  return { face: b.querySelector('b').textContent, steps: getComputedStyle(steps).display !== 'none', pass: b.dataset.pass, label: b.getAttribute('aria-label'), sv: b.dataset.sv,
+    rate: SVApp.state().settings.rate, ramp: SVApp.state().settings.ramp, clipped: b.scrollWidth > b.clientWidth + 1 };
 });
 const layout = (page) => page.evaluate(() => {
   const de = document.documentElement;
@@ -143,13 +154,13 @@ try {
   check('在线翻译（查词用）默认开着', (await seen(page)).s.settings.online === true);
   await page.waitForFunction(() => document.body.classList.contains('no-builtin'), null, { timeout: 5000 }).catch(() => {});
   let tr = await trState(page, '#list');
-  check('没有「全文翻译」按钮，列表上提示 Safari 的「aA → 翻译成中文」', !tr.btn && /点地址栏「aA → 翻译成中文」/.test(tr.hint), JSON.stringify(tr));
+  check('没有「全文翻译」按钮，列表上不提示整页翻译，说明框里写着 Safari 的「aA → 翻译成中文」', !tr.btn && !tr.hint && tr.help === '你现在用的浏览器：点地址栏「aA → 翻译成中文」。', JSON.stringify(tr));
   let lay = await layout(page);
   check('iPhone 上列表不横向溢出、朗读按钮在屏幕内', lay.scrollW <= lay.vw && lay.playerFits, JSON.stringify(lay));
   await shot(page, 'iphone-list');
   check('iPhone 上点一篇打开文章', await openArticle(page));
   tr = await trState(page, '#article');
-  check('文章页上也有这行提示', !tr.btn && /aA → 翻译成中文/.test(tr.hint), tr.hint);
+  check('文章页上也不提示（在说明框里）', !tr.btn && !tr.hint, JSON.stringify(tr));
   const hdr = await page.evaluate(() => {
     const b = document.querySelector('#btnBack'), br = document.querySelector('#brand'), t = document.querySelector('.tools');
     const rb = b.getBoundingClientRect(), rr = br.getBoundingClientRect(), rt = t.getBoundingClientRect();
@@ -162,9 +173,11 @@ try {
   const g = await page.evaluate(() => { const g = document.querySelector('#guide'); if (g.hidden) return null; const r = g.getBoundingClientRect(); return { on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight, lines: g.querySelectorAll('li').length }; });
   check('iPhone 上点标题打开「怎么用」，在屏幕内', g && g.on && g.lines >= 4, JSON.stringify(g));
   await shot(page, 'iphone-guide');
-  await touch(page, '#article .meta');
+  // 点「怎么用」外面（正文左边的空白，不是词）：关上。手机上话题不再占一行，文章开头那一行现在被「怎么用」盖着
+  const outW = await page.evaluate(() => { const g = document.querySelector('#guide').getBoundingClientRect(); return { x: 6, y: Math.round(Math.min(innerHeight - 30, g.bottom + 30)) }; });
+  await page.touchscreen.tap(outW.x, outW.y);
   await page.waitForTimeout(300);
-  check('iPhone 上点别处关上「怎么用」', await page.evaluate(() => document.querySelector('#guide').hidden));
+  check('iPhone 上点别处关上「怎么用」', await page.evaluate(() => document.querySelector('#guide').hidden), JSON.stringify(outW));
   await touch(page, '#article .body .w', 2);
   await page.waitForTimeout(800);
   const pop = await page.evaluate(() => { const p = document.querySelector('#popup'); if (p.hidden) return null; const r = p.getBoundingClientRect(); return { word: p.querySelector('.pw b').textContent, text: (p.querySelector('.gl')?.textContent || '') + (p.querySelector('.mt')?.textContent || ''), on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.top >= 0 && r.bottom <= innerHeight }; });
@@ -190,33 +203,55 @@ try {
   ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok, [], null, devices['iPhone 13'].userAgent.replace('Version/', 'CriOS/157.0.0.0 Version/')));
   await page.waitForFunction(() => document.body.classList.contains('no-builtin'), null, { timeout: 5000 }).catch(() => {});
   tr = await trState(page, '#list');
-  check('iPhone 上的 Chrome：没有按钮，提示用浏览器自带的翻译', !tr.btn && /用浏览器自带的翻译功能/.test(tr.hint), tr.hint);
+  check('iPhone 上的 Chrome（认不出它的办法）：没有按钮，列表上不提示，说明框里不说「你现在用的浏览器」，只列各个浏览器的办法', !tr.btn && !tr.hint && tr.help === '' && tr.others === '比如：', JSON.stringify(tr));
   await ctx.close();
 
-  // ---------- 循环朗读的开关：瑞典文提示、按下去的样子、浏览器记住；浏览器不让存时照样能用 ----------
+  // ---------- 「读完以后」按钮（读完就停 → 接着读下一篇 → 本篇循环）、语速按钮（0.8× → 0.9× → 1× → 三连读）：
+  // 瑞典文提示、读屏软件听到的、图标、浏览器记住；浏览器不让存时照样能用
   // （Windows 上的 WebKit 不能播音频，也没有 Media Session，所以朗读本身在这里试不了，在下面的 Firefox 里试）
-  console.log('\n== 循环朗读的开关');
+  console.log('\n== 「读完以后」和语速按钮');
   ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok));
-  let lp = await loopState(page);
-  check('iPhone 上有「循环」按钮，瑞典文提示 Upprepa，默认关着', lp.exists && lp.sv === 'Upprepa' && lp.pressed === 'false' && lp.loop === false, JSON.stringify(lp));
-  await touch(page, '#btnLoop');
+  let lp = await afterState(page);
+  check('iPhone 上有「读完以后」按钮，默认「读完就停」（灰色的重复图标，瑞典文提示 Stoppa efter artikeln）',
+    lp.exists && lp.mode === 'stop' && lp.icon === 'i-stop' && lp.sv === 'Stoppa efter artikeln' && lp.pressed === 'off' && lp.label === '读完以后：读完就停' && lp.after === 'stop', JSON.stringify(lp));
+  await touch(page, '#btnAfter');
   await page.waitForTimeout(200);
-  lp = await loopState(page);
-  check('点「循环」：开着（瑞典文提示 Upprepa: på），存进了浏览器', lp.pressed === 'true' && lp.sv === 'Upprepa: på' && lp.stored === true, JSON.stringify(lp));
+  lp = await afterState(page);
+  check('点一下：接着读下一篇（瑞典文提示 Fortsätt med nästa artikel），存进了浏览器',
+    lp.mode === 'next' && lp.icon === 'i-next' && lp.pressed === 'on' && lp.sv === 'Fortsätt med nästa artikel' && lp.label === '读完以后：接着读下一篇' && lp.stored === 'next', JSON.stringify(lp));
+  await touch(page, '#btnAfter');
+  await page.waitForTimeout(200);
+  lp = await afterState(page);
+  check('再点一下：本篇循环（重复图标里有个 1，瑞典文提示 Upprepa artikeln）', lp.mode === 'loop' && lp.icon === 'i-loop' && lp.sv === 'Upprepa artikeln' && lp.stored === 'loop', JSON.stringify(lp));
   await page.reload();
   await page.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 });
-  lp = await loopState(page);
-  check('重新打开网页，「循环」还开着', lp.pressed === 'true' && lp.loop === true, JSON.stringify(lp));
+  lp = await afterState(page);
+  check('重新打开网页，还是「本篇循环」', lp.mode === 'loop' && lp.pressed === 'on' && lp.after === 'loop', JSON.stringify(lp));
+  await shot(page, 'iphone-after-loop');
+  await touch(page, '#btnAfter');
+  await page.waitForTimeout(200);
+  check('再点一下：回到「读完就停」', (await afterState(page)).mode === 'stop');
+  // 语速：默认 0.9×，点：1× → 三连读（0.8× 和台阶）→ 0.8× → 0.9×
+  let rs = await rateState(page);
+  check('语速默认 0.9×（读屏软件听到「语速 0.9×」）', rs.face === '0.9×' && !rs.steps && rs.label === '语速 0.9×' && /^Talhastighet 0,9×$/.test(rs.sv), JSON.stringify(rs));
+  const faces = [];
+  for (let k = 0; k < 4; k++) {
+    await touch(page, '#btnRate');
+    await page.waitForTimeout(150);
+    rs = await rateState(page);
+    faces.push(rs.face + (rs.steps ? '+台阶' + rs.pass : '') + (rs.clipped ? '（截字）' : ''));
+    if (rs.ramp) await shot(page, 'iphone-rate-ramp');
+  }
+  check('语速按钮只有四种：1× → 三连读（0.8× 和台阶，第 1 遍）→ 0.8× → 0.9×，不截字', faces.join(' ') === '1× 0.8×+台阶1 0.8× 0.9×', faces.join(' '));
   const lay5 = await layout(page);
   check('iPhone 上五个朗读按钮都在屏幕内', lay5.playerFits, JSON.stringify(lay5));
-  await shot(page, 'iphone-loop-on');
   await ctx.close();
   ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok, [], null, '', true));
   check('浏览器不让存的时候，页面照常列出文章', ok);
-  await touch(page, '#btnLoop');
+  await touch(page, '#btnAfter');
   await page.waitForTimeout(200);
-  lp = await loopState(page);
-  check('浏览器不让存的时候，「循环」照样能开（只在这次打开的页面里有效）', lp.pressed === 'true' && lp.loop === true && lp.stored === 'blocked', JSON.stringify(lp));
+  lp = await afterState(page);
+  check('浏览器不让存的时候，「读完以后」照样能换（只在这次打开的页面里有效）', lp.mode === 'next' && lp.after === 'next' && lp.stored === 'blocked', JSON.stringify(lp));
   await ctx.close();
 
   // ---------- 旧版本留下的「关」：改回默认一次 ----------
@@ -231,6 +266,14 @@ try {
   let pv = await page.evaluate(() => document.querySelector('#popup .mt')?.textContent || '');
   check('迁移后点词直接用在线翻译', /【译】/.test(pv), pv);
   await ctx.close();
+  // 旧版本的「循环」开关和别的语速：「循环」开着 → 本篇循环；语速只剩 0.8、0.9、1，别的改成最近的一档
+  for (const [preset, wantAfter, wantRate] of [[{ v: 3, loop: true, rate: 0.7, topic: 'idag' }, 'loop', 0.8], [{ v: 3, loop: false, rate: 1.25, topic: 'idag' }, 'stop', 1], [{ v: 3, rate: 1.1, topic: 'idag' }, 'stop', 1], [{ v: 3, rate: 0.6, topic: 'idag' }, 'stop', 0.8]]) {
+    ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok, [], preset));
+    const m = await page.evaluate(() => { let st = null; try { st = JSON.parse(localStorage.getItem('sv.settings.v1')); } catch (e) { /* 忽略 */ } return { after: SVApp.state().settings.after, rate: SVApp.state().settings.rate, mode: document.querySelector('#btnAfter').dataset.mode, face: document.querySelector('#btnRate b').textContent, storedLoop: st && 'loop' in st, storedAfter: st && st.after, storedRate: st && st.rate }; });
+    check(`旧设置 ${JSON.stringify(preset)}：读完以后是「${wantAfter}」，语速 ${wantRate}×（存回去也是）`,
+      m.after === wantAfter && m.mode === wantAfter && m.rate === wantRate && m.face === wantRate + '×' && m.storedAfter === wantAfter && m.storedRate === wantRate && !m.storedLoop, JSON.stringify(m));
+    await ctx.close();
+  }
 
   // ---------- 这个版本以后在「设置」里关掉的：保留，并且有「打开在线翻译」 ----------
   console.log('\n== 在「设置」里关掉在线翻译以后');
@@ -350,7 +393,7 @@ try {
     lay = await layout(page);
     check(`${device} 上不横向溢出、朗读按钮在屏幕内`, lay.scrollW <= lay.vw && lay.playerFits, JSON.stringify(lay));
     tr = await trState(page, '#list');
-    check(`${device}：没有「全文翻译」按钮，提示「aA → 翻译成中文」`, !tr.btn && /aA → 翻译成中文/.test(tr.hint), tr.hint);
+    check(`${device}：没有「全文翻译」按钮，列表上不提示，说明框里是「aA → 翻译成中文」`, !tr.btn && !tr.hint && /aA → 翻译成中文/.test(tr.help), JSON.stringify(tr));
     await openArticle(page);
     await shot(page, device.replace(/\W+/g, '-') + '-article');
     await ctx.close();
@@ -391,7 +434,7 @@ try {
     await fpage.waitForFunction(() => document.body.classList.contains('no-builtin') || typeof self.Translator !== 'undefined', null, { timeout: 5000 }).catch(() => {});
     tr = await trState(fpage, '#list');
     const hasApi = await fpage.evaluate(() => typeof self.Translator !== 'undefined');
-    check('Firefox：没有「全文翻译」按钮，没有内置翻译时提示「用地址栏的翻译图标」', !tr.btn && (hasApi || /用地址栏的翻译图标/.test(tr.hint)), JSON.stringify({ hasApi, ...tr }));
+    check('Firefox：没有「全文翻译」按钮，列表上不提示，说明框里是「用地址栏的翻译图标」', !tr.btn && !tr.hint && /用地址栏的翻译图标/.test(tr.help), JSON.stringify({ hasApi, ...tr }));
     await fpage.locator('#list .card').first().click();
     await fpage.waitForFunction(() => SVApp.state().view === 'article' && SVApp.state().sentences > 0, null, { timeout: 10000 });
     const fidx = await fpage.evaluate(() => [...document.querySelectorAll('#article .body .w')].findIndex((w) => w.textContent.length > 6 && !SV.glossary.lookup(w.textContent)));
@@ -447,7 +490,8 @@ try {
     check('Firefox：回到前台时，标记就在正在读的词上', fBack.reader === 'speaking' && fBack.onWord, JSON.stringify(fBack));
     // 循环朗读：从最后一段读起，读完从头再读，重读时不再合成
     await cpage.evaluate(() => { window.__ttsWordMs = 25; });
-    await cpage.locator('#btnLoop').click();
+    await cpage.locator('#btnAfter').click(); // 读完就停 → 接着读下一篇
+    await cpage.locator('#btnAfter').click(); // → 本篇循环
     const fLast = await cpage.evaluate(() => { const ps = [...document.querySelectorAll('#article .body p, #article .body li')].filter((p) => p.querySelector('.w')); return [...document.querySelectorAll('#article .body .w')].indexOf(ps[ps.length - 1].querySelector('.w')); });
     // 先暂停再点最后一段的词：一个词 25 毫秒时，读着的页面一直在往回滚到正在读的词，
     // 滚到最后一段和点下去之间要是正好开始往回滚，点完词页面还在滚，那个词滚出屏幕，弹出框就关了
@@ -463,6 +507,23 @@ try {
     await cpage.waitForTimeout(300);
     check('Firefox：锁屏界面的「暂停」停下循环朗读', (await fst()).reader === 'paused' && (await cpage.evaluate(() => navigator.mediaSession.playbackState)) === 'paused');
     await cpage.screenshot({ path: join(outDir, String(++shotNo).padStart(2, '0') + '-firefox-loop-paused.png') });
+    // 接着读下一篇，页面藏着（模拟）：读完停一下，打开列表里的下一篇接着读，锁屏界面换成新的标题
+    await cpage.locator('#btnAfter').click(); // 本篇循环 → 读完就停
+    await cpage.locator('#btnAfter').click(); // → 接着读下一篇
+    const fId0 = (await fst()).id;
+    await cpage.locator('#article .body .w').nth(fLast).click();
+    await cpage.waitForTimeout(300);
+    await cpage.locator('#popup .acts button', { hasText: '从这里读' }).click();
+    await cpage.evaluate(() => {
+      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    const fNext = await cpage.waitForFunction((id0) => { const s = SVApp.state(); return s.id !== id0 && s.id === s.batch[s.batch.indexOf(id0) + 1] && s.reader === 'speaking' && !s.held; }, fId0, { timeout: 60000, polling: 200 }).then(() => true, () => false);
+    const fN = await cpage.evaluate(() => ({ s: SVApp.state(), meta: navigator.mediaSession.metadata ? navigator.mediaSession.metadata.title : '' }));
+    check('Firefox：「接着读下一篇」，页面藏着（模拟）时读完打开下一篇接着读，锁屏界面换成新的标题', fNext && fN.meta === fN.s.title, `${fN.s.reader} ${fN.s.title}`);
+    await cpage.evaluate(() => { delete document.hidden; delete document.visibilityState; document.dispatchEvent(new Event('visibilitychange')); });
+    await cpage.evaluate(() => window.__ms.pause());
     await cctx.close();
     await ff.close();
   }
