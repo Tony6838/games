@@ -626,6 +626,12 @@ async function languageChecks() {
   console.log('\n== 9. 国旗：瑞典语 ↔ 英语；英语版（英文的源、美国口音的云端声音、英译中、分开存）');
   check('9：瑞典语页面打开（电脑 1280×800，假的云端语音）', await openPage({ width: 1280, height: 800, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true }));
   const svShown = await evalJs(`localStorage.getItem('sv.shown.v1')`);
+  // 瑞典语的一批和以前一样：最新的几篇（不轮流、不合并）
+  const svB = await evalJs(`(() => { const mk = (id, src, h, title, opening) => ({ id, programId: src, published: new Date(Date.now() - h * 3600000), day: SV.newsDay(new Date(Date.now() - h * 3600000)), title, blocks: [{ type: 'p', text: opening || ('Body of ' + id + ' with enough words to read.') }] });
+    const pool = (items) => items.slice().sort((a, b) => b.published - a.published).map((item) => ({ item, score: 5 }));
+    const items = [...Array.from({ length: 12 }, (_, i) => mk('a' + i, 83, i, 'Ekot ' + i)), mk('b0', 4540, 13, 'P4 0'), mk('b1', 4540, 14, 'P4 1')];
+    const b = SV.sources.pickBatch(pool(items), 9); return { batch: SV.lang.batch || null, ids: b.map((x) => x.id) }; })()`);
+  check('瑞典语：一批还是最新的几篇（同一个节目也不限几篇，不合并），和以前一样', !svB.batch && svB.ids.join() === 'a0,a1,a2,a3,a4,a5,a6,a7,a8', JSON.stringify(svB));
   const svTopic = (await state()).topic;
   const sv0 = await evalJs(`(() => { const b = document.querySelector('#langSel'); return { title: document.title, brand: [...document.querySelector('#brand').childNodes].find((n) => n.nodeType === 3).nodeValue,
     flag: b.dataset.lang, svg: !!b.querySelector('.flag svg'), label: b.getAttribute('aria-label'), popup: b.hasAttribute('aria-haspopup'), tip: b.dataset.sv, zh: b.dataset.zh,
@@ -698,6 +704,44 @@ async function languageChecks() {
     return { big: big.map((b) => b.text), huge: huge.length + ':' + !!huge.tooLong, cut: cut.cut || '', end: end.cut || '', tb: tb.cut || '', cap: cap.map((b) => b.type + ':' + b.text) }; })()`);
   check('文章 HTML：脚本去掉了；去掉以后还超过 300 KB 的不要；停在「Press contacts」前面（后面还有字）记下是节选，后面没有字的不算；GOV.UK 的纯文字一样；KFF 的图片说明照登成一段',
     ca.big.length === 2 && ca.huge === '0:true' && ca.cut === 'Press contacts:' && ca.end === '' && ca.tb === 'Notes to editors' && ca.cap.length === 2 && ca.cap[0].startsWith('caption:A nurse'), JSON.stringify(ca));
+  // 一批：各个源轮流、一个源最多 3 篇（加拿大政府一下子发十几篇也不会占满一批）；只有一个源时都是它的
+  const bt = await evalJs(`(() => { const mk = (id, src, h, title, opening) => ({ id, programId: src, published: new Date(Date.now() - h * 3600000), day: SV.newsDay(new Date(Date.now() - h * 3600000)), title, blocks: [{ type: 'p', text: opening || ('Body of ' + id + ' with enough words to read.') }] });
+    const pool = (items) => items.slice().sort((a, b) => b.published - a.published).map((item) => ({ item, score: 5 }));
+    const many = [...Array.from({ length: 12 }, (_, i) => mk('gc' + i, 'gc', i, 'Canada ' + i)), mk('uk0', 'govuk', 12, 'UK 0'), mk('uk1', 'govuk', 13, 'UK 1'), mk('hk0', 'hk', 14, 'HK 0'), mk('hk1', 'hk', 15, 'HK 1'),
+      mk('kf0', 'kff', 16, 'KFF 0'), mk('kf1', 'kff', 17, 'KFF 1'), mk('ec0', 'ec', 18, 'EC 0')];
+    const b1 = SV.sources.pickBatch(pool(many), 9);
+    const one = SV.sources.pickBatch(pool(Array.from({ length: 12 }, (_, i) => mk('gc' + i, 'gc', i, 'Canada ' + i))), 9);
+    const two = SV.sources.pickBatch(pool([...Array.from({ length: 10 }, (_, i) => mk('gc' + i, 'gc', i, 'Canada ' + i)), ...Array.from({ length: 10 }, (_, i) => mk('uk' + i, 'govuk', 20 + i, 'UK ' + i))]), 9);
+    const count = (b, src) => b.filter((x) => x.programId === src).length;
+    return { b1: b1.map((x) => x.id), gc1: count(b1, 'gc'), first5: new Set(b1.slice(0, 5).map((x) => x.programId)).size, one: one.length, oneGc: count(one, 'gc'), two: two.length, twoGc: count(two, 'gc'), twoUk: count(two, 'govuk'),
+      newestFirst: b1.filter((x) => x.programId === 'gc').map((x) => x.id).every((id, i) => id === 'gc' + i) }; })()`);
+  check('英语的一批：一个源（加拿大政府 12 篇）最新、别的源少：各个源轮流，前 5 篇是 5 个不同的源，加拿大政府最多 3 篇（拿的是它最新的），一批还是 9 篇',
+    bt.b1.length === 9 && bt.gc1 >= 1 && bt.gc1 <= 3 && bt.b1[0] === 'gc0' && bt.first5 === 5 && bt.newestFirst, JSON.stringify(bt));
+  check('英语的一批：只有一个源时都是它的（9 篇）；只有两个源时轮流、补满 9 篇', bt.one === 9 && bt.oneGc === 9 && bt.two === 9 && bt.twoGc === 5 && bt.twoUk === 4, JSON.stringify(bt));
+  // 一样的新闻稿发了好几次：只留最新的；不一样的（标题像、开头一样但隔了一周、不同的源）不合并
+  const dd = await evalJs(`(() => { const mk = (id, src, h, title, opening) => ({ id, programId: src, published: new Date(Date.now() - h * 3600000), day: SV.newsDay(new Date(Date.now() - h * 3600000)), title, blocks: [{ type: 'p', text: opening || ('Body of ' + id + ' with enough words to read.') }] });
+    const pool = (items) => items.slice().sort((a, b) => b.published - a.published).map((item) => ({ item, score: 5 }));
+    const OPEN = 'November 14, 2026 – Winnipeg, Manitoba - In a world reshaped by geopolitical competition, protectionism, and rapidly evolving technologies, Canada stands apart. More text follows here.';
+    const OPEN2 = 'November 14, 2026 – Laval, Quebec - In a world reshaped by geopolitical competition, protectionism, and rapidly evolving technologies, Canada stands apart. Other text.';
+    const WEEKLY = 'The UK Health Security Agency has published its latest weekly surveillance data on flu, COVID-19 and other winter viruses across England today.';
+    const items = [
+      mk('t1', 'gc', 1, 'Minister MacDonald highlights Government of Canada’s investments from Budget 2026: Masters of our destiny', OPEN),
+      mk('m1', 'gc', 1.5, 'Minister Joly highlights Budget 2026: Masters of our destiny investments of the Government of Canada', OPEN2),
+      mk('t2', 'gc', 2, 'Caroline Desrochers highlights Government of Canada’s investments from Budget 2026: Masters of our destiny', 'November 14, 2026 - Kingston - Agriculture and Agri-Food Canada'),
+      mk('t3', 'gc', 3, 'Deputy Leader Arielle Kayabaga and Parliamentary Secretary Peter Fragiskatos highlight Government of Canada’s investments from Budget 2026: Masters of our destiny', OPEN2),
+      mk('o1', 'gc', 4, 'Parliamentary Secretary Smith highlights the Government of Canada commitment in Budget 2026 to the Fredericton Regional Aquatics Centre', OPEN2),
+      mk('s1', 'gc', 5, 'Minister Ng announces funding for the Halifax port expansion project in Nova Scotia today', 'HALIFAX, Nova Scotia - The Government of Canada is investing in the port of Halifax to expand container capacity for the region.'),
+      mk('s2', 'gc', 6, 'Minister Lee announces funding for the Halifax hospital expansion project in Nova Scotia today', 'HALIFAX, Nova Scotia - The Government of Canada is investing in the Halifax Infirmary to expand emergency care for patients in the region.'),
+      mk('w1', 'govuk', 2, 'Latest weekly winter virus surveillance data', WEEKLY),
+      mk('w2', 'govuk', 2 + 7 * 24, 'Latest weekly winter virus surveillance data', WEEKLY),
+      mk('x1', 'beehive', 2, 'Minister MacDonald highlights Government of Canada’s investments from Budget 2026: Masters of our destiny', OPEN),
+    ];
+    const kept = SV.sources.dedupe(pool(items)).map((c) => c.item.id);
+    return { kept, sv: SV.lang.code }; })()`);
+  check('一样的新闻稿发了好几次（同一个源、48 小时里、动词后面的标题一样，或者开头一句一样、标题六成一样）：只留最新的一篇',
+    dd.kept.includes('t1') && !dd.kept.includes('t2') && !dd.kept.includes('t3') && !dd.kept.includes('m1'), JSON.stringify(dd));
+  check('不合并：同一套开头、讲的是某个地方的某个项目（标题不到六成一样）；标题像但说的是不同的事；同名的每周报告（隔了一周）；不同的源',
+    ['o1', 's1', 's2', 'w1', 'w2', 'x1'].every((id) => dd.kept.includes(id)), JSON.stringify(dd));
   // 原文链接只要 https：新闻源里写的 javascript:、http: 的那一篇不列
   const sch = await evalJs(`(async () => { SV.lang.sources.__t = { adapter: '__t' }; SV.adapters.__t = async () => [{ id: 'a', link: 'javascript:alert(1)' }, { id: 'b', link: 'https://example.org/x' }, { id: 'c', link: 'http://example.org/y' }, { id: 'd', link: 'data:text/html,x' }];
     const items = await SV.sources.fetchFeed('__t'); delete SV.lang.sources.__t; delete SV.adapters.__t; return items.map((x) => x.id); })()`);

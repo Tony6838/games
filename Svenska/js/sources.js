@@ -397,7 +397,55 @@
     }
     let isLoose = false;
     if (!cands.length && loose.length && !topic.strict) { cands = loose; isLoose = true; }
+    if (SV.lang.batch && SV.lang.batch.dedupe) cands = dedupe(cands);
     return { cands, loose: isLoose };
+  }
+
+  // ---------- 一样的新闻稿发了好几次（别的语言：SV.lang.batch.dedupe） ----------
+  // 加拿大政府常把同一篇新闻稿换个部长、换个地方发十几次（「X highlights Government of Canada's investments from Budget 2026」）。
+  // 同一个源、发布时间相差不到 48 小时，而且下面两条有一条成立，才算同一篇，只留最新的：
+  // - 标题里「highlights / announces / welcomes……」这个动词后面的部分一样（至少 6 个词；前面的人名、职务、地方不管）；
+  // - 正文第一句（至少 14 个词，比较它最后 12 个词，前面的日期、地名不管）一样，标题的词也有六成以上一样
+  //   （同一套开头、讲的是某个地方的某个项目的那几篇不合并）。
+  // 别的都不算（比如每周一次的同名报告，相差一周；同一个动词后面说的是不同的事）。
+  const DUP_HOURS = 48;
+  const VERB_RE = /^(highlights?|announces?|announced|welcomes?|marks?|celebrates?|launches?|unveils?|outlines?|showcases?|promotes?|delivers?|invests?|supports?|confirms?)$/;
+  const words = (s) => String(s || '').toLowerCase().replace(/[’']/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().split(' ').filter(Boolean);
+  function dupKeys(it) {
+    if (it._dup) return it._dup;
+    const tw = words(it.title);
+    let titleKey = '';
+    const vi = tw.findIndex((w, i) => i > 0 && VERB_RE.test(w));
+    if (vi > 0 && tw.length - vi - 1 >= 6) titleKey = tw[vi].replace(/(s|ed)$/, '') + ' ' + tw.slice(vi + 1).join(' ');
+    let openKey = '';
+    const text = (it.blocks || []).slice(0, 6).map((b) => b.text).join(' ');
+    for (const s of text.match(/[^.!?]+[.!?]+/g) || []) {
+      const sw = words(s);
+      if (sw.length >= 14) { openKey = sw.slice(-12).join(' '); break; }
+    }
+    it._dup = { titleKey, openKey, titleSet: new Set(tw) };
+    return it._dup;
+  }
+  function sameRelease(a, b) {
+    if (a.programId !== b.programId || Math.abs(a.published - b.published) > DUP_HOURS * 3600000) return false;
+    const ka = dupKeys(a);
+    const kb = dupKeys(b);
+    if (ka.titleKey && ka.titleKey === kb.titleKey) return true;
+    if (!ka.openKey || ka.openKey !== kb.openKey) return false;
+    let both = 0;
+    for (const w of ka.titleSet) if (kb.titleSet.has(w)) both++;
+    return both / (ka.titleSet.size + kb.titleSet.size - both) >= 0.6;
+  }
+  // cands：[{ item, score }]；一样的只留最新的一篇（顺序不变）
+  function dedupe(cands) {
+    const newestFirst = cands.slice().sort((a, b) => b.item.published - a.item.published);
+    const kept = [];
+    const drop = new Set();
+    for (const c of newestFirst) {
+      if (kept.some((k) => sameRelease(k.item, c.item))) drop.add(c);
+      else kept.push(c);
+    }
+    return drop.size ? cands.filter((c) => !drop.has(c)) : cands;
   }
   async function loadTopic(topic, onProgress) {
     let done = 0;
@@ -485,6 +533,40 @@
 
   // again=false：打开话题时，这个标签页里已经有这个话题的一批（比如刚刷新过网页），就还给这一批。
   // again=true：再点一次话题，换下一批。
+  // 一批挑哪几篇（pool 是还没列过的，最新的在前）。瑞典语：最新的几篇（和以前一样）。
+  // 别的语言（SV.lang.batch.interleave）：各个源轮流，每个源先拿它最新的；一批里一个源最多 perSource 篇（默认 3），
+  // 别的源都没有了才再多拿（只有一个源时就都是它的）。顺序就是轮流的顺序（最新的文章所在的源先）。
+  function pickBatch(pool, size) {
+    const cfg = SV.lang.batch;
+    if (!cfg || !cfg.interleave) return pool.slice(0, size).map((c) => c.item);
+    const cap = cfg.perSource || 3;
+    const bySrc = new Map();
+    for (const c of pool) {
+      const k = c.item.programId;
+      if (!bySrc.has(k)) bySrc.set(k, []);
+      bySrc.get(k).push(c.item);
+    }
+    const queues = [...bySrc.values()]; // 源的顺序：它最新的一篇有多新
+    const out = [];
+    const used = new Map();
+    for (const capped of [true, false]) {
+      let moved = true;
+      while (out.length < size && moved) {
+        moved = false;
+        for (const q of queues) {
+          if (out.length >= size) break;
+          if (!q.length) continue;
+          const k = q[0].programId;
+          if (capped && (used.get(k) || 0) >= cap) continue;
+          out.push(q.shift());
+          used.set(k, (used.get(k) || 0) + 1);
+          moved = true;
+        }
+      }
+    }
+    return out;
+  }
+
   function nextBatch(topic, cands, size, again) {
     const notices = [];
     if (!cands.length) return { items: [], notices, more: false };
@@ -504,10 +586,11 @@
       pool = sorted;
       notices.push('这个话题最近的文章都列过了，从最新的重新开始。');
     }
-    const items = pool.slice(0, size).map((c) => c.item);
+    const items = pickBatch(pool, size);
     const today = SV.newsDay(new Date());
     if (!items.some((it) => it.day === today)) {
-      const age = SV.dayDiff(today, items[0].day);
+      const newest = items.reduce((a, b) => (b.published > a.published ? b : a));
+      const age = SV.dayDiff(today, newest.day);
       notices.push(age <= 1 ? '这个话题今天还没有新文章，下面是最近的。' : `这个话题今天还没有新文章，最新的一篇是 ${age} 天前的。`);
     }
     setShown(topic.key, [...shown, ...items.map((it) => it.id)]);
@@ -523,5 +606,5 @@
     SV.session.set(BATCH_KEY, batches);
   }
 
-  SV.sources = { TOPICS, EASY, MIN_BODY, loadTopic, countCached, fillBodies, setBatch, nextBatch, markRead, readSet, clearHistory, fetchFeed, parseFeed, cleanHtml, cleanArticle, textBlocks, bodyLength, plainText, score, tokens };
+  SV.sources = { TOPICS, EASY, MIN_BODY, loadTopic, countCached, fillBodies, setBatch, nextBatch, pickBatch, dedupe, markRead, readSet, clearHistory, fetchFeed, parseFeed, cleanHtml, cleanArticle, textBlocks, bodyLength, plainText, score, tokens };
 })();

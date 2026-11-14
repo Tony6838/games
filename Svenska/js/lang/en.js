@@ -261,6 +261,8 @@
 
   SV.addLang({
     code: 'en',
+    // 一批：各个源轮流、一个源最多 3 篇（不让加拿大政府一下子发的十几篇占满一批）；一样的新闻稿发了好几次的只留最新的一篇（js/sources.js）
+    batch: { interleave: true, perSource: 3, dedupe: true },
     htmlLang: 'en-US',
     zh: '英语',
     zhText: '英文',
