@@ -7,21 +7,26 @@
       Azure 的密钥不对）时，这次打开的页面里不再问。
    2. 浏览器内置翻译（Translator API，Chrome / Edge 138 起的电脑版）：在本机翻译，文字不离开电脑，没有额度。
       第一次要下载语言模型，浏览器规定只能在用户点了按钮之后开始下载。
-   3. MyMemory 的免费接口（api.mymemory.translated.net，支持 CORS，不用注册），只在「设置」里的在线翻译开关开着、
-      而且是读者点出来的（点词、点「本句译文」，鼠标只是停在词上不算，Tony 定的）时候用。
+   3. MyMemory 的免费接口（api.mymemory.translated.net，支持 CORS，不用注册），只在「设置」里的在线翻译开关开着时用
+      （查词都是读者点出来的：点词、点「本句译文」、选中几个词；鼠标停在词上不查，Tony 定的）。
       不带电子邮件参数，不发任何个人信息；匿名额度约每天 5000 字符；它会长期保存收到的句子；本站不用它翻译整篇文章。
       它给单个词的「译文」常常是翻译记忆库里的字幕（kommunen →「市长办公厅的人能够相信吗?」），不像一个词的译文的不显示。
-   同一段文字同时有两次要翻译（鼠标停在词上开始翻这一句，接着又点了「本句译文」）：微软翻译那一步共用一个请求，不多花额度；
-   微软翻译不行时，各自按自己的条件往下走（点出来的可以下载内置翻译的模型、可以用 MyMemory），不会被鼠标停着的那一次拖累。
+   同一段文字同时有两次要翻译（点词时自动翻这一句，接着又点了「本句译文」）：微软翻译那一步共用一个请求，不多花额度；
+   微软翻译不行时，各自往下走（内置翻译、MyMemory）。
    单词的译文存在 localStorage（长期，记下是哪个翻译给的），句子的译文只存在 sessionStorage（关掉标签页就清掉），
    因为那是 SR 文章的内容，按 SR 的条款不长期保存。 */
 (function () {
   'use strict';
   const SV = window.SV;
 
-  const OPTS = { sourceLanguage: 'sv', targetLanguage: 'zh' };
-  const WORD_KEY = 'sv.trw.v1';
-  const TEXT_KEY = 'sv.trs.v1';
+  // 现在这种语言（js/lang/*.js 的 tr）：瑞典语 sv；英语 en……
+  const TR = (SV.lang && SV.lang.tr) || { from: 'sv', azurePath: '/translate', mymemory: 'sv' };
+  const PREFIX = (SV.lang && SV.lang.prefix) || 'sv.';
+  const OPTS = { sourceLanguage: TR.from, targetLanguage: 'zh' };
+  // 单词、句子的译文缓存按语言分开（瑞典语还是 sv.trw.v1、sv.trs.v1）
+  const WORD_KEY = PREFIX + 'trw.v1';
+  const TEXT_KEY = PREFIX + 'trs.v1';
+  // MyMemory 每天的用量、微软翻译的额度：所有语言共用（额度本来就是共用的），键不变
   const MM_KEY = 'sv.mm.v1'; // { day, chars }：今天交给 MyMemory 的字符数，只用来提醒
 
   // ---------- 缓存 ----------
@@ -68,7 +73,16 @@
   let azPauseUntil = 0;
   let azPauseWhy = '';
   let azBroken = false; // Worker 的设置不对（不让这个网页用、还没有 /translate、没设密钥）：这次打开的页面里不再问
-  const azUrl = () => String((SV.config && SV.config.translateUrl) || '');
+  // 瑞典语：Worker 的 /translate（以前就有的）；英语：/translate/en（Worker 新加的）。部署了的 Worker 还没有它时，
+  // 浏览器的预检不通过（页面看到的是连不上）：这一次用内置翻译、MyMemory，30 秒里不再问（和连不上微软翻译时一样）
+  const azUrl = () => {
+    const base = String((SV.config && SV.config.translateUrl) || '');
+    if (!base || TR.azurePath === '/translate') return base;
+    const langs = (SV.config && SV.config.translateLangs) || ['sv'];
+    if (!langs.includes(TR.from)) return ''; // 部署了的 Worker 还不翻这种语言（js/config.js）
+    if (!TR.azurePath) return '';
+    return base.replace(/\/translate\/?$/, '') + TR.azurePath;
+  };
   function azQuotaUntil() {
     const v = SV.store.get(AZ_KEY, null);
     const t = v && +v.until;
@@ -210,7 +224,7 @@
   // q 最多 500 个字符（实测：超过时回 200，responseStatus 403「QUERY LENGTH LIMIT EXCEEDED」）；
   // 一次只能翻一段（MyMemory 的条款）。不带 de（电子邮件）、key 等参数。
   async function myMemoryOne(text) {
-    const url = 'https://api.mymemory.translated.net/get?langpair=sv%7Czh-CN&q=' + encodeURIComponent(text);
+    const url = 'https://api.mymemory.translated.net/get?langpair=' + encodeURIComponent(TR.mymemory) + '%7Czh-CN&q=' + encodeURIComponent(text);
     let r;
     try {
       r = await fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer' });
@@ -270,12 +284,10 @@
   // ---------- 对外 ----------
   // opts.gesture：是不是用户刚点过（允许开始下载内置模型）
   // opts.online：「设置」里的在线翻译（MyMemory）开关（true / false）
-  // opts.mm：这一次能不能用 MyMemory（鼠标只是停在词上时是 false，Tony 定的）；不写就是可以
   // opts.onDownload(0..1)：内置模型下载进度
   // 返回 { zh, engine: 'azure' | 'builtin' | 'mymemory' | 'cache', azure }，
   //   azure 是这次为什么没用（或用了）微软翻译：'ok'、'off'（没设置）、'quota'、'busy'、'network'、'broken'、'server'、'long'（太长）。
   // 失败抛出带 code 的错误（也带 azure）：'none'（没有可用的翻译）、'needGesture'（内置翻译要先点一下才能下载）、
-  //   'needClick'（只剩 MyMemory，可这一次是鼠标停着，要点一下）、
   //   'quota'、'network'、'server'（MyMemory 的），'unreliable'（MyMemory 给单词的译文不可靠）
   function translate(text, kind, opts) {
     const key = kind === 'word' ? text.toLowerCase() : text;
@@ -314,7 +326,6 @@
           if (avail === 'downloadable' || avail === 'downloading') throw fail(err('needGesture', '点一下按钮，启用浏览器内置的翻译'));
           throw fail(err('none', opts.online === false ? '在线翻译已关闭' : '这个浏览器没有内置翻译'));
         }
-        if (opts.mm === false) throw fail(err('needClick', '点一下，用 MyMemory 在线翻译'));
         try {
           zh = await myMemory(text);
         } catch (e) {
@@ -344,9 +355,6 @@
     return { html, engine: 'azure' };
   }
 
-  // 鼠标只是停在词上时，有没有不用 MyMemory 的翻译（微软翻译，或者已经能用的内置翻译）
-  const hoverCanTranslate = () => azureState() === 'ok' || !!builtin || lastAvail === 'available' || lastAvail === 'ready';
-
   SV.tr = {
     translate,
     tagged,
@@ -358,7 +366,6 @@
     // 按句子选词义时拿到的整句译文（去掉标签），也当「本句译文」存起来，再点「本句译文」不再花额度
     rememberText: (text, zh) => { if (zh && !textCache[text]) remember('text', text, zh); },
     builtinReady: () => !!builtin,
-    hoverCanTranslate,
     azureState,
     azureQuotaUntil: azQuotaUntil,
     unreliable,

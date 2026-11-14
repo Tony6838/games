@@ -31,20 +31,14 @@
   // 文章句子的译文：只在这个标签页里临时保存，关掉就没了
   SV.session = makeStore(() => window.sessionStorage);
 
+  // 各种语言的设置：js/lang/*.js 用 SV.addLang 登记，js/langs.js 按网址的 ?lang= 选一种当 SV.lang（默认瑞典语）
+  SV.LANGS = SV.LANGS || [];
+  SV.addLang = (cfg) => { SV.LANGS.push(cfg); };
+
   SV.sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   SV.clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
-  // 文章的日期一律按瑞典时间算：「今天的新闻」是瑞典的今天
-  const partsFmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/Stockholm', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
-  });
-  function parts(d) {
-    const o = {};
-    for (const p of partsFmt.formatToParts(d)) o[p.type] = p.value;
-    return o;
-  }
-  SV.stockholmDay = (d) => { const p = parts(d); return `${p.year}-${p.month}-${p.day}`; };
-  SV.stockholmTime = (d) => { const p = parts(d); return `${p.hour}:${p.minute}`; };
+  // 文章的日期（「今天」按哪里的时间算）：SV.newsDay、SV.newsTime，在 js/langs.js（瑞典语按瑞典时间）
   SV.dayDiff = (a, b) => Math.round((Date.parse(a) - Date.parse(b)) / 86400000);
 
   // h('div', { class: 'x', onclick: fn }, '文字', child)

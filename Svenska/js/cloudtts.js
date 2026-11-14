@@ -22,11 +22,9 @@
   const conf = SV.config || {};
   const SDK_URL = 'https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@1.53.0/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js';
   const SDK_SRI = 'sha384-YG0CfpDhvvBF6YvDNHgeAPtRBdnkEnbLtXyPhAfT+dB7uCoCZgcIruOnhmQhJQqv';
-  const VOICES = [
-    { name: 'sv-SE-SofieNeural', label: 'Sofie', gender: 'f' },
-    { name: 'sv-SE-HilleviNeural', label: 'Hillevi', gender: 'f' },
-    { name: 'sv-SE-MattiasNeural', label: 'Mattias', gender: 'm' },
-  ];
+  // 现在这种语言的云端声音（js/lang/*.js 的 tts.cloud；瑞典语 Sofie、Hillevi、Mattias）。令牌对所有声音都一样
+  const TTS = (SV.lang && SV.lang.tts) || { locale: 'sv-SE', cloud: [] };
+  const VOICES = TTS.cloud;
   // 0.1 秒的静音（WAV），只用来在用户点击时「解锁」audio 元素
   const SILENCE = 'data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==';
   const configured = !!conf.ttsUrl;
@@ -87,7 +85,7 @@
     const tk = await getToken();
     const sc = SDK.SpeechConfig.fromAuthorizationToken(tk.token, tk.region);
     sc.speechSynthesisVoiceName = voice;
-    sc.speechSynthesisLanguage = 'sv-SE';
+    sc.speechSynthesisLanguage = TTS.locale;
     sc.speechSynthesisOutputFormat = SDK.SpeechSynthesisOutputFormat.Audio24Khz48KBitRateMonoMp3;
     const synth = new SDK.SpeechSynthesizer(sc, null); // null：不直接播放，只要音频数据
     const raw = [];

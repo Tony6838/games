@@ -507,5 +507,7 @@ december|十二月|
     return null;
   }
 
-  SV.glossary = { lookup, size: map.size };
+  // 小词典只有瑞典语的：别的语言（js/lang/*.js 里 glossary 不是 true）查不到，查词直接走翻译（js/translate.js）
+  const own = !SV.lang || SV.lang.glossary === true;
+  SV.glossary = { lookup: own ? lookup : () => null, size: own ? map.size : 0 };
 })();

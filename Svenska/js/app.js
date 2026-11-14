@@ -6,6 +6,10 @@
   const $ = (sel) => document.querySelector(sel);
   // 图标（css/style.css 的 .ic：CSS mask 画的，各个平台一样；不用 ← → ↗ 这些字符）
   const icon = (name) => h('i', { class: 'ic ic-' + name, 'aria-hidden': 'true' });
+  // 现在学的语言（js/langs.js 按网址的 ?lang= 选的；瑞典语时一切和以前一样）
+  const L = SV.lang;
+  const isSV = L.code === 'sv';
+  const LANG = L.htmlLang; // 文章、外文提示的 lang 属性
 
   // ---------- 设置 ----------
   const SET_KEY = 'sv.settings.v1';
@@ -17,7 +21,11 @@
   // 'loop' 本篇循环（从头再读）。旧版本的 loop: true（「循环」开着）当作 'loop'。
   // rate：语速只有 0.8、0.9、1 三档（Tony 定的，2026-11-14）；ramp：循序渐进三连读（第 1 遍 0.8×、第 2 遍 0.9×、第 3 遍 1×）。
   // 这些这个浏览器都记住；存不了（隐私模式等）时只在这次打开的页面里有效
-  const DEFAULTS = { scale: 1, rate: 0.9, ramp: false, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, topic: 'idag', after: 'stop' };
+  const DEFAULTS = { scale: 1, rate: 0.9, ramp: false, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, topic: L.topics[0].key, after: 'stop' };
+  // 话题、选的声音每种语言各记各的：瑞典语还在 sv.settings.v1 里（和以前一样），别的语言存在 <语言>.settings.v1；
+  // 别的设置（字号、语速、读完以后、男女声、声音来源、在线翻译）是读者的习惯，各种语言共用 sv.settings.v1
+  const LANG_KEYS = ['topic', 'voiceURI', 'cloudVoice'];
+  const LANG_SET_KEY = isSV ? '' : L.prefix + 'settings.v1';
   const AFTER = ['stop', 'next', 'loop'];
   const RATES = [0.8, 0.9, 1];
   // 三连读的三遍：语速和为什么这样读
@@ -41,7 +49,23 @@
   if (!['f', 'm'].includes(S.gender)) S.gender = 'f';
   if (!['cloud', 'device'].includes(S.engine)) S.engine = 'cloud';
   if (S.online !== false) S.online = true;
-  const save = () => SV.store.set(SET_KEY, S);
+  if (!isSV) {
+    let own = SV.store.get(LANG_SET_KEY, {});
+    if (!own || typeof own !== 'object') own = {};
+    for (const k of LANG_KEYS) S[k] = typeof own[k] === 'string' ? own[k] : DEFAULTS[k];
+  }
+  const save = () => {
+    if (isSV) return SV.store.set(SET_KEY, S);
+    // 别的语言：共用的设置写回 sv.settings.v1，但不动瑞典语自己的话题和声音
+    let base = SV.store.get(SET_KEY, {});
+    if (!base || typeof base !== 'object') base = {};
+    const shared = Object.assign({}, S);
+    for (const k of LANG_KEYS) { if (k in base) shared[k] = base[k]; else delete shared[k]; }
+    const own = {};
+    for (const k of LANG_KEYS) own[k] = S[k];
+    SV.store.set(LANG_SET_KEY, own);
+    return SV.store.set(SET_KEY, shared);
+  };
 
   const TOPICS = SV.sources.TOPICS;
   // 本站不翻译整篇文章：整篇用浏览器自己的整页翻译。怎么用（这个浏览器的办法放在最前面）写在说明框「?」的「整篇翻译」里，
@@ -92,6 +116,7 @@
   // 电脑上是浏览器自己的 title 提示（鼠标停在按钮上）；手机、平板没有悬停，按住按钮半秒，
   // 在按钮上方显示同样的两行，松手不算点击。新加的按钮一律用 tip() 给提示，测试会查每个按钮。
   function tip(el, sv, zh) {
+    sv = SV.tipText(sv); // 别的语言：换成那种语言的说法（js/lang/*.js 的 tips）
     el.dataset.sv = sv;
     el.dataset.zh = zh || '';
     el.title = zh ? sv + '\n' + zh : sv;
@@ -107,7 +132,7 @@
     const host = btn.closest('dialog[open]') || document.body;
     if (tipBox.parentNode !== host) host.append(tipBox);
     tipBox.textContent = '';
-    tipBox.append(h('b', { lang: 'sv' }, btn.dataset.sv));
+    tipBox.append(h('b', { lang: LANG }, btn.dataset.sv));
     if (btn.dataset.zh) tipBox.append(h('span', { lang: 'zh-CN' }, btn.dataset.zh));
     tipBox.hidden = false;
     const r = btn.getBoundingClientRect();
@@ -164,8 +189,8 @@
     try {
       media.metadata = item ? new MediaMetadata({
         title: item.title,
-        artist: (S.ramp ? `第 ${ramp.pass + 1}/3 遍 ${fmtRate(curRate())} · ` : '') + item.program + ' · Sveriges Radio',
-        album: '瑞典语读报',
+        artist: (S.ramp ? `第 ${ramp.pass + 1}/3 遍 ${fmtRate(curRate())} · ` : '') + (isSV ? item.program + ' · Sveriges Radio' : srcLabel(item)),
+        album: L.title,
         artwork: [192, 512].map((n) => ({ src: new URL(`icons/icon-${n}.png`, location.href).href, sizes: `${n}x${n}`, type: 'image/png' })),
       }) : null;
     } catch (e) { /* 忽略 */ }
@@ -306,7 +331,7 @@
     els.voice.querySelector('b').textContent = g === 'm' ? '男' : g === 'f' ? '女' : '声';
     els.voice.setAttribute('aria-label', g === 'm' ? '男声' : g === 'f' ? '女声' : '声音');
     tip(els.voice, g === 'm' ? 'Manlig röst' : g === 'f' ? 'Kvinnlig röst' : 'Röst',
-      name ? '现在的声音：' + name + '（点一下切换男声、女声）' : '这台设备没有瑞典语声音');
+      name ? '现在的声音：' + name + '（点一下切换男声、女声）' : `这台设备没有${L.zh}声音`);
   }
 
   // 只标正在读的词（下划线）；正在读的句子不标出来。声音没有词的位置时（不发 boundary 事件），
@@ -352,7 +377,7 @@
     if (!useCloud()) {
       if (!SV.speech.supported) { toast('这个浏览器不支持朗读'); return; }
       if (reader.state === 'idle' && !SV.speech.voices().length) {
-        toast('这台设备上没有瑞典语声音，发音可能不对。用 Edge 浏览器可以用微软的瑞典语声音，详见「设置」。', 6000);
+        toast(`这台设备上没有${L.zh}声音，发音可能不对。用 Edge 浏览器可以用微软的${L.zh}声音，详见「设置」。`, 6000);
       }
     }
     hidePopup();
@@ -410,7 +435,7 @@
     els.after.setAttribute('aria-label', '读完以后：' + a.zh); // 三种状态：读屏软件听 aria-label，不用 aria-pressed
     tip(els.after, a.sv, '读完以后：' + a.tip);
     // 标题：文章页上回到列表，别的时候回到最上面
-    els.brand.setAttribute('aria-label', inArticle ? '瑞典语读报：回到列表' : '瑞典语读报：回到最上面');
+    els.brand.setAttribute('aria-label', inArticle ? L.title + '：回到列表' : L.title + '：回到最上面');
     tip(els.brand, inArticle ? 'Tillbaka till listan' : 'Till toppen', inArticle ? `回到「${cur.topic ? cur.topic.zh : ''}」的文章列表` : '回到最上面');
     // 下一篇 / 换一批
     els.next.disabled = !(inArticle || inList);
@@ -438,8 +463,9 @@
   // 键盘：按钮上回车、空格、↓ 打开（焦点到现在选的那个）；用鼠标、手指打开的，按 ↑↓ 焦点也进到面板里；
   // ↑↓ 在一列里走，←→ 换一列；回车选；Esc 关上（焦点在面板里时回到按钮）。
   const pickers = [];
-  function makePicker({ button, panel, cols = 1, place, onPick }) {
-    const pk = { button, panel, cols, open: false, rows: 1, cw: null };
+  // flow 'row'：一行一行排（国旗面板）；默认一列一列排（话题面板）。rowHeight：每个选项多高
+  function makePicker({ button, panel, cols = 1, place, onPick, flow = 'column', rowHeight = 44 }) {
+    const pk = { button, panel, cols, open: false, rows: 1, cw: null, flow };
     pk.items = () => [...panel.querySelectorAll('[role="option"]')];
     pk.place = () => place(pk);
     // 焦点进到面板里：现在选的那个（用鼠标、手指打开以后按 ↑↓）
@@ -452,7 +478,8 @@
     pk.setOptions = (list) => {
       panel.textContent = '';
       for (const it of list) {
-        const o = h('button', { type: 'button', class: 'opt' + (it.cls ? ' ' + it.cls : ''), role: 'option', 'aria-selected': 'false', tabindex: '-1', 'data-value': it.value, lang: 'zh-CN' }, it.text);
+        const o = h('button', { type: 'button', class: 'opt' + (it.cls ? ' ' + it.cls : ''), role: 'option', 'aria-selected': 'false', tabindex: '-1', 'data-value': it.value, lang: 'zh-CN' }, it.node || it.text);
+        if (it.label) o.setAttribute('aria-label', it.label);
         if (it.attrs) for (const [k, v] of Object.entries(it.attrs)) o.setAttribute(k, v);
         if (it.sv) tip(o, it.sv, it.zh || '');
         o.addEventListener('click', (e) => {
@@ -464,7 +491,11 @@
         panel.append(o);
       }
       pk.rows = Math.max(1, Math.ceil(list.length / cols));
-      panel.style.gridTemplateRows = `repeat(${pk.rows}, 44px)`;
+      panel.style.gridTemplateRows = `repeat(${pk.rows}, ${rowHeight}px)`;
+      if (flow === 'row') {
+        panel.style.gridAutoFlow = 'row';
+        panel.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      }
     };
     pk.select = (value) => { for (const o of pk.items()) o.setAttribute('aria-selected', o.dataset.value === String(value) ? 'true' : 'false'); };
     pk.show = (byKeyboard) => {
@@ -495,6 +526,8 @@
       if (!pk.open) return;
       pk.open = false;
       panel.hidden = true;
+      // 开着时不能重排的（话题按钮变了）：关上以后再做（不在手指下面换掉选项）
+      if (pk.afterClose) { const f = pk.afterClose; pk.afterClose = null; setTimeout(f, 0); }
       button.setAttribute('aria-expanded', 'false');
       if (pk.cw) { const cw = pk.cw; pk.cw = null; try { cw.destroy(); } catch (err) { /* 忽略 */ } }
       if (focusButton) button.focus({ preventScroll: true });
@@ -512,12 +545,18 @@
       const i = items.indexOf(document.activeElement);
       if (i < 0) return;
       const rows = pk.rows;
+      const c = pk.cols;
       let j = -1;
-      if (e.key === 'ArrowDown') j = i % rows < rows - 1 && i + 1 < items.length ? i + 1 : i;
+      if (pk.flow === 'row') { // 一行一行排：← → 在一行里走，↑ ↓ 换一行
+        if (e.key === 'ArrowRight') j = i % c < c - 1 && i + 1 < items.length ? i + 1 : i;
+        else if (e.key === 'ArrowLeft') j = i % c > 0 ? i - 1 : i;
+        else if (e.key === 'ArrowDown') j = i + c < items.length ? i + c : i;
+        else if (e.key === 'ArrowUp') j = i - c >= 0 ? i - c : i;
+      } else if (e.key === 'ArrowDown') j = i % rows < rows - 1 && i + 1 < items.length ? i + 1 : i;
       else if (e.key === 'ArrowUp') j = i % rows > 0 ? i - 1 : i;
       else if (e.key === 'ArrowRight') j = i + rows < items.length ? i + rows : i;
       else if (e.key === 'ArrowLeft') j = i - rows >= 0 ? i - rows : i;
-      else if (e.key === 'Home') j = 0;
+      if (j >= 0) { /* 上面处理了 */ } else if (e.key === 'Home') j = 0;
       else if (e.key === 'End') j = items.length - 1;
       else return;
       e.preventDefault();
@@ -599,18 +638,100 @@
     onPick: (key) => { const t = TOPICS.find((x) => x.key === key); if (t) chooseTopic(t); },
   });
   tip(els.topicSel, 'Välj ämne', '选话题（再选一次现在的话题：换一批）');
+
+  // ---------- 国旗：换学的语言（Tony 定的，2026-11-14） ----------
+  // 标题前面的国旗是现在学的语言，标题跟着它（瑞典语读报 / 英语读报），中文界面不变。
+  // 现在只有两种语言：点国旗直接换成另一种（不出面板），提示和读屏软件说「切换到英语读报」。
+  // 以后有三种以上时点开是别的语言的国旗面板（不列现在这种；瑞典语、英语在前面；不超过 4 种两列，多了三列）。
+  // 换语言就是打开那种语言的网址（?lang=），网页重新载入；阅读记录、单词缓存、话题和声音每种语言各记各的。
+  const els2 = { langSel: $('#langSel'), langMenu: $('#langMenu') };
+  const otherLangs = SV.langList.filter((x) => x.code !== L.code);
+  const SWITCH_KEY = 'sv.switched'; // sessionStorage：刚换了语言（新网页打开时说一声）
+  // sessionStorage：这种语言读到哪里了（换语言时记下，换回来时接着：话题、这篇文章、读到的那一句，暂停着等点 ▶）
+  const RESUME_KEY = L.prefix + 'resume.v1';
+  function switchLang(code) {
+    const reading = cur.view === 'article' && cur.item;
+    SV.session.set(RESUME_KEY, {
+      topic: cur.topic ? cur.topic.key : '', id: reading ? cur.item.id : '',
+      si: reading && reader.state !== 'idle' ? reader.si : -1, wi: reading && reader.state !== 'idle' ? reader.wi : -1, y: Math.round(window.scrollY),
+    });
+    SV.session.set(SWITCH_KEY, code);
+    if (reader.state === 'speaking') reader.pause(); // 新的网页载入以前别接着读（换回来时停在这里）
+    location.assign(SV.langUrl(code));
+  }
+  const langPicker = otherLangs.length >= 2 ? makePicker({
+    button: els2.langSel, panel: els2.langMenu, cols: otherLangs.length <= 4 ? 2 : 3, flow: 'row', rowHeight: 56,
+    place: (pk) => placeUnder(pk, otherLangs.length <= 4 ? 280 : 360),
+    onPick: (code) => switchLang(code),
+  }) : null;
+  if (!langPicker && otherLangs.length === 1) {
+    const to = otherLangs[0];
+    els2.langSel.removeAttribute('aria-haspopup');
+    els2.langSel.removeAttribute('aria-expanded');
+    els2.langSel.removeAttribute('aria-controls');
+    els2.langSel.addEventListener('click', () => switchLang(to.code));
+  }
+  function renderLangs() {
+    els2.langSel.querySelector('.flag').innerHTML = L.flag;
+    els2.langSel.dataset.lang = L.code;
+    if (!langPicker) {
+      const to = otherLangs[0];
+      if (to) {
+        els2.langSel.setAttribute('aria-label', `现在是${L.title}，切换到${to.title}`);
+        tip(els2.langSel, 'Byt språk', `切换到${to.title}（现在是${L.title}）`);
+      }
+      return;
+    }
+    els2.langSel.setAttribute('aria-label', `现在学的是${L.zh}，换一种语言`);
+    tip(els2.langSel, 'Välj språk', `现在学的是${L.zh}（点开换一种语言）`);
+    langPicker.setOptions(otherLangs.map((x) => {
+      const f = h('span', { class: 'flag', 'aria-hidden': 'true' });
+      f.innerHTML = x.flag;
+      return {
+        value: x.code, node: [f, h('span', { class: 'ln' }, h('b', null, x.zh), h('small', { lang: x.htmlLang }, x.native))],
+        sv: x.native, zh: `换成学${x.zh}（${x.title}）`, label: `${x.zh}（${x.native}）`, attrs: { 'data-lang': x.code },
+      };
+    }));
+  }
+
+  // ---------- 文章太少就不列的话题（hideBelow：英语读报的体育、移民） ----------
+  // 这些话题大多数日子只有一两篇或者一篇也没有：打开网页时先不列。每次一个话题列出来以后数一数，只用已经取过的源
+  // （SV.sources.countCached，不另外去取；它的源有没取过的就先不数，比如先看了「科学」，等「今日要闻」取过了再数），
+  // 够 hideBelow 篇才列出来。现在看的话题总是列着（网址里的 ?topic=、上次看的）。
+  // 只有列不列真的变了才重排话题按钮；手机的话题面板开着时等它关上再排。瑞典语没有这样的话题：什么都不变。
+  const thinTopics = TOPICS.filter((t) => t.hideBelow > 0);
+  for (const t of thinTopics) t.hidden = true;
+  const thinCount = {}; // { 话题: 数到几篇 }（给自动测试看）
+  function checkThinTopics() {
+    let changed = false;
+    for (const t of thinTopics) {
+      const n = SV.sources.countCached(t);
+      if (n === null) continue;
+      thinCount[t.key] = n;
+      const hide = n < t.hideBelow;
+      if (hide !== t.hidden) { t.hidden = hide; changed = true; }
+    }
+    if (changed) rerenderChips();
+  }
+  function rerenderChips() {
+    if (topicPicker.open) { topicPicker.afterClose = rerenderChips; return; }
+    renderChips();
+    markChip(cur.topic, loading || undefined);
+  }
+
   function renderChips() {
     els.topics.textContent = '';
-    for (const t of TOPICS) {
-      const b = h('button', { type: 'button', class: 'chip' + (t.key === 'latt' ? ' extra' : ''), 'data-topic': t.key }, t.zh);
-      tip(b, t.sv, `看「${t.zh}」的新闻`);
+    const list = TOPICS.filter((t) => !t.hidden || t === cur.topic);
+    for (const t of list) {
+      const b = h('button', { type: 'button', class: 'chip' + (t.key === 'latt' || t.easy ? ' extra' : ''), 'data-topic': t.key }, t.zh);
+      tip(b, t.native, `看「${t.zh}」的${isSV ? '新闻' : '文章'}`);
       b.addEventListener('click', () => {
         b.blur();
         chooseTopic(t);
       });
       els.topics.append(b);
     }
-    topicPicker.setOptions(TOPICS.map((t) => ({ value: t.key, text: t.zh, sv: t.sv, zh: `看「${t.zh}」的新闻`, cls: t.key === 'latt' ? 'extra' : '', attrs: { 'data-topic': t.key } })));
+    topicPicker.setOptions(list.map((t) => ({ value: t.key, text: t.zh, sv: t.native, zh: `看「${t.zh}」的${isSV ? '新闻' : '文章'}`, cls: t.key === 'latt' || t.easy ? 'extra' : '', attrs: { 'data-topic': t.key } })));
   }
 
   function markChip(topic, busy) {
@@ -626,7 +747,7 @@
       b.classList.toggle('busy', on && busy);
       b.setAttribute('aria-pressed', on ? 'true' : 'false');
       const t = TOPICS.find((x) => x.key === b.dataset.topic);
-      if (t) tip(b, t.sv, on ? '再点一次换一批文章' : `看「${t.zh}」的新闻`);
+      if (t) tip(b, t.native, on ? '再点一次换一批文章' : `看「${t.zh}」的${isSV ? '新闻' : '文章'}`);
       if (on && busy === false) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
   }
@@ -682,7 +803,10 @@
     loading = true;
     if (!auto) { cancelGap(); reader.stop(); capNext = false; }
     hidePopup();
+    const prevTopic = cur.topic;
     cur.topic = topic;
+    // 文章太少、平常不列的话题（hideBelow）：看它时列着，换走了又不列
+    if (prevTopic !== topic && ((prevTopic && prevTopic.hidden) || topic.hidden)) rerenderChips();
     S.topic = topic.key;
     save();
     markChip(topic, true);
@@ -695,7 +819,7 @@
       els.article.textContent = '';
       els.article.removeAttribute('data-id');
       els.article.append(h('div', { class: 'state-box', lang: 'zh-CN' },
-        h('p', null, `正在从瑞典广播电台（Sveriges Radio）取「${topic.zh}」的新闻…`),
+        h('p', null, isSV ? `正在从瑞典广播电台（Sveriges Radio）取「${topic.zh}」的新闻…` : `正在取「${topic.zh}」的${L.zh}文章…`),
         h('div', { class: 'loading-bar' }, bar)));
       cur.item = null;
       cur.model = null;
@@ -722,26 +846,44 @@
       gap = null;
       reader.stop();
       if (at) { ramp.pass = pass; reader.si = at.si; reader.wi = at.wi; reader.setState('paused'); highlight(at.si, at.wi, true); }
-      toast((res.error ? '没能取到下一批文章（网络不通，或者 SR 的服务器暂时拒绝了）' : `「${topic.zh}」没有更多文章了`) + (at ? '，停在刚才读到的地方。' : '，朗读停下。'), 6000);
+      toast((res.error ? (isSV ? '没能取到下一批文章（网络不通，或者 SR 的服务器暂时拒绝了）' : '没能取到下一批文章（网络不通，或者新闻网站暂时拒绝了）') : `「${topic.zh}」没有更多文章了`) + (at ? '，停在刚才读到的地方。' : '，朗读停下。'), 6000);
       return;
     }
     if (!res.cands.length) {
       if (res.error) {
-        message(h('p', null, '没能从瑞典广播电台（Sveriges Radio）取到新闻。'),
-          h('p', null, '可能是网络不通，或者请求太密集被 SR 的服务器暂时拒绝了。请过一两分钟再试。'),
-          tip(h('button', { type: 'button', onclick: () => showTopic(topic) }, '再试一次'), 'Försök igen', '再从 SR 取一次新闻'));
+        if (isSV) {
+          message(h('p', null, '没能从瑞典广播电台（Sveriges Radio）取到新闻。'),
+            h('p', null, '可能是网络不通，或者请求太密集被 SR 的服务器暂时拒绝了。请过一两分钟再试。'),
+            tip(h('button', { type: 'button', onclick: () => showTopic(topic) }, '再试一次'), 'Försök igen', '再从 SR 取一次新闻'));
+        } else {
+          message(h('p', null, `没能取到「${topic.zh}」的文章。`),
+            h('p', null, '可能是网络不通，或者新闻网站暂时拒绝了请求。请过一两分钟再试。'),
+            tip(h('button', { type: 'button', onclick: () => showTopic(topic) }, '再试一次'), 'Försök igen', '再取一次'));
+        }
       } else {
-        const alt = TOPICS.filter((t) => t !== topic && ['idag', 'teknik', 'klimat', 'ekonomi'].includes(t.key));
-        message(h('p', null, `Sveriges Radio 最近几天没有「${topic.zh}」的文章（SR 的新闻源每个节目只保留最新的 20 篇左右）。`),
+        const alt = isSV ? TOPICS.filter((t) => t !== topic && ['idag', 'teknik', 'klimat', 'ekonomi'].includes(t.key))
+          : TOPICS.filter((t) => t !== topic && !t.easy && !t.hidden).slice(0, 4);
+        message(h('p', null, isSV ? `Sveriges Radio 最近几天没有「${topic.zh}」的文章（SR 的新闻源每个节目只保留最新的 20 篇左右）。` : `最近几天没有「${topic.zh}」的文章。`),
           h('p', null, '先看看别的话题吧：'),
-          h('div', { class: 'next-row' }, alt.map((t) => tip(h('button', { type: 'button', onclick: () => showTopic(t) }, t.zh), t.sv, `看「${t.zh}」的新闻`))));
+          h('div', { class: 'next-row' }, alt.map((t) => tip(h('button', { type: 'button', onclick: () => showTopic(t) }, t.zh), t.native, `看「${t.zh}」的${isSV ? '新闻' : '文章'}`))));
       }
       return;
     }
-    const b = SV.sources.nextBatch(topic, res.cands, BATCH, !!again);
+    let b = SV.sources.nextBatch(topic, res.cands, BATCH, !!again);
+    // 列表里只有摘要的源（KFF：正文太大，见 js/adapters.js 的 src.lazy）：这一批的正文先取来，取不到、不能用的去掉
+    for (let round = 0; round < 3 && b.items.some((it) => it.loadBody && !it.bodyLoaded); round++) {
+      const kept = await SV.sources.fillBodies(b.items);
+      if (token !== loadToken) return;
+      if (kept.length === b.items.length) break;
+      SV.sources.setBatch(topic.key, kept);
+      if (kept.length) { b = Object.assign({}, b, { items: kept }); break; }
+      b = SV.sources.nextBatch(topic, res.cands.filter((c) => !c.item.bad), BATCH, true);
+    }
+    if (thinTopics.length) checkThinTopics();
     const notices = b.notices.slice();
     if (res.loose) notices.unshift(`最近几天没有专门讲「${topic.zh}」的文章，下面这些和它有些关系。`);
-    if (res.failed) notices.push(`有 ${res.failed} 个节目这次没取到，文章可能少一些。`);
+    // 别的语言：哪个源这次没取到不用说（读者不用知道），只有整个话题没有文章时才说（和瑞典语一样）
+    if (res.failed && isSV) notices.push(`有 ${res.failed} 个节目这次没取到，文章可能少一些。`);
     cur.batch = b.items;
     cur.more = b.more;
     cur.notices = notices;
@@ -764,8 +906,13 @@
     }
     // 网址里带了 ?a=文章编号：直接打开那一篇
     if (wantArticle) {
-      const it = res.cands.map((c) => c.item).find((x) => x.id === wantArticle);
+      let it = res.cands.map((c) => c.item).find((x) => x.id === wantArticle);
       wantArticle = '';
+      if (it && it.loadBody && !it.bodyLoaded) {
+        await SV.sources.fillBodies([it]);
+        if (token !== loadToken) return;
+        if (it.bad) it = null;
+      }
       if (it) {
         if (!cur.batch.includes(it)) cur.batch = [it, ...cur.batch].slice(0, BATCH);
         renderList();
@@ -777,14 +924,107 @@
     window.scrollTo({ top: 0 });
   }
 
+  // ---------- 别的语言的来源和许可 ----------
+  // 列表上、锁屏界面上写的来源：「GOV.UK · 部门」「KFF Health News」「Wikipedia · Did you know」
+  function srcLabel(item) {
+    const name = item.source ? item.source.name : '';
+    if (!item.program || item.program === name) return name || item.program || '';
+    return name ? name + ' · ' + item.program : item.program;
+  }
+  // 这一篇的来源和许可（许可要求写明的整句）：© European Union, 年份；许可的整句（加拿大政府、统计局、PIB、Frontiers 的
+  // 是这一篇的标题、网址、作者）；署名；节选到哪里为止（blocks.cut）；维基百科是条目开头的摘录；最后是标题、发布时间、原文网址
+  function licenceLines(item) {
+    const src = item.source || { name: item.program };
+    const c = item.credit || {};
+    const cut = item.blocks && item.blocks.cut;
+    return [
+      c.copyright || '',
+      c.license ? (c.license.statement || c.license.text) : '',
+      c.byline ? 'By ' + c.byline + ', ' + src.name + '.' : '',
+      cut ? 'Excerpt: the text up to “' + cut + '”; the rest of the original is not reproduced here.' : '',
+      c.wiki ? 'Excerpt from the Wikipedia article “' + c.wiki.title + '” (lead section).' : '',
+      '“' + item.title + '”, ' + item.day + ' ' + SV.newsTime(item.published) + ', ' + item.link,
+    ].filter(Boolean);
+  }
+  // 文章开头一行（和瑞典语的一样紧凑，没有文章末尾的一块，Tony 定的）：来源（很窄的手机上用短名）· 栏目 · 作者（许可要求署名的）·
+  // 许可的简称（OGL v3、CC BY 4.0……）、时间、「原文」。点许可的简称（电脑、手机一样）在这一行下面打开一小块：
+  // 这一篇许可要求写明的整句（licenceLines）、节选到哪里、许可和原文的链接；再点一次、Esc 收起
+  function metaLine(item) {
+    const src = item.source || { name: item.program, short: item.program, zh: '' };
+    const c = item.credit || {};
+    const prog = item.program && item.program !== src.name ? item.program : '';
+    const long = src.name + (src.zh ? '（' + src.zh + '）' : '') + (prog ? ' · ' + prog : '');
+    const lic = c.license;
+    const cut = item.blocks && item.blocks.cut;
+    let box = null;
+    let chip = null;
+    if (lic) {
+      const lines = licenceLines(item);
+      box = h('div', { class: 'lic-box', id: 'licBox', role: 'region', 'aria-label': '来源和许可', hidden: true },
+        h('b', null, '来源和许可'),
+        h('p', { lang: LANG }, lines.flatMap((t, i) => [i ? h('br') : null, t])),
+        cut || c.note ? h('p', null, [cut ? `节选：到「${cut}」为止（后面的没有转载）。` : '', c.note || ''].join('')) : null,
+        h('p', { class: 'lic-links' },
+          lic.url ? h('a', { href: lic.url, target: '_blank', rel: 'noopener' }, '许可：', h('span', { lang: LANG }, lic.text || lic.short), icon('ext')) : null,
+          h('a', { href: item.link, target: '_blank', rel: 'noopener' }, '原文', icon('ext'))));
+      chip = h('button', { type: 'button', class: 'lic', lang: LANG, 'aria-expanded': 'false', 'aria-controls': 'licBox', title: '看这一篇的来源和许可' }, lic.short || lic.text);
+      const toggle = (open) => {
+        box.hidden = !open;
+        chip.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+      chip.addEventListener('click', () => toggle(box.hidden));
+      for (const el of [chip, box]) el.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !box.hidden) { e.stopPropagation(); toggle(false); chip.focus(); } });
+    }
+    return h('div', { class: 'meta', lang: 'zh-CN' },
+      item.easy ? h('span', { class: 'badge', title: `这篇是用${L.easyBadge}写的` }, L.easyBadge) : null,
+      h('span', { class: 'src-line', title: long },
+        h('span', { class: 'src-long', lang: LANG }, src.name),
+        h('abbr', { class: 'src-short', lang: LANG, title: long }, src.short || src.name),
+        prog ? ' · ' : null, prog ? h('span', { lang: LANG }, prog) : null,
+        c.byline ? ' · ' : null, c.byline ? h('span', { class: 'byline', lang: LANG }, c.byline) : null),
+      chip,
+      h('span', { class: 'when', title: L.tzLabel }, when(item), h('span', { class: 'wide-only' }, `（${L.tzLabel}）`)),
+      h('a', { href: item.link, target: '_blank', rel: 'noopener', title: '在 ' + src.name + ' 上看原文' }, '原文', icon('ext')),
+      box);
+  }
+  // 说明框、设置里写着「瑞典语」的地方：别的语言换成那种语言的说法；来源、简易语言、声音、查词几段整段换掉
+  function applyLangTexts() {
+    document.title = L.title;
+    els.article.setAttribute('lang', LANG);
+    if (isSV) return;
+    const brandText = Array.from(els.brand.childNodes).find((n) => n.nodeType === 3);
+    if (brandText) brandText.nodeValue = L.zh; // 顶栏只写「瑞典语」「英语」（Tony 定的，2026-11-14）；网页的标题、读屏软件、提示还是全名「瑞典语读报」
+    const tg = els.brand.querySelector('.tagline');
+    if (tg) tg.textContent = L.tagline;
+    const sub = (t) => t.replace(/瑞典语读报/g, L.title).replace(/瑞典文/g, L.zhText).replace(/瑞典语/g, L.zh).replace(/瑞典时间/g, L.tzLabel);
+    for (const root of document.querySelectorAll('#dlgHelp, #dlgSettings')) {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      for (let n = walker.nextNode(); n; n = walker.nextNode()) if (/瑞典/.test(n.nodeValue)) n.nodeValue = sub(n.nodeValue);
+    }
+    const f = L.tts.cloud.filter((v) => v.gender === 'f').map((v) => v.label).join('、');
+    const m = L.tts.cloud.filter((v) => v.gender === 'm').map((v) => v.label).join('、');
+    const texts = {
+      lookup: '<b>查词</b>：点一下词看中文（鼠标只是停在词上不弹），再点一下这个词或者点别处关上（微软翻译；用不了时用浏览器内置的翻译或 MyMemory）。喇叭读这个词，「从这里读」从这个词开始朗读，「本句译文」翻译这一整句。电脑上用鼠标选中几个词，也会翻译选中的部分。',
+      easy: `<b>${L.easyBadge}</b>：${L.easyNote || ''}`,
+      voices: `<b>声音</b>：点「女 / 男」按钮切换女声、男声；在「设置」里可以选具体的声音和语速。默认用云端自然语音（微软的 ${f} 女声，${m} 男声），电脑、手机、任何浏览器上都一样，要联网；云端不通时自动改用设备自带的${L.zh}声音。在「设置」里也可以自己选用设备的声音。`,
+      tips: `<b>按钮的${L.zhText}</b>：鼠标停在任何一个按钮上（手机上按住按钮半秒），显示这个按钮的${L.zhText}说法和中文说明，顺便学几个词；播放栏上只有图标的按钮，也这样看它是做什么的。手机上按住看提示，松手不算点了按钮。`,
+      source: '<b>文章来源</b>：' + (L.sourcesHelp || ''),
+      sources: L.sourcesNote || '',
+    };
+    for (const el of document.querySelectorAll('[data-l10n]')) {
+      const v = texts[el.dataset.l10n];
+      if (v) el.innerHTML = v;
+    }
+  }
+
   // ---------- 文章列表 ----------
   // 发布时间（瑞典时间）：「今天 08:00」「昨天 17:35」「11月9日 17:35」，不是今年的加上年份
   function when(item) {
     const [y, m, d] = item.day.split('-');
-    const today = SV.stockholmDay(new Date());
+    const today = SV.newsDay(new Date());
     const diff = SV.dayDiff(today, item.day);
     const rel = diff === 0 ? '今天' : diff === 1 ? '昨天' : `${+m}月${+d}日`;
-    return `${rel} ${SV.stockholmTime(item.published)}${diff > 1 && y !== today.slice(0, 4) ? ' ' + y + '年' : ''}`;
+    return `${rel} ${SV.newsTime(item.published)}${diff > 1 && y !== today.slice(0, 4) ? ' ' + y + '年' : ''}`;
   }
   function firstLine(item) {
     const t = item.blocks.length ? item.blocks[0].text : '';
@@ -805,12 +1045,12 @@
         h('span', { class: 'narrow-only' }, '再选一次现在的话题，或者点最下面的「换一批」'))));
     const ol = h('ol', { class: 'cards' });
     for (const it of cur.batch) {
-      const a = h('a', { class: 'card' + (read.has(it.id) ? ' read' : ''), href: '?topic=' + topic.key + '&a=' + encodeURIComponent(it.id), 'data-id': it.id },
-        h('span', { class: 'c-title', lang: 'sv' }, it.title),
-        h('span', { class: 'c-first', lang: 'sv' }, firstLine(it)),
+      const a = h('a', { class: 'card' + (read.has(it.id) ? ' read' : ''), href: '?' + (isSV ? '' : 'lang=' + L.code + '&') + 'topic=' + topic.key + '&a=' + encodeURIComponent(it.id), 'data-id': it.id },
+        h('span', { class: 'c-title', lang: LANG }, it.title),
+        h('span', { class: 'c-first', lang: LANG }, firstLine(it)),
         h('span', { class: 'c-meta' },
-          it.easy ? h('span', { class: 'badge' }, '简易瑞典语') : null,
-          h('span', { lang: 'sv' }, it.program),
+          it.easy ? h('span', { class: 'badge' }, L.easyBadge) : null,
+          h('span', { lang: LANG }, isSV ? it.program : srcLabel(it)),
           h('span', null, when(it)),
           read.has(it.id) ? h('span', { class: 'badge done' }, '已读') : null));
       a.addEventListener('click', (e) => {
@@ -910,12 +1150,14 @@
     // 文章开头一行：来源（SR 的条款要写清楚材料来自 SR：「Sveriges Radio · 节目」，不到 360 像素宽的手机上「SR · 节目」）、时间、「原文 ↗」。
     // 新闻源里没有节目名时（sources.js 填的是 'Sveriges Radio'）只写一次 Sveriges Radio
     const prog = item.program && item.program !== 'Sveriges Radio' ? item.program : '';
-    // 文章末尾不再有一段来源和版权（Tony 定的，2026-11-14）；版权、「不保存、不修改」写在说明框「?」的「文章来源」里
-    art.append(h('div', { class: 'meta', lang: 'zh-CN' },
+    // 文章末尾不再有一段来源和版权（Tony 定的，2026-11-14）；版权、「不保存、不修改」写在说明框「?」的「文章来源」里。
+    // 别的语言的源要写明来源、作者、许可：都在开头这一行（见 metaLine），和瑞典语一样没有文章末尾的一块
+    if (!isSV) art.append(metaLine(item));
+    else art.append(h('div', { class: 'meta', lang: 'zh-CN' },
       item.easy ? h('span', { class: 'badge', title: '这篇是用简易瑞典语写的' }, '简易瑞典语') : null,
       h('span', { class: 'src-line', title: '来源：Sveriges Radio（瑞典广播电台）' + (prog ? '的节目 ' + prog : '') },
-        h('span', { class: 'src-long', lang: 'sv' }, 'Sveriges Radio'), h('abbr', { class: 'src-short', lang: 'sv', title: 'Sveriges Radio（瑞典广播电台）' }, 'SR'),
-        prog ? ' · ' : null, prog ? h('span', { lang: 'sv' }, prog) : null),
+        h('span', { class: 'src-long', lang: LANG }, 'Sveriges Radio'), h('abbr', { class: 'src-short', lang: LANG, title: 'Sveriges Radio（瑞典广播电台）' }, 'SR'),
+        prog ? ' · ' : null, prog ? h('span', { lang: LANG }, prog) : null),
       h('span', { class: 'when', title: '瑞典时间' }, when(item), h('span', { class: 'wide-only' }, '（瑞典时间）')),
       h('a', { href: item.link, target: '_blank', rel: 'noopener', title: '在 SR 网站上看原文（还可以听电台的原声）' }, '原文', icon('ext'))));
     const title = h('h1');
@@ -1032,16 +1274,13 @@
   }
 
   // ---------- 查词弹出框 ----------
+  // 弹出框只在点了词（或者用鼠标选中几个词）时打开，鼠标停在词上不弹（Tony 定的，2026-11-14）。pinned 一直是 true（给测试看）
   const pop = { open: false, pinned: false, wordEl: null, rect: null, token: 0, si: -1, wi: -1, text: '' };
-  let hoverTimer = 0;
-  let hideTimer = 0;
 
   const ICON_SPEAK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
   const ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>';
 
   function hidePopup() {
-    clearTimeout(hoverTimer);
-    clearTimeout(hideTimer);
     if (pop.wordEl) pop.wordEl.classList.remove('picked');
     pop.open = false;
     pop.pinned = false;
@@ -1049,10 +1288,6 @@
     pop.token++;
     els.popup.hidden = true;
     els.popup.textContent = '';
-  }
-  function scheduleHide() {
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(() => { if (!pop.pinned) hidePopup(); }, 350);
   }
 
   function placePopup() {
@@ -1079,7 +1314,6 @@
     if (!e) return '翻译失败';
     // 微软翻译的免费额度用完了才落到后面的：说一声
     const az = e.azure === 'quota' ? '微软翻译的免费额度用完了，' : '';
-    if (e.code === 'needClick') return az + '点一下这个词，用 MyMemory 在线翻译';
     if (e.code === 'needGesture') return az + '点一下这个词，启用浏览器内置的翻译';
     if (isOffError(e)) return offText(e);
     if (e.code === 'none') return az + '这个浏览器没有可用的翻译';
@@ -1101,7 +1335,7 @@
   const engineLabel = (r) => (ENGINE[r.engine] ? ENGINE[r.engine] + (r.engine !== 'azure' && r.azure === 'quota' ? '（微软翻译的免费额度用完了）' : '') : '');
 
   function onDownload(p) {
-    toast(`正在下载浏览器的瑞典语到中文的翻译模型：${Math.round((p || 0) * 100)}%`, 3000);
+    toast(`正在下载浏览器的${L.zh}到中文的翻译模型：${Math.round((p || 0) * 100)}%`, 3000);
   }
 
   // 整句译文先占多大地方：中文译文的字数一般是瑞典语句子长度的 0.28–0.37 倍（2026-11-13 的评估集，140 句），
@@ -1110,15 +1344,14 @@
   let senseApplied = 0; // 给测试看：按这一句选词义的结果真的放进弹出框几次（换了词、关了以后回来的结果不算）
 
   // 弹出框：word 模式（文章里的一个词）或 text 模式（鼠标选中的几个词）
-  function openPopup({ wordEl, text, rect, pinned, si, wi }) {
-    clearTimeout(hideTimer);
+  function openPopup({ wordEl, text, rect, si, wi }) {
     if (pop.wordEl) pop.wordEl.classList.remove('picked');
     const token = ++pop.token;
-    Object.assign(pop, { open: true, pinned, wordEl: wordEl || null, rect: rect || null, si, wi, text });
-    if (wordEl && pinned) wordEl.classList.add('picked');
+    Object.assign(pop, { open: true, pinned: true, wordEl: wordEl || null, rect: rect || null, si, wi, text });
+    if (wordEl) wordEl.classList.add('picked');
     const p = els.popup;
     p.textContent = '';
-    p.setAttribute('role', pinned ? 'dialog' : 'tooltip');
+    p.setAttribute('role', 'dialog');
     p.setAttribute('aria-label', '「' + text + '」的中文');
     const isWord = !!wordEl;
     const gl = isWord ? SV.glossary.lookup(text) : null;
@@ -1126,14 +1359,13 @@
     const senses = gl ? SV.sense.senses(gl) : [];
     const sentence = isWord && cur.model ? cur.model.sentences[si] : null;
     // 有几个意思（Tony 定的）：自动显示这一句的译文；js/sense.js 确定时，给那个意思和整句译文里这个词的译文画下划线。
-    // 鼠标只是停在词上时不用 MyMemory：只剩 MyMemory 时不自动翻这一句，只有意思和「本句译文」
-    const auto = !!sentence && senses.length >= 2 && (pinned || SV.tr.hoverCanTranslate());
+    const auto = !!sentence && senses.length >= 2;
     p.classList.toggle('multi', auto);
-    p.append(h('div', { class: 'pw' }, h('b', { lang: 'sv' }, text)));
+    p.append(h('div', { class: 'pw' }, h('b', { lang: LANG }, text)));
     if (gl) {
       const box = h('div', { class: 'gl' });
       gl.forEach((e, ei) => {
-        const line = h('div', null, e.lemma !== text.toLowerCase() ? h('i', { lang: 'sv' }, e.lemma + '：') : null);
+        const line = h('div', null, e.lemma !== text.toLowerCase() ? h('i', { lang: LANG }, e.lemma + '：') : null);
         senses.filter((x) => x.entry === ei).forEach((x, j) => {
           if (j) line.append('；');
           x.el = h('span', { class: 'sense' }, x.text);
@@ -1183,8 +1415,8 @@
             ctxs.flashTimer = setTimeout(() => ctxs.classList.remove('flash'), 900);
             return;
           }
-          // 还在等（可能是鼠标停着开始的：不能下载内置翻译的模型、不能用 MyMemory），或者刚才没翻成：点的这一次自己再翻，
-          // 结果放在同一个格子里。微软翻译那一步和还在等的那一次共用一个请求（js/translate.js），不多花额度
+          // 还在等，或者刚才没翻成：点的这一次自己再翻，结果放在同一个格子里。
+          // 微软翻译那一步和还在等的那一次共用一个请求（js/translate.js），不多花额度
           ctxs.hidden = false;
           ctxs.dataset.clicked = '1';
           fillInto(ctxs, () => translateText(s.text), 'ctxs', 'ctxs err', eng, null, () => ctxs.dataset.why !== 'wait' && ctxs.dataset.why !== 'fail');
@@ -1203,12 +1435,11 @@
     p.append(eng);
     p.hidden = false;
     placePopup();
-    if (auto) fillSentence(ctxs, sentence, sentence.words[wi], senses, gl, pinned, eng);
+    if (auto) fillSentence(ctxs, sentence, sentence.words[wi], senses, gl, eng);
     if (!needMt) return;
     const short = isWord || text.split(/\s+/).length <= 3;
-    // explicit：读者点了按钮重试（「打开在线翻译」）：就算弹出框是鼠标停着打开的，这一次也算点出来的
-    fillInto(mt, (explicit) => (short
-      ? SV.tr.translate(text, 'word', { gesture: pinned || explicit, online: S.online !== false, mm: pinned || explicit, onDownload })
+    fillInto(mt, () => (short
+      ? SV.tr.translate(text, 'word', { gesture: true, online: S.online !== false, onDownload })
       : translateText(text)), 'mt', 'mt err', eng, bSent);
   }
 
@@ -1216,7 +1447,7 @@
   // 能挑的词（js/sense.js）先请微软翻译把这个词包在 <b> 里翻译整句：确定时，给那个意思画下划线，整句译文里这个词的译文也画下划线；
   // 不确定、或者微软翻译用不了（再用内置翻译、MyMemory 翻整句）：只放整句译文，不画。
   // 结果回来时弹出框已经关了、或者换到别的词上了，就不管它。整句也翻不了：收起这一格，不报错（点「本句译文」能看到原因）。
-  async function fillSentence(box, s, w, senses, gl, pinned, eng) {
+  async function fillSentence(box, s, w, senses, gl, eng) {
     const token = pop.token;
     const put = (zh, res, r) => {
       senseApplied++;
@@ -1252,7 +1483,7 @@
       }
     }
     try {
-      const r = await translateText(s.text, { gesture: pinned, mm: pinned });
+      const r = await translateText(s.text);
       if (token !== pop.token) return;
       put(r.zh, null, r);
     } catch (e) {
@@ -1270,14 +1501,13 @@
   // 在弹出框的一个格子里放译文。在线翻译关着时，给一个「打开在线翻译」按钮：一点就打开，马上重新翻译
   // （微软翻译只是暂时连不上时，这个按钮不醒目：先说暂时连不上，打开 MyMemory 只是另一个办法）。
   // MyMemory 给单词的译文不可靠时，说一声，并把下面那个「本句译文」按钮（bSent，弹出框是文章里的一个词时才有）变成醒目的样子。
-  // skip()：结果回来时如果它说「已经有了」（别的途径先放好了），就不放。
-  // run(explicit)：explicit 是 true 时，是读者点了按钮重试（不管弹出框是不是鼠标停着打开的，都算点出来的）
+  // skip()：结果回来时如果它说「已经有了」（别的途径先放好了），就不放。run()：再翻一次（「打开在线翻译」以后）
   function fillInto(box, run, okClass, errClass, eng, bSent, skip) {
     const token = pop.token;
     box.className = errClass.replace(' err', '') + ' wait';
     box.textContent = '翻译中…';
     placePopup();
-    Promise.resolve().then(() => run(false)).then((r) => {
+    Promise.resolve().then(() => run()).then((r) => {
       if (token !== pop.token || (skip && skip())) return;
       if (!r) {
         box.textContent = '没有翻译';
@@ -1298,9 +1528,8 @@
         const b = tip(h('button', { type: 'button', class: quiet ? 'on-btn' : 'primary on-btn' }, '打开在线翻译'), 'Slå på onlineöversättning', '打开 MyMemory 在线翻译，马上重新翻译');
         b.addEventListener('click', (e) => {
           e.stopPropagation();
-          pop.pinned = true;
           turnOnline();
-          fillInto(box, () => run(true), okClass, errClass, eng);
+          fillInto(box, run, okClass, errClass, eng);
         });
         box.append(h('br'), b);
       }
@@ -1308,23 +1537,23 @@
     });
   }
 
-  function openWordPopup(wordEl, pinned) {
+  function openWordPopup(wordEl) {
     const sEl = wordEl.closest('.s');
     if (!sEl || !cur.model) return;
     const si = +sEl.dataset.si;
     const wi = +wordEl.dataset.wi;
     const s = cur.model.sentences[si];
     if (!s || !s.words[wi]) return;
-    openPopup({ wordEl, text: s.words[wi].text, pinned, si, wi });
+    openPopup({ wordEl, text: s.words[wi].text, si, wi });
   }
 
   // 本句译文、选中的几个词、自动显示的整句译文：和查词一样的顺序（js/translate.js）：微软翻译，用不了时浏览器内置翻译
   // （Chrome、Edge 电脑版），再不行用 MyMemory（默认开着，在「设置」里关了就不用）。
-  // opts.gesture、opts.mm：是不是读者点出来的。鼠标只是停在词上时都是 false：不能开始下载内置翻译的模型，也不用 MyMemory（Tony 定的）
-  async function translateText(text, opts = {}) {
+  // 都是读者点出来的（点词、点按钮、选中几个词）：可以开始下载内置翻译的模型
+  async function translateText(text) {
     const cached = SV.tr.cachedText(text);
     if (cached) return { zh: cached, engine: 'cache' };
-    return SV.tr.translate(text, 'text', { gesture: opts.gesture !== false, mm: opts.mm !== false, online: S.online !== false, onDownload });
+    return SV.tr.translate(text, 'text', { gesture: true, online: S.online !== false, onDownload });
   }
 
   // 「打开在线翻译」按钮：一点就打开（关掉的开关在顶部齿轮按钮「设置」里）
@@ -1336,61 +1565,89 @@
   }
 
   // ---------- 事件 ----------
-  let lastPointer = 'mouse';
-  document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType || 'mouse'; clearTimeout(hoverTimer); }, true);
-
-  // 点文章：正在读就暂停（点在词上同时显示这个词）；没在读时点词显示中文
-  els.main.addEventListener('click', (e) => {
-    if (cur.view !== 'article') return;
-    if (e.target.closest('a, button, input, select')) return;
-    const sel = window.getSelection ? window.getSelection() : null;
-    if (sel && !sel.isCollapsed && String(sel).trim().length > 1 && lastPointer === 'mouse') return;
-    const wEl = e.target.closest('#article .w');
-    if (reader.state === 'speaking') {
-      reader.pause();
-      if (wEl) openWordPopup(wEl, true);
-      else hidePopup();
-      return;
+  // 点（Tony 定的，2026-11-14；电脑、手机、平板一样，两种语言一样）：
+  // - 点一下词（按下、松开离得不远，不是拖着选字、不是滑动）：打开这个词的中文；正在读时先暂停（停在正在读的词上，
+  //   中文弹出框不会被朗读滚走），再点一下同一个词关上。鼠标停在词上不弹，也不去翻译（不花额度）。
+  //   点在文章的字里、但不在词上（词和词之间、行和行之间、一行后面没有字的地方）：离得最近的词，8 像素以内的算点了它，
+  //   再远就什么也不做（文章的字里不算空白处，手指差一点没点准不会接着读、不会滚页面）。
+  //   按下时在一个词上、松开时页面自己滚了一点（朗读跟着往下滚）：算点了按下的那个词。
+  // - 点页面空白处（页边、段落之间、页面自己空着的地方；不是文章的字、链接、按钮、国旗、标题、话题按钮、面板、对话框、
+  //   弹出框、「来源和许可」）：正在读就暂停，暂停着就从停下的词接着读；还没开始读什么也不做。
+  //   开着弹出框时，点外面只是关上它；开着话题面板时，点外面只是关上面板。
+  // - 拖着选字、滑动、长按都不算点。空格键照旧（暂停、继续）。
+  // - 没有按下的 click（读屏软件、键盘、脚本发的，e.detail 是 0）：点词照样查词；空白处不算，只关上弹出框。
+  let down = null; // 按下时：在哪里、什么时候、按在什么上、弹出框开着没有
+  let tapInfo = null; // 这一次 click 的那一下按下（capture 阶段从 down 拿过来，用过就清掉，不会留给以后的 click）
+  document.addEventListener('pointerdown', (e) => {
+    down = { x: e.clientX, y: e.clientY, t: Date.now(), target: e.target, popOpen: pop.open };
+  }, true);
+  // 没有变成 click 的按下（滑动、长按、右键）：忘掉，免得以后读屏软件、脚本的 click 被它挡住
+  document.addEventListener('pointercancel', () => { down = null; }, true);
+  document.addEventListener('contextmenu', () => { down = null; }, true);
+  document.addEventListener('click', (e) => { tapInfo = e.detail === 0 ? null : down; down = null; }, true);
+  // iOS 的 Safari 只在有 click 处理的元素上合成 click：顶栏、播放栏、文章区各挂一个什么也不做的（真的处理在 document 上）
+  for (const el of [$('header.top'), els.topbar, els.main]) if (el) el.addEventListener('click', () => {});
+  const selecting = () => { const sel = window.getSelection ? window.getSelection() : null; return !!(sel && !sel.isCollapsed && String(sel).trim().length > 1); };
+  const NOT_BLANK = 'a, button, input, select, textarea, label, summary, details, dialog, [role="option"], [role="listbox"], [role="dialog"], [contenteditable="true"], #popup, .lic-box, .topic-menu, .lang-menu, .svtip, #toast, .w';
+  // 文章的字：标题和正文的段落、列表、小标题、引文（点在这里不算空白处）
+  const TEXT_BLOCKS = '#article h1, #article .body p, #article .body li, #article .body h2, #article .body blockquote';
+  // 真的点了一下：按下、松开离得不远（10 像素以内）、不超过 0.7 秒，没有选着字
+  function realTap(e, d) {
+    if (!d || Math.abs(e.clientX - d.x) > 10 || Math.abs(e.clientY - d.y) > 10 || Date.now() - d.t > 700) return false;
+    return !selecting();
+  }
+  // 离 (x, y) 最近的词，8 像素以内；没有就是 null
+  function nearWord(x, y) {
+    let best = null;
+    let bestD = Infinity;
+    for (const [dx, dy] of [[0, 0], [0, -8], [0, 8], [-8, 0], [8, 0], [-6, -6], [6, -6], [-6, 6], [6, 6]]) {
+      const el = document.elementFromPoint(x + dx, y + dy);
+      const w = el && el.closest ? el.closest('#article .w') : null;
+      if (!w) continue;
+      for (const r of w.getClientRects()) {
+        const dist = Math.hypot(Math.max(r.left - x, 0, x - r.right), Math.max(r.top - y, 0, y - r.bottom));
+        if (dist < bestD) { bestD = dist; best = w; }
+      }
     }
-    if (wEl) {
-      if (pop.open && pop.pinned && pop.wordEl === wEl) hidePopup();
-      else openWordPopup(wEl, true);
-    } else {
-      hidePopup();
-    }
-  });
-
-  // 鼠标停在词上：显示中文（正在朗读时不弹，免得挡住；点一下就暂停并显示）
-  els.article.addEventListener('pointerover', (e) => {
-    if (e.pointerType !== 'mouse' || e.buttons) return; // 按着键在拖选文字时不弹
-    const wEl = e.target.closest('.w');
-    if (!wEl || reader.state === 'speaking' || (pop.open && pop.pinned)) return;
-    clearTimeout(hideTimer);
-    clearTimeout(hoverTimer);
-    if (pop.open && pop.wordEl === wEl) return;
-    hoverTimer = setTimeout(() => {
-      if (reader.state === 'speaking' || (pop.open && pop.pinned) || !wEl.isConnected) return;
-      openWordPopup(wEl, false);
-    }, 260);
-  });
-  els.article.addEventListener('pointerout', (e) => {
-    if (e.pointerType !== 'mouse') return;
-    const wEl = e.target.closest('.w');
-    if (!wEl || (e.relatedTarget && wEl.contains(e.relatedTarget))) return;
-    clearTimeout(hoverTimer);
-    if (pop.open && !pop.pinned) scheduleHide();
-  });
-  els.popup.addEventListener('pointerenter', () => clearTimeout(hideTimer));
-  els.popup.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && pop.open && !pop.pinned) scheduleHide(); });
+    return bestD <= 8 ? best : null;
+  }
+  // 这一下点的是哪个词（见上面）：没有就是 null
+  function tappedWord(e, d) {
+    if (cur.view !== 'article') return null;
+    const t = e.target;
+    const w = t.closest('#article .w');
+    if (!d) return w && !selecting() ? w : null; // 没有按下（读屏软件、脚本）：只认点在词上的
+    if (!realTap(e, d)) return null;
+    const dw = d.target && d.target.closest ? d.target.closest('#article .w') : null;
+    if (dw) return dw; // 按下时在词上（松开时页面可能自己滚了一点）
+    if (w) return w;
+    return t.closest(TEXT_BLOCKS) ? nearWord(e.clientX, e.clientY) : null;
+  }
   els.popup.addEventListener('click', (e) => {
     e.stopPropagation();
     const b = e.target.closest && e.target.closest('button'); // 弹出框里点过的按钮放开焦点：再按空格是暂停、继续
     if (b) b.blur();
   });
   document.addEventListener('click', (e) => {
-    if (!pop.open || els.popup.contains(e.target) || els.main.contains(e.target)) return;
-    if (e.target.closest('dialog')) return;
-    hidePopup();
+    const d = tapInfo;
+    tapInfo = null;
+    if (e.defaultPrevented || e.button > 0) return;
+    const t = e.target;
+    if (!t || !t.closest || t.closest('dialog')) return;
+    const wEl = tappedWord(e, d);
+    // 点在弹出框外面（按钮、链接、空白处）：弹出框关上；点词时下面换成那个词的
+    if (pop.open && !els.popup.contains(t) && !wEl) hidePopup();
+    if (wEl) {
+      if (reader.state === 'speaking') reader.pause();
+      if (pop.open && pop.wordEl === wEl) hidePopup();
+      else openWordPopup(wEl);
+      return;
+    }
+    // 文章的字里（没点准词）、不是空白处的、没有真的按下的：不暂停也不接着读
+    if (t.closest(TEXT_BLOCKS) || t.closest(NOT_BLANK) || document.querySelector('dialog[open]') || !realTap(e, d)) return;
+    if (d.popOpen) return; // 这一下只是关上弹出框
+    if (reader.state === 'speaking') reader.pause();
+    else if (reader.state === 'paused' && cur.view === 'article') startReading();
   });
 
   // 电脑上用鼠标选中几个词：翻译选中的部分
@@ -1403,7 +1660,7 @@
       if (text.length < 2 || text.length > 300 || !/\s/.test(text)) return;
       const range = sel.getRangeAt(0);
       if (!els.article.contains(range.commonAncestorContainer)) return;
-      openPopup({ text, rect: range.getBoundingClientRect(), pinned: true, si: -1, wi: -1 });
+      openPopup({ text, rect: range.getBoundingClientRect(), si: -1, wi: -1 });
     }, 0);
   });
 
@@ -1498,8 +1755,8 @@
     syncSettingsForm();
     const want = S.gender === 'm' ? '男声' : '女声';
     if (useCloud()) toast(`${want}：${cloudVoice().label}（云端自然语音）`, 2500);
-    else if (!voiceInfo.voice) toast('这台设备上没有瑞典语声音（详见「设置」）');
-    else if (!voiceInfo.exact) toast(`这台设备没有瑞典语${want}，现在用的是 ${voiceInfo.voice.name}`, 5000);
+    else if (!voiceInfo.voice) toast(`这台设备上没有${L.zh}声音（详见「设置」）`);
+    else if (!voiceInfo.exact) toast(`这台设备没有${L.zh}${want}，现在用的是 ${voiceInfo.voice.name}`, 5000);
     else toast(`${want}：${voiceInfo.voice.name}`, 2500);
     if (reader.state === 'speaking' && !reader.held) reader.play(reader.si, reader.wi);
   });
@@ -1588,7 +1845,7 @@
     selVoice.setAttribute('aria-label', '声音：' + (o ? o.textContent : ''));
     if (o) voicePicker.select(o.dataset.value);
   }
-  const CLOUD_NOTE = '云端自然语音：微软 Azure 的瑞典语神经语音，电脑、手机、任何浏览器上都一样。朗读时文章的文字发给微软的语音服务合成声音（Edge 浏览器的在线声音也是这样），要联网。';
+  const CLOUD_NOTE = '云端自然语音：微软 Azure 的' + L.zh + '神经语音，电脑、手机、任何浏览器上都一样。朗读时文章的文字发给微软的语音服务合成声音（Edge 浏览器的在线声音也是这样），要联网。';
   function fillVoiceSelect() {
     // 声音来源：只有设了云端语音（js/config.js 的 ttsUrl）才显示
     $('#engineRow').hidden = !cloudReader;
@@ -1603,14 +1860,15 @@
       return;
     }
     const list = SV.speech.voices();
-    setVoiceOptions([{ value: '', text: `自动（${S.gender === 'm' ? '男声' : '女声'}优先）`, sv: 'Automatiskt', zh: '自动选一个瑞典语声音' }].concat(list.map((x) => {
+    setVoiceOptions([{ value: '', text: `自动（${S.gender === 'm' ? '男声' : '女声'}优先）`, sv: 'Automatiskt', zh: `自动选一个${L.zh}声音` }].concat(list.map((x) => {
       const g = x.gender === 'f' ? '女' : x.gender === 'm' ? '男' : '性别不明';
       return { value: x.v.voiceURI, text: `${x.v.name}（${g}）`, sv: x.gender === 'f' ? 'Kvinnoröst' : x.gender === 'm' ? 'Mansröst' : 'Röst', zh: `用这台设备的 ${x.v.name} 朗读` };
     })), list.some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '');
     let t;
     if (!SV.speech.supported) t = '这个浏览器不支持朗读。';
-    else if (!list.length) t = '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 > 时间和语言 > 语音」里添加瑞典语语音；iPhone / iPad 在「设置 > 辅助功能 > 朗读内容 > 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。';
-    else t = `这台设备有 ${list.length} 个瑞典语声音。认不出男女的标为「性别不明」，可以试听后自己选。`;
+    else if (!list.length) t = isSV ? '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 > 时间和语言 > 语音」里添加瑞典语语音；iPhone / iPad 在「设置 > 辅助功能 > 朗读内容 > 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。'
+      : `这台设备上没有${L.zh}声音。办法：用 Edge 浏览器（自带微软的在线声音）；Windows 可以在「设置 > 时间和语言 > 语音」里添加${L.zh}语音；iPhone / iPad 在「设置 > 辅助功能 > 朗读内容 > 声音」里下载${L.zh}声音；安卓在系统的「文字转语音」设置里安装${L.zh}。`;
+    else t = `这台设备有 ${list.length} 个${L.zh}声音。认不出男女的标为「性别不明」，可以试听后自己选。`;
     t += ' 手机锁屏后，这台设备的声音会停下（回到前台从停下的词接着读）；锁屏后继续朗读需要云端语音。';
     // 设备自己的声音是平台的东西（有没有瑞典语声音、听起来怎样、锁屏后停不停），各个平台一样的办法是云端语音
     if (cloudReader) t += ' 每台设备自己的声音不一样；要在电脑、手机、平板上都一样，选上面的「云端自然语音」。';
@@ -1682,13 +1940,14 @@
     else if (az !== 'off') t = '查词和「本句译文」先用微软翻译（微软不保存收到的文字；免费额度所有读者共用，用完时自动改用下面的）。';
     const lead = az === 'off' ? '浏览器内置翻译：可用' : '微软翻译用不了时，用浏览器内置翻译';
     if (a === 'ready' || a === 'available') t += lead + '（在本机翻译，文字不离开这台设备，不限量）。';
-    else if (a === 'downloadable' || a === 'downloading') t += lead + '。第一次用时浏览器要下载瑞典语到中文的翻译模型（点一个词就开始）。';
+    else if (a === 'downloadable' || a === 'downloading') t += lead + '。第一次用时浏览器要下载' + L.zh + '到中文的翻译模型（点一个词就开始）。';
     else t += '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：' + (az === 'off' ? '' : '微软翻译用不了时，') + '查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能' + (PAGE_TR_KNOWN ? '（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）' : '') + '。';
     if (u.chars) t += ` 今天已用 MyMemory 在线翻译约 ${u.chars} 个字符。`;
     $('#trNote').textContent = t;
   }
 
   // ---------- 开始 ----------
+  applyLangTexts();
   document.documentElement.style.setProperty('--scale', S.scale);
   // 页面上固定的按钮的瑞典文提示。朗读、语速、男女声、读完以后、下一篇、返回列表随状态变，
   // 由 updateButtons、refreshVoice、openArticle 再改；这里先给它们一个，免得哪个按钮没有提示。
@@ -1719,13 +1978,40 @@
   // 内置翻译能不能用：没有时显示整页翻译的提示
   SV.tr.builtinAvailability().then((a) => setBuiltin(a !== 'unavailable'), () => setBuiltin(false));
   const params = new URLSearchParams(location.search);
-  const first = TOPICS.find((t) => t.key === params.get('topic')) || TOPICS.find((t) => t.key === S.topic) || TOPICS[0];
-  showTopic(first, false);
+  renderLangs();
+  const justSwitched = SV.session.get(SWITCH_KEY, '') === L.code;
+  if (justSwitched) SV.session.remove(SWITCH_KEY);
+  // 换回来的：接着上次在这种语言读到的地方（同一个话题、同一篇文章、读到的那一句，暂停着）
+  const resume = justSwitched ? SV.session.get(RESUME_KEY, null) : null;
+  SV.session.remove(RESUME_KEY);
+  const first = TOPICS.find((t) => t.key === params.get('topic')) || (resume && TOPICS.find((t) => t.key === resume.topic)) || TOPICS.find((t) => t.key === S.topic) || TOPICS[0];
+  // 刚换了语言：文章列出来以后说一声
+  Promise.resolve(showTopic(first, false)).then(() => {
+    const it = resume && resume.id && cur.view === 'list' && cur.topic === first ? cur.batch.find((x) => x.id === resume.id) : null;
+    if (it) {
+      openArticle(it, true);
+      const s = cur.model && resume.si >= 0 ? cur.model.sentences[resume.si] : null;
+      if (s) {
+        reader.si = resume.si;
+        reader.wi = resume.wi;
+        reader.setState('paused');
+        highlight(resume.si, resume.wi, true);
+        const r = s.el.getBoundingClientRect();
+        window.scrollTo({ top: Math.max(0, window.scrollY + r.top - window.innerHeight * 0.3) });
+      } else if (resume.y > 0) window.scrollTo({ top: resume.y });
+    }
+    if (justSwitched) toast(`已切换到${L.title}：${L.zh}的文章、${L.zh}的朗读，查词还是翻成中文` + (it ? '（接着上次读到的地方）' : ''), 4000);
+  });
 
   // 给自动测试看的状态（不影响使用）
   window.SVApp = {
     setAutoNextMax: (n) => { autoNextMax = n > 0 ? n : AUTO_NEXT_MAX; }, // 测试用：连着自动读几篇就停（平常是 AUTO_NEXT_MAX）
     state: () => ({
+      lang: L.code,
+      langMenu: !!(langPicker && langPicker.open),
+      thin: Object.assign({}, thinCount), // 文章太少就不列的话题数到了几篇（hideBelow）
+      licOpen: !!(document.querySelector('#licBox') && !document.querySelector('#licBox').hidden),
+      hiddenTopics: thinTopics.filter((t) => t.hidden).map((t) => t.key),
       topic: cur.topic && cur.topic.key,
       view: cur.view,
       batch: cur.batch.map((x) => x.id),

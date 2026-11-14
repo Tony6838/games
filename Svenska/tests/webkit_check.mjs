@@ -78,6 +78,25 @@ const azRoute = (route) => {
   return route.fulfill({ status: r.status, headers: { ...cors, 'Content-Type': 'application/json' }, body: JSON.stringify(r.body) });
 };
 const WORKER_TRANSLATE = 'https://svenska-tts.tony6838.workers.dev/translate';
+// 新闻代理（上线的设置 feedProxy: true）：页面里是假的 svtts.test，/feed、/page 转给部署了的 Worker（用这个网页的 Origin，
+// 本机 127.0.0.1 Worker 也允许）；同一个地址这一次运行里只取一次（几种设备比的是同样的文章，也碰不到 Worker 的上限）
+const LIVE_WORKER = 'https://svenska-tts.tony6838.workers.dev';
+const liveCache = new Map();
+const liveProxyRoute = async (route) => {
+  const u = new URL(route.request().url());
+  const live = LIVE_WORKER + u.pathname + u.search;
+  if (!liveCache.has(live)) {
+    liveCache.set(live, (async () => {
+      try {
+        const r = await fetch(live, { headers: { Origin: new URL(baseUrl).origin } });
+        return { status: r.status, type: r.headers.get('content-type') || 'text/plain', body: Buffer.from(await r.arrayBuffer()) };
+      } catch (e) { return null; }
+    })());
+  }
+  const v = await liveCache.get(live);
+  if (!v) return route.abort('failed');
+  return route.fulfill({ status: v.status, headers: { 'Access-Control-Allow-Origin': '*', 'Content-Type': v.type }, body: v.body });
+};
 
 const browser = await webkit.launch();
 const allErrors = [];
@@ -163,14 +182,14 @@ try {
   check('文章页上也不提示（在说明框里）', !tr.btn && !tr.hint, JSON.stringify(tr));
   // 文章页的顶栏：没有「← 列表」（点标题回到列表），是标题、话题按钮（选着现在的话题）和工具按钮，一行
   const hdr = await page.evaluate(() => {
-    const items = [...document.querySelectorAll('header.top .brand, header.top .topic-sel, header.top .back-btn, header.top .tools')].filter((e) => e.offsetParent);
+    const items = [...document.querySelectorAll('header.top .lang-sel, header.top .brand, header.top .topic-sel, header.top .back-btn, header.top .tools')].filter((e) => e.offsetParent);
     const mids = items.map((e) => { const r = e.getBoundingClientRect(); return (r.top + r.bottom) / 2; });
     const de = document.documentElement;
     return { items: items.map((e) => e.id || e.className.split(' ')[0]), oneRow: mids.every((m) => Math.abs(m - mids[0]) < 10), sel: document.querySelector('#topicSel').dataset.topic, topic: SVApp.state().topic,
       fits: items.every((e) => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= de.clientWidth + 0.5; }), scrollW: de.scrollWidth, vw: de.clientWidth };
   });
-  check('iPhone 上文章页的顶栏：没有「← 列表」，是标题、话题按钮（选着现在的话题）和工具按钮，一行，不出屏',
-    hdr.items.join() === 'brand,topicSel,tools' && hdr.oneRow && hdr.sel === hdr.topic && hdr.fits && hdr.scrollW <= hdr.vw, JSON.stringify(hdr));
+  check('iPhone 上文章页的顶栏：没有「← 列表」，是国旗、标题、话题按钮（选着现在的话题）和工具按钮，一行，不出屏',
+    hdr.items.join() === 'langSel,brand,topicSel,tools' && hdr.oneRow && hdr.sel === hdr.topic && hdr.fits && hdr.scrollW <= hdr.vw, JSON.stringify(hdr));
   // 文章开头一行：「SR · 节目」、时间、「原文 ↗」；文章末尾没有来源、版权那一段；没有「怎么用」小说明和第一次打开时的说明框
   const srcW = await page.evaluate(() => {
     const m = document.querySelector('#article .meta'); const s = m.querySelector('.src-line'); const a = [...m.querySelectorAll('a')].find((x) => /原文/.test(x.textContent));
@@ -199,10 +218,10 @@ try {
   const stick = await page.evaluate(() => { const bar = document.querySelector('#topbar').getBoundingClientRect(); const p = document.querySelector('#btnPlay').getBoundingClientRect(); return { barTop: Math.round(bar.top), playTop: Math.round(p.top), playBottom: Math.round(p.bottom), scrolled: Math.round(scrollY) }; });
   check('iPhone 上往下滚，朗读按钮还粘在顶上', stick.barTop === 0 && stick.playTop >= 0 && stick.playBottom < 130, JSON.stringify(stick));
   await page.evaluate(() => window.scrollTo(0, 0));
-  // 点标题「瑞典语读报」：回到列表
+  // 点标题「瑞典语」：回到列表
   await touch(page, '#brand');
   const backW = await page.waitForFunction(() => SVApp.state().view === 'list', null, { timeout: 5000 }).then(() => true, () => false);
-  check('iPhone 上点标题「瑞典语读报」回到列表', backW);
+  check('iPhone 上点标题「瑞典语」回到列表', backW);
   console.log('  朗读：', env.speech ? `有 speechSynthesis，${env.voices} 个瑞典语声音` : '这个 WebKit 没有 speechSynthesis（Windows 上的 WebKit 不带语音），朗读只能在真的苹果设备上试');
   await ctx.close();
 
@@ -475,6 +494,7 @@ try {
     cpage.on('pageerror', (e) => allErrors.push('Firefox 云端: ' + e.message));
     await cpage.route('https://svtts.test/**', (route) => json(route, { token: 'tok-ff', region: 'northeurope' }));
     await cpage.route('https://svtts.test/translate', azRoute); // 后注册的先匹配：微软翻译照旧当作连不上
+    await cpage.route(/^https:\/\/svtts\.test\/(feed|page)\?/, liveProxyRoute);
     await cpage.route('**/api.mymemory.translated.net/**', (route) => MM.ok(route, []));
     await cpage.goto(baseUrl);
     ok = await cpage.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 }).then(() => true, () => false);
@@ -578,6 +598,11 @@ try {
     // 对照：安卓（Chromium）用和 iPhone、iPad 一样大的屏幕，排版、折行应当一模一样（上面两台安卓设备的屏幕本来就宽一点、窄一点）
     { name: 'phone-android-chromium-390', group: 'phone', engine: 'chromium', vp: [390, 844], touch: true, ua: ANDROID_PHONE_UA, dpr: 3 },
     { name: 'tablet-android-chromium-820', group: 'tablet', engine: 'chromium', vp: [820, 1180], touch: true, ua: ANDROID_TAB_UA, dpr: 2 },
+    // 英语读报（?lang=en）：电脑上 Windows 和 Mac、手机上 iPhone 和安卓也一样
+    { name: 'en-desktop-1280-chromium', group: 'en-desk', engine: 'chromium', vp: [1280, 800], touch: false, lang: 'en' },
+    { name: 'en-desktop-1280-webkit-mac', group: 'en-desk', engine: 'webkit', vp: [1280, 800], touch: false, ua: MAC_UA, lang: 'en' },
+    { name: 'en-phone-iphone-webkit', group: 'en-phone', engine: 'webkit', vp: [390, 844], touch: true, ua: IPHONE_UA, dpr: 3, lang: 'en' },
+    { name: 'en-phone-android-chromium-390', group: 'en-phone', engine: 'chromium', vp: [390, 844], touch: true, ua: ANDROID_PHONE_UA, dpr: 3, lang: 'en' },
   ];
   const plat = {};
   let pn = 0;
@@ -593,9 +618,10 @@ try {
     pp.on('pageerror', (e) => allErrors.push(c.name + ': ' + e.message));
     await pp.route('https://svtts.test/**', (route) => json(route, { token: 'tok-plat', region: 'northeurope' }));
     await pp.route('https://svtts.test/translate', azRoute);
+    await pp.route(/^https:\/\/svtts\.test\/(feed|page)\?/, liveProxyRoute);
     await pp.route('**/api.mymemory.translated.net/**', (route) => MM.ok(route, []));
-    await pp.goto(baseUrl);
-    const okP = await pp.waitForFunction(() => window.SVApp && SVApp.state().view === 'list' && !SVApp.state().loading, null, { timeout: 60000 }).then(() => true, () => false);
+    await pp.goto(baseUrl + (c.lang ? '?lang=' + c.lang : ''));
+    const okP = await pp.waitForFunction(() => window.SVApp && SVApp.state().view === 'list' && !SVApp.state().loading, null, { timeout: 150000 }).then(() => true, () => false);
     await pp.evaluate(() => document.fonts.ready);
     const snapP = (nm) => pp.screenshot({ path: join(platDir, `${String(++pn).padStart(2, '0')}-${c.name}-${nm}.png`) });
     const tapP = async (sel) => { if (c.touch) await pp.locator(sel).first().tap(); else await pp.locator(sel).first().click(); };
@@ -644,7 +670,7 @@ try {
     plat[c.name] = { ...c, ok: okP, m };
     console.log('  ', c.name, JSON.stringify(m));
     check(`${c.name}：打开、本站的字体（SV Sans）用上了、没有系统的下拉菜单、设置里的控件自己画、声音是自己的选择列表、不横向溢出`,
-      okP && m.font && m.cardFont === 'SV Sans' && m.article.font === 'SV Sans' && !m.selects && m.settings.open && m.settings.controls && m.settings.picker && m.settings.voices === 3 && !m.overflow, JSON.stringify(m).slice(0, 300));
+      okP && m.font && m.cardFont === 'SV Sans' && m.article.font === 'SV Sans' && !m.selects && m.settings.open && m.settings.controls && m.settings.picker && m.settings.voices === (c.lang === 'en' ? 4 : 3) && !m.overflow, JSON.stringify(m).slice(0, 300));
     await pctx.close();
   }
   // 每一对比一比
@@ -678,13 +704,17 @@ try {
       JSON.stringify({ ipad: { layout: ipad.m.layout, bar: ipad.m.bar }, android: { layout: atab.m.layout, bar: atab.m.bar } }));
   }
   // 一样大的屏幕：iPhone 和安卓 390×844、iPad 和安卓平板 820×1180，顶栏一样高、同一篇文章的标题和正文折成一样多的行
-  for (const [x, y, what] of [['phone-iphone-webkit', 'phone-android-chromium-390', '手机 390×844'], ['tablet-ipad-webkit', 'tablet-android-chromium-820', '平板 820×1180']]) {
+  for (const [x, y, what] of [['phone-iphone-webkit', 'phone-android-chromium-390', '手机 390×844'], ['tablet-ipad-webkit', 'tablet-android-chromium-820', '平板 820×1180'],
+    ['en-phone-iphone-webkit', 'en-phone-android-chromium-390', '英语读报 手机 390×844'], ['en-desktop-1280-webkit-mac', 'en-desktop-1280-chromium', '英语读报 电脑 1280×800']]) {
     const a = plat[x];
     const b = plat[y];
     if (!a || !b) continue;
     const sameArticle = a.m.article.id === b.m.article.id;
-    check(`${what}：iOS（WebKit）和安卓（Chromium）一模一样：顶栏一样高、播放栏一样、${a.m.menu ? '话题面板一样、' : ''}同一篇文章的标题和正文折成一样多的行`,
-      a.m.layout === b.m.layout && a.m.bar === b.m.bar && same(a, b, [(z) => z.m.playerH, (z) => z.m.menu || null]) && (!sameArticle || (a.m.article.h1 === b.m.article.h1 && a.m.article.body === b.m.article.body)),
+    const names = /电脑/.test(what) ? 'Mac（WebKit）和 Windows（Chromium）' : 'iOS（WebKit）和安卓（Chromium）';
+    check(`${what}：${names}一模一样：顶栏一样高、播放栏一样、${a.m.menu ? '话题面板一样、' : ''}同一篇文章的标题和正文折成一样多的行`,
+      // 本站的字体只有拉丁字母和常用标点：文章里偶尔有别的文字、符号（用各个平台自己的字体画），很长的文章可能差一两行（不超过 1%）
+      a.m.layout === b.m.layout && a.m.bar === b.m.bar && same(a, b, [(z) => z.m.playerH, (z) => z.m.menu || null])
+      && (!sameArticle || (a.m.article.h1 === b.m.article.h1 && Math.abs(a.m.article.body - b.m.article.body) <= Math.max(0, Math.floor(a.m.article.body / 100)))),
       JSON.stringify({ sameArticle, ios: { bar: a.m.bar, h1: a.m.article.h1, body: a.m.article.body }, android: { bar: b.m.bar, h1: b.m.article.h1, body: b.m.article.body } }));
   }
   writeFileSync(join(platDir, 'platforms.json'), JSON.stringify(plat, null, 1));

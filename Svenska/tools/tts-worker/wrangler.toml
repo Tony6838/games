@@ -19,3 +19,14 @@ namespace_id = "1001"
   [ratelimits.simple]
   limit = 60
   period = 60
+
+# 新闻代理 /feed、/page 每个网络地址的上限：每 60 秒 120 个请求。一个读者第一次打开英语读报的几个话题，
+# 一分钟里大约 20～50 个（加拿大政府的新闻稿一篇一个请求）；学校、公司共用一个出口地址时还有余地。
+# 挡的是一直来要的（循环、扫描），不是正常读报。超了 Worker 回 429 { error: 'busy' }，网页这一次少了那个源的文章。
+[[ratelimits]]
+name = "NEWS_LIMIT"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60

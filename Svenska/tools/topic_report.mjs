@@ -1,5 +1,5 @@
-// 调关键词用：在无头 Edge 里取一遍各话题的 SR 源，列出每个话题的候选文章和得分（今天的标 *，简易的标「易」）。
-//   node tools/topic_report.mjs [话题键，比如 klimat] [每个话题列几篇，默认 8]
+// 调关键词用：在无头 Edge 里取一遍各话题的源，列出每个话题的候选文章和得分（今天的标 *，简易的标「易」）。
+//   node tools/topic_report.mjs [话题键，比如 klimat] [每个话题列几篇，默认 8] [语言，默认 sv；英语 en]
 // 每个 SR 源只取一次（页面里有缓存），所有话题加起来二十几个请求。
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { extname, join, normalize, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const [only = '', limit = '8'] = process.argv.slice(2);
+const [only = '', limit = '8', lang = 'sv'] = process.argv.slice(2);
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
@@ -35,19 +35,23 @@ let id = 0;
 const pending = new Map();
 ws.addEventListener('message', (m) => { const msg = JSON.parse(m.data); if (msg.id && pending.has(msg.id)) { pending.get(msg.id)(msg); pending.delete(msg.id); } });
 const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
-await send('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/Svenska/` });
+// SV_CONFIG_JSON='{"ttsUrl":"http://127.0.0.1:8799","feedProxy":true}'：页面的设置（比如试一试本机跑的 Worker 的新闻代理）
+await send('Page.enable');
+if (process.env.SV_CONFIG_JSON) await send('Page.addScriptToEvaluateOnNewDocument', { source: 'window.SV_CONFIG = ' + process.env.SV_CONFIG_JSON + ';' });
+await send('Page.navigate', { url: `http://127.0.0.1:${server.address().port}/Svenska/` + (lang === 'sv' ? '' : '?lang=' + encodeURIComponent(lang)) });
 await sleep(2500);
 const r = await send('Runtime.evaluate', {
   awaitPromise: true, returnByValue: true,
   expression: `(async () => {
     const out = [];
-    const today = SV.stockholmDay(new Date());
+    const today = SV.newsDay(new Date());
     for (const t of SV.sources.TOPICS) {
       if (${JSON.stringify(only)} && t.key !== ${JSON.stringify(only)}) continue;
       const res = await SV.sources.loadTopic(t);
       const list = res.cands.slice().sort((a, b) => b.score - a.score || b.item.published - a.item.published);
-      out.push('== ' + t.key + ' ' + t.zh + '：' + res.cands.length + ' 篇' + (res.loose ? '（没有够分的，用的是 2 分以上的）' : '') + (res.failed ? '，' + res.failed + ' 个源没取到' : ''));
-      for (const c of list.slice(0, ${+limit})) out.push('  ' + String(c.score).padStart(3) + (c.item.day === today ? ' *' : '  ') + (c.item.easy ? '易 ' : '   ') + c.item.day + ' ' + c.item.program.slice(0, 22).padEnd(22) + ' ' + c.item.title);
+      const days = new Set(res.cands.map((c) => c.item.day));
+      out.push('== ' + t.key + ' ' + t.zh + '：' + res.cands.length + ' 篇（' + days.size + ' 天）' + (res.loose ? '（没有够分的，用的是 2 分以上的）' : '') + (res.failed ? '，' + res.failed + ' 个源没取到' : '') + (t.hideBelow && res.cands.length < t.hideBelow ? '（不到 ' + t.hideBelow + ' 篇：网页上不列这个话题）' : ''));
+      for (const c of list.slice(0, ${+limit})) out.push('  ' + String(c.score).padStart(3) + (c.item.day === today ? ' *' : '  ') + (c.item.easy ? '易 ' : '   ') + c.item.day + ' ' + (c.item.source ? c.item.source.name + ' · ' : '') .slice(0, 12) + c.item.program.slice(0, 20).padEnd(20) + ' ' + c.item.title.slice(0, 110));
     }
     return out.join('\\n');
   })()`,

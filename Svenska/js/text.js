@@ -5,26 +5,39 @@
   'use strict';
   const SV = window.SV;
 
+  // 下面是瑞典语的规则；别的语言在它的设置里（js/lang/*.js 的 text：segmenter、wordRe、abbr、cont）换掉
+  const LT = (SV.lang && SV.lang.text) || {};
   // 词：字母或数字，中间可以有连字符、撇号、冒号（EU:s、AI-chip、1990-talet），数字里可以有小数点（12.30、3,5）
-  const WORD_RE = /[\p{L}\p{N}]+(?:[-'’:][\p{L}\p{N}]+|[.,]\p{N}+)*/gu;
+  const WORD_RE = LT.wordRe || /[\p{L}\p{N}]+(?:[-'’:][\p{L}\p{N}]+|[.,]\p{N}+)*/gu;
   // 这些缩写后面的句点不是句子结束（osv.、m.m. 常在句末，不放进来；它们在句中时后面是小写字母，下面另有规则）
-  const ABBR = /(?:^|[\s(])(?:bl\.a|t\.ex|s\.k|fr\.o\.m|t\.o\.m|p\.g\.a|resp|jfr|f\.d|dvs|ca|kl|nr|tel|inkl|exkl|[A-ZÅÄÖ])\.\s*$/;
+  const ABBR = LT.abbr || /(?:^|[\s(])(?:bl\.a|t\.ex|s\.k|fr\.o\.m|t\.o\.m|p\.g\.a|resp|jfr|f\.d|dvs|ca|kl|nr|tel|inkl|exkl|[A-ZÅÄÖ])\.\s*$/;
+  // 下一段这样开头（小写字母、数字）就不是新句子
+  const CONT = LT.cont || /^\s*[a-zåäöéü0-9]/;
+  // 英语：可以在句末的缩写（U.S.、p.m.、etc.、Inc.、单个大写字母「vitamin D.」）后面是常见的句首词（The、It、But……）时，
+  // 还是新的一句（「U.S. The」断开，「U.S. Senate」「John F. Kennedy」不断）。瑞典语没有这两条
+  const ABBR_END = LT.abbrEnd || null;
+  const STARTER = LT.starter || null;
+  // 分句器不断、但一定要断开的地方（英语：「in 2025. 12 people」数字后面的句点下一句以数字开头；
+  // 分句器把「U.S. The」当成一句时，在缩写和句首词之间）
+  const SPLIT = LT.split || null;
 
   let segmenter = null;
   try {
-    if (typeof Intl !== 'undefined' && Intl.Segmenter) segmenter = new Intl.Segmenter('sv', { granularity: 'sentence' });
+    if (typeof Intl !== 'undefined' && Intl.Segmenter) segmenter = new Intl.Segmenter(LT.segmenter || 'sv', { granularity: 'sentence' });
   } catch (e) { segmenter = null; }
 
   function splitSentences(text) {
     let parts;
     if (segmenter) parts = Array.from(segmenter.segment(text), (s) => s.segment);
     else parts = text.match(/[^.!?…]+(?:[.!?…]+["”’»)]*\s*|$)/g) || [text];
+    if (SPLIT) parts = parts.flatMap((p) => p.split(SPLIT));
     const out = [];
     for (const p of parts) {
       if (!p) continue;
       const prev = out.length ? out[out.length - 1] : null;
-      // 缩写后面、或者下一段以小写字母/数字开头：不是新句子
-      if (prev !== null && (ABBR.test(prev) || /^\s*[a-zåäöéü0-9]/.test(p) || !/[\p{L}\p{N}]/u.test(p))) out[out.length - 1] = prev + p;
+      // 缩写后面、或者下一段以小写字母/数字开头：不是新句子（英语：可以在句末的缩写后面是句首词时除外）
+      const endOk = ABBR_END && STARTER && ABBR_END.test(prev || '') && STARTER.test(p);
+      if (prev !== null && ((ABBR.test(prev) && !endOk) || CONT.test(p) || !/[\p{L}\p{N}]/u.test(p))) out[out.length - 1] = prev + p;
       else out.push(p);
     }
     return out.map((s) => s.trim()).filter(Boolean);
@@ -62,11 +75,44 @@
     return si;
   }
 
-  function renderBlockText(text, el, model, blockIndex) {
+  // 原文里的链接（有的源要求保留，比如 KFF Health News）：在链接的最后一个词后面放一个小箭头，点它打开链接。
+  // 词本身还是点了查词、朗读时高亮，箭头不算句子的一部分（不朗读、不影响词的位置）
+  function linkMark(href) {
+    const a = document.createElement('a');
+    a.className = 'src-link';
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    let host = '';
+    try { host = new URL(href).hostname.replace(/^www\./, ''); } catch (e) { host = ''; }
+    a.title = '原文里的链接：' + host;
+    a.setAttribute('aria-label', '链接：' + host);
+    const i = document.createElement('i');
+    i.className = 'ic ic-ext';
+    i.setAttribute('aria-hidden', 'true');
+    a.append(i);
+    return a;
+  }
+
+  function renderBlockText(text, el, model, blockIndex, links) {
     const block = model.blocks[blockIndex];
+    let cursor = 0;
     splitSentences(text).forEach((s, i) => {
       if (i) el.append(' ');
-      block.sentences.push(renderSentence(s, el, model, blockIndex));
+      const si = renderSentence(s, el, model, blockIndex);
+      block.sentences.push(si);
+      if (!links || !links.length) return;
+      // 这一句在整段里从哪里开始（分句时去掉了句子两头的空白）
+      const at = text.indexOf(s, cursor);
+      const start = at >= 0 ? at : cursor;
+      cursor = start + s.length;
+      const sent = model.sentences[si];
+      for (const ln of links) {
+        if (ln.end <= start || ln.end > start + s.length + 1) continue;
+        let w = null;
+        for (const x of sent.words) if (start + x.start < ln.end) w = x;
+        if (w) w.el.after(linkMark(ln.href));
+      }
     });
   }
 
@@ -86,11 +132,12 @@
         list = null;
         el = document.createElement(b.type === 'h' ? 'h2' : b.type === 'q' ? 'blockquote' : 'p');
         if (b.type === 'lead') el.className = 'lead';
+        if (b.type === 'caption') el.className = 'caption'; // 图片说明（图片没有转载，KFF 的说明照登）
         bodyEl.append(el);
       }
       const bi = model.blocks.length;
       model.blocks.push({ el, type: b.type, text: b.text, sentences: [] });
-      renderBlockText(b.text, el, model, bi);
+      renderBlockText(b.text, el, model, bi, b.links);
     }
     return model;
   }

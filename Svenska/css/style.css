@@ -141,6 +141,18 @@ kbd {
 .brand:active { background: var(--accent-soft); }
 @media (hover: hover) { .brand:hover { background: var(--accent-soft); } }
 .tagline { margin-left: 12px; font-size: 14px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
+/* 国旗（标题前面）：现在学的语言；只有两种语言时点一下换成另一种，多了点开是国旗面板（.lang-menu）。
+   国旗是 SVG（js/lang/*.js），不用 emoji 国旗（Windows 上只显示两个字母） */
+.lang-sel { flex: none; width: 40px; height: 38px; padding: 0; margin-right: -6px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 8px; background: none; transition: background-color .1s; }
+.lang-sel:active { background: var(--accent-soft); }
+@media (hover: hover) { .lang-sel:hover { background: var(--accent-soft); } }
+.lang-sel .flag, .lang-menu .flag { display: inline-block; flex: none; width: 28px; line-height: 0; border-radius: 3px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0, 0, 0, .18); }
+.lang-sel .flag svg, .lang-menu .flag svg { display: block; width: 100%; height: auto; }
+.lang-menu .opt { gap: 10px; height: 56px; padding: 0 12px; }
+.lang-menu .opt::before { display: none; }
+.lang-menu .ln { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.25; }
+.lang-menu .ln small { font-size: 13px; color: var(--muted); font-weight: 400; }
 .tools { display: flex; align-items: center; gap: 6px; }
 .icon-btn { min-width: 40px; height: 38px; padding: 0 8px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .icon-btn small { font-size: .75em; margin-left: 1px; }
@@ -212,6 +224,20 @@ main { padding: 6px var(--pad) calc(40px + env(safe-area-inset-bottom)); }
   font-family: var(--ui-font); font-size: 14px; color: var(--muted);
 }
 .article .meta a { white-space: nowrap; }
+/* 原文里的链接（KFF Health News 要求保留）：链接的最后一个词后面一个小箭头 */
+.article .src-link { display: inline-block; margin-left: 2px; padding: 0 2px; font-size: .7em; line-height: 1; vertical-align: super; color: var(--accent); text-decoration: none; border-radius: 4px; }
+.article .src-link:focus-visible { outline: 2px solid var(--accent); }
+/* 别的语言的文章开头一行里许可的简称（OGL v3、CC BY 4.0……）：一个按钮，点它在下面打开这一篇的来源和许可（电脑、手机一样）；作者名 */
+.article .meta .lic { font: inherit; font-size: .85em; color: var(--muted); background: none; border: 0; border-radius: 4px; cursor: pointer;
+  padding: 6px 3px; margin: -6px -3px; text-decoration: underline dotted; text-underline-offset: 2px; }
+.article .meta .lic[aria-expanded="true"] { color: var(--accent); }
+@media (hover: hover) { .article .meta .lic:hover { color: var(--accent); } }
+.article .meta .lic-box { flex-basis: 100%; margin: 2px 0; padding: 8px 12px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--ink); font-size: 14px; line-height: 1.55; }
+.article .meta .lic-box[hidden] { display: none; }
+.article .meta .lic-box p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.article .meta .lic-box .lic-links { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.article .meta .byline { white-space: nowrap; }
 /* 来源：「Sveriges Radio · 节目」，不到 360 像素宽的手机上「SR · 节目」（见下面）；放不下时折行，不会出屏 */
 .article .meta .src-short { display: none; text-decoration: none; }
 .badge { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: 13px; font-weight: 600; background: var(--easy-bg); color: var(--easy-ink); }
@@ -436,6 +462,10 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   .top { justify-content: flex-start; gap: 6px; padding-top: 8px; }
   .brand-row { display: contents; }
   .brand { font-size: 18px; letter-spacing: .5px; }
+  /* 国旗（标题只写「瑞典语」「英语」，Tony 定的，2026-11-14，省出来的地方给国旗）：看得见的国旗 24 像素宽、和内容左边对齐，
+     能点的地方 40×40（往左伸进页边，上下用负 margin 抵消，顶栏不变高）；右边离标题的字 8 像素（标题能点的地方从 4 像素以后开始） */
+  .lang-sel { width: 40px; height: 40px; margin: -2px 2px -2px -14px; justify-content: flex-end; padding-right: 2px; }
+  .lang-sel .flag { width: 24px; }
   .tools { margin-left: auto; gap: 4px; }
   .icon-btn { min-width: 34px; height: 36px; padding: 0 4px; }
   /* 宽度固定（换话题时不跳），长的名字（简易瑞典语）末尾是省略号。字 16 像素（不是输入框，iPhone 不会放大；也看得清） */

@@ -1,4 +1,4 @@
-/* 朗读：浏览器的 Web Speech API（speechSynthesis），瑞典语（sv-SE）声音。
+/* 朗读：浏览器的 Web Speech API（speechSynthesis），现在这种语言的声音（瑞典语 sv-SE；别的语言见 js/lang/*.js 的 tts）。
    一次读一句（长句再按逗号切开）：
    - 每句开始时报告位置（页面滚到这一句，句子本身不标出来）；声音支持 boundary 事件的，再跟着标出正在读的词；
    - 一句读完在 onend 里接着读下一句（不用定时器，后台标签页里定时器会被放慢到一秒一次）；整篇读完时，
@@ -13,11 +13,13 @@
   const SV = window.SV;
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
 
-  // 按名字认男女声。微软：Sofie、Hedvig、Hillevi 女，Mattias、Bengt 男；苹果：Alva、Klara 女，Oskar 男。
-  const FEMALE = ['sofie', 'hedvig', 'hillevi', 'alva', 'klara', 'astrid', 'elin', 'karin', 'ingrid', 'linnea', 'maja', 'emma', 'sara', 'female', 'kvinna', 'kvinnlig', 'woman'];
-  const MALE = ['mattias', 'bengt', 'oskar', 'erik', 'anders', 'johan', 'lars', 'male', 'man ', 'manlig'];
+  // 现在这种语言（js/langs.js 的 SV.lang；没有时是瑞典语）
+  const TTS = (SV.lang && SV.lang.tts) || { locale: 'sv-SE', match: /^sv([-_]|$)/i, exact: /^sv-se/i, female: [], male: [] };
+  // 按名字认男女声。瑞典语：微软 Sofie、Hedvig、Hillevi 女，Mattias、Bengt 男；苹果 Alva、Klara 女，Oskar 男。别的语言的名字在 tts.female、tts.male
+  const FEMALE = (TTS.female || []).concat(['female', 'woman']);
+  const MALE = (TTS.male || []).concat(['male', 'man ']);
 
-  function isSwedish(v) { return /^sv([-_]|$)/i.test(v.lang || ''); }
+  function isLang(v) { return TTS.match.test(v.lang || ''); }
   function genderOf(v) {
     const n = ' ' + (v.name || '').toLowerCase() + ' ';
     if (FEMALE.some((f) => n.includes(f))) return 'f';
@@ -30,13 +32,13 @@
     let q = 0;
     if (/natural|neural|premium|enhanced|förbättrad|siri/.test(n)) q += 2;
     if (/online/.test(n)) q += 0.5;
-    if (/^sv-se/i.test(v.lang)) q += 0.2;
+    if (TTS.exact.test(v.lang)) q += 0.2; // 想要的口音（瑞典语 sv-SE；英语 en-US）在前
     return q;
   }
 
   function voices() {
     if (!synth) return [];
-    return synth.getVoices().filter(isSwedish).map((v) => ({ v, gender: genderOf(v), q: quality(v) }))
+    return synth.getVoices().filter(isLang).map((v) => ({ v, gender: genderOf(v), q: quality(v) }))
       .sort((a, b) => b.q - a.q);
   }
 
@@ -135,7 +137,7 @@
     speakChunk(gen, s, list, ci) {
       const c = list[ci];
       const u = new SpeechSynthesisUtterance(s.text.slice(c.start, c.end));
-      u.lang = 'sv-SE';
+      u.lang = TTS.locale;
       const v = this.h.voice();
       if (v) u.voice = v;
       u.rate = this.h.rate();
@@ -247,7 +249,7 @@
       this.gen++;
       synth.cancel();
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'sv-SE';
+      u.lang = TTS.locale;
       const v = this.h.voice();
       if (v) u.voice = v;
       u.rate = Math.min(this.h.rate(), 0.9);
