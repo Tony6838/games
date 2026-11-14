@@ -12,6 +12,20 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
 <title>瑞典语读报</title>
+<!-- 本站自己带的拉丁字母字体（Noto Sans，OFL；两个字重共约 26 KB）：各个平台上瑞典文的字宽、折行一样。
+     只在网上打开时载入（双击 index.html 用 file:// 打开时，Chrome 不让读本地的字体文件，控制台会报错；那时用系统的字体） -->
+<script>
+  if (location.protocol === 'http:' || location.protocol === 'https:') {
+    for (const w of [400, 700]) {
+      const l = document.createElement('link');
+      l.rel = 'preload'; l.as = 'font'; l.type = 'font/woff2'; l.crossOrigin = 'anonymous'; l.href = 'fonts/noto-sans-latin-' + w + '.woff2';
+      document.head.append(l);
+    }
+    const css = document.createElement('link');
+    css.rel = 'stylesheet'; css.href = 'css/fonts.css';
+    document.head.append(css);
+  }
+</script>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -19,9 +33,11 @@
   <div class="brand-row">
     <!-- 标题：点一下回到列表（文章页上和「← 列表」一样），列表页上回到最上面；用法都在右上角的「?」里 -->
     <button type="button" class="brand" id="brand" aria-label="瑞典语读报：回到最上面">瑞典语读报<span class="tagline">今天的瑞典新闻 · 朗读 · 点词看中文</span></button>
-    <!-- 手机上的话题：下拉菜单，在标题旁边（话题按钮那一行不显示，省一行）；选项和按钮都是 js/app.js 的 renderChips 用同一张表做的 -->
-    <select id="topicSel" class="topic-sel" aria-label="话题"></select>
-    <button type="button" id="btnBack" class="back-btn" hidden><span class="long">← 返回列表</span></button>
+    <!-- 手机上的话题：标题旁边一个按钮（现在的话题 ▾），点开是两列的话题面板（Tony 定的，2026-11-14：系统的下拉菜单只有一列，要滑）。
+         面板里的话题和电脑上的话题按钮都是 js/app.js 的 renderChips 用同一张表做的 -->
+    <button type="button" id="topicSel" class="topic-sel" aria-haspopup="listbox" aria-expanded="false" aria-controls="topicMenu"><span class="label"></span></button>
+    <div id="topicMenu" class="topic-menu" role="listbox" aria-label="话题" hidden></div>
+    <button type="button" id="btnBack" class="back-btn" hidden><i class="ic ic-arrow-l" aria-hidden="true"></i> <span class="long">返回列表</span></button>
   </div>
   <div class="tools">
     <!-- 每个按钮的提示（第一行瑞典文，第二行中文）在 js/app.js 里用 tip() 加 -->
@@ -68,7 +84,7 @@
 
 <dialog id="dlgSettings" class="dlg" aria-labelledby="setTitle">
   <form method="dialog" class="dlg-body">
-    <h2 id="setTitle">设置</h2>
+    <h2 id="setTitle" tabindex="-1" autofocus>设置</h2>
     <section>
       <h3>朗读的声音</h3>
       <div id="engineRow" class="engine" role="radiogroup" aria-label="声音来源" hidden>
@@ -76,9 +92,11 @@
         <label class="check"><input type="radio" name="engine" value="device"> 这台设备自己的声音（每台设备不一样）</label>
       </div>
       <div class="row">
-        <select id="selVoice" aria-label="声音"></select>
+        <!-- 声音：自己的选择列表（和手机上的话题面板一样），不用系统的下拉菜单（各个平台样子不一样） -->
+        <button type="button" id="selVoice" class="pick-btn" aria-haspopup="listbox" aria-expanded="false" aria-controls="voiceMenu"><span class="label"></span></button>
         <button type="button" id="btnTryVoice">试听</button>
       </div>
+      <div id="voiceMenu" class="pick-menu" role="listbox" aria-label="声音" hidden></div>
       <p id="voiceNote" class="note"></p>
       <h3>语速</h3>
       <div id="rateRow" class="rates" role="radiogroup" aria-label="语速">
@@ -115,23 +133,24 @@
 
 <dialog id="dlgHelp" class="dlg" aria-labelledby="helpTitle">
   <form method="dialog" class="dlg-body">
-    <h2 id="helpTitle">怎么用</h2>
+    <h2 id="helpTitle" tabindex="-1" autofocus>怎么用</h2>
     <ul class="help">
-      <li><b>选话题</b>：点上面的话题（手机上：标题「瑞典语读报」旁边的下拉菜单），下面列出这个话题今天的几篇新闻（今天还没有的，列最近的），点一篇来读。<b>再点一次同一个话题，换一批</b>，列过的不会再列（手机上：点列表最下面的「换一批」，或者播放栏最右边的 → 按钮）。读完可以点播放栏最右边的 → 按钮（下一篇）读列表里的下一篇。</li>
-      <li><b>回到列表</b>：点顶上的标题「瑞典语读报」回到列表（电脑上也可以点标题旁边的「← 返回列表」，浏览器、手机的「后退」也行）；在列表上点标题，回到最上面。</li>
-      <li><b>朗读</b>：点话题按钮后面那组立体按钮里蓝色的 ▶ 按钮（手机上在标题下面一行，往下滚时一直在顶上）。这组按钮只有图标：鼠标停在按钮上（手机上按住半秒）显示它是做什么的。正在读的单词下面有一条下划线，跟着往下走。切到别的标签页、窗口最小化、手机锁屏时接着读（<b>锁屏后继续朗读需要云端语音</b>，手机上设备自己的声音锁屏就停，回来接着读）；手机锁屏界面、电脑键盘的媒体键可以暂停、继续、下一篇。</li>
-      <li><b>暂停</b>：按<kbd>空格</kbd>，或者点一下文章。再按空格或点 ▶，从停下的地方接着读。</li>
-      <li><b>语速</b>：▶ 后面的按钮（上面写着 0.9× 之类），点一下换一档：0.8× → 0.9× → 1× → 循序渐进三连读 → 0.8×。<b>三连读</b>：一篇读三遍，第 1 遍 0.8× 慢读，便于理解；第 2 遍 0.9×，便于练习；第 3 遍 1×，正常速度；每遍之间停一下，从头再读。按钮上有三级台阶，亮到第几级就是第几遍。读的时候点它马上换语速；暂停、继续还在这一遍里；打开别的文章、下一篇从第 1 遍开始。</li>
-      <li><b>读完以后</b>：「女 / 男」后面那个重复图标的按钮，点一下换一种：<b>读完就停</b>（灰色的重复图标）→ <b>接着读下一篇</b>（几行字和一个播放三角）→ <b>本篇循环</b>（重复图标里有个 1）。接着读下一篇：读完停一下，自动打开列表里的下一篇接着读，这一批读完了就取下一批；本篇循环：读完从头再读，一遍又一遍，直到按暂停。用三连读时，三遍都读完才按这里的来（接着读下一篇也是三遍，本篇循环是三遍再来一次）。停一下的时候按暂停，就不接着读了。锁屏时也接着读（要云端语音）。这台设备的浏览器会记住。</li>
+      <li><b>选话题</b>：点上面的话题（手机上：点标题「瑞典语读报」旁边的话题按钮，打开两列的话题面板，点一个），下面列出这个话题今天的几篇新闻（今天还没有的，列最近的），点一篇来读。<b>再点一次同一个话题，换一批</b>，列过的不会再列（手机上：在话题面板里再点一次现在的话题（打了 ✓ 的那个），或者点列表最下面的「换一批」、播放栏最右边的 <i class="ic ic-arrow-r" role="img" aria-label="下一篇"></i> 按钮）。读完可以点播放栏最右边的 <i class="ic ic-arrow-r" role="img" aria-label="下一篇"></i> 按钮（下一篇）读列表里的下一篇。</li>
+      <li><b>回到列表</b>：点顶上的标题「瑞典语读报」回到列表（电脑上也可以点标题旁边的「<i class="ic ic-arrow-l" aria-hidden="true"></i> 返回列表」，浏览器、手机的「后退」也行）；在列表上点标题，回到最上面。</li>
+      <li><b>朗读</b>：点话题按钮后面那组立体按钮里蓝色的 <i class="ic ic-play" role="img" aria-label="朗读"></i> 按钮（手机上在标题下面一行，往下滚时一直在顶上）。这组按钮只有图标：鼠标停在按钮上（手机上按住半秒）显示它是做什么的。正在读的单词下面有一条下划线，跟着往下走。切到别的标签页、窗口最小化、手机锁屏时接着读（<b>锁屏后继续朗读需要云端语音</b>，手机上设备自己的声音锁屏就停，回来接着读）；手机锁屏界面、电脑键盘的媒体键可以暂停、继续、下一篇。</li>
+      <li><b>暂停</b>：按<kbd>空格</kbd>，或者点一下文章。再按空格或点 <i class="ic ic-play" role="img" aria-label="朗读"></i>，从停下的地方接着读。</li>
+      <li><b>语速</b>：<i class="ic ic-play" role="img" aria-label="朗读"></i> 后面的按钮（上面写着 0.9× 之类），点一下换一档：0.8× <i class="ic ic-arrow-r" role="img" aria-label="然后"></i> 0.9× <i class="ic ic-arrow-r" role="img" aria-label="然后"></i> 1× <i class="ic ic-arrow-r" role="img" aria-label="然后"></i> 循序渐进三连读 <i class="ic ic-arrow-r" role="img" aria-label="然后"></i> 0.8×。<b>三连读</b>：一篇读三遍，第 1 遍 0.8× 慢读，便于理解；第 2 遍 0.9×，便于练习；第 3 遍 1×，正常速度；每遍之间停一下，从头再读。按钮上有三级台阶，亮到第几级就是第几遍。读的时候点它马上换语速；暂停、继续还在这一遍里；打开别的文章、下一篇从第 1 遍开始。</li>
+      <li><b>读完以后</b>：「女 / 男」后面那个重复图标的按钮，点一下换一种：<b>读完就停</b>（灰色的重复图标） <i class="ic ic-arrow-r" role="img" aria-label="然后"></i> <b>接着读下一篇</b>（几行字和一个播放三角） <i class="ic ic-arrow-r" role="img" aria-label="然后"></i> <b>本篇循环</b>（重复图标里有个 1）。接着读下一篇：读完停一下，自动打开列表里的下一篇接着读，这一批读完了就取下一批；本篇循环：读完从头再读，一遍又一遍，直到按暂停。用三连读时，三遍都读完才按这里的来（接着读下一篇也是三遍，本篇循环是三遍再来一次）。停一下的时候按暂停，就不接着读了。锁屏时也接着读（要云端语音）。这台设备的浏览器会记住。</li>
       <li><b>查词</b>：鼠标停在词上，或者点一下词，就显示中文。一个词有几个意思时，全都列出来，下面自动显示这一整句的译文；能确定这句里是哪个意思时，那个意思和整句译文里它的译文下面各有一条蓝色下划线，拿不准就不画，对着整句看就知道。喇叭读这个词，「从这里读」从这个词开始朗读，「本句译文」翻译这一整句。电脑上用鼠标选中几个词，也会翻译选中的部分。</li>
-      <li><b>整篇翻译</b>：用浏览器自带的整页翻译。<b id="helpTrHint"></b><span id="helpTrOthers">别的浏览器：</span>Safari、iPhone、iPad 点地址栏「aA → 翻译成中文」；安卓的 Chrome 点右上角 ⋮ →「翻译…」；Firefox 用地址栏的翻译图标。</li>
+      <li><b>整篇翻译</b>：用浏览器自带的整页翻译。<b id="helpTrHint"></b><span id="helpTrOthers">别的浏览器：</span>Safari、iPhone、iPad 点地址栏的「aA」，再点「翻译成中文」；安卓的 Chrome 点右上角的 ⋮，再点「翻译…」；Firefox 用地址栏的翻译图标。</li>
       <li><b>在线翻译</b>：查词和「本句译文」用微软翻译（微软不保存文字）。它的免费额度大家共用，用完时自动改用浏览器内置的翻译（Chrome、Edge 电脑版），没有内置翻译时，点词、点「本句译文」用 MyMemory 在线翻译（鼠标只是停在词上时不用；默认开着；它会保存收到的句子，不想用可以在顶部齿轮按钮「设置」里关掉）。</li>
       <li><b>简易瑞典语</b>：最后一个话题，是 SR 专门用简单的瑞典语写的新闻；别的话题都是普通的瑞典新闻。</li>
       <li><b>声音</b>：点「女 / 男」按钮切换女声、男声；在「设置」里可以选具体的声音和语速。默认用云端自然语音（微软的 Sofie、Hillevi 女声，Mattias 男声），电脑、手机、任何浏览器上都一样，要联网；云端不通时自动改用设备自带的声音（Edge 浏览器有微软的 Sofie、Mattias，苹果设备有 Alva、Klara、Oskar）。在「设置」里也可以自己选用设备的声音。</li>
       <li><b>字号</b>：右上角的 A− 和 A+。</li>
+      <li><b>电脑、手机、平板上都一样</b>：Windows 和 Mac 的电脑上一样，iPhone 和安卓的手机、iPad 和安卓的平板上也一样：同样的按钮、话题面板、设置、字体和排版。不一样的只有设备自己的东西：这台设备自己的声音、浏览器的整页翻译、锁屏界面的样子、中文的字形。要在哪里都一样的声音，用「设置」里的云端自然语音（默认就是它）。</li>
       <li><b>设置</b>：右上角的齿轮按钮。声音（云端自然语音或这台设备的声音、具体选哪个）、语速和三连读、字号、在线翻译的开关，还有清除阅读记录，都在这里。</li>
       <li><b>按钮的瑞典文</b>：鼠标停在任何一个按钮上（手机上按住按钮半秒），显示这个按钮的瑞典文说法和中文说明，顺便学几个词；播放栏上只有图标的按钮，也这样看它是做什么的。手机上按住看提示，松手不算点了按钮。</li>
-      <li><b>文章来源</b>：文章来自瑞典广播电台（Sveriges Radio）的开放接口，每篇文章开头一行写着来源和节目（「Sveriges Radio · 节目」，很窄的手机上是「SR · 节目」）、发布时间（瑞典时间）和「原文 ↗」链接，在 SR 网站上还可以听电台的原声。文章版权归 Sveriges Radio 所有；本站在你打开时从 SR 读取，不保存、不修改。</li>
+      <li><b>文章来源</b>：文章来自瑞典广播电台（Sveriges Radio）的开放接口，每篇文章开头一行写着来源和节目（「Sveriges Radio · 节目」，很窄的手机上是「SR · 节目」）、发布时间（瑞典时间）和「原文<i class="ic ic-ext" aria-hidden="true"></i>」链接，在 SR 网站上还可以听电台的原声。文章版权归 Sveriges Radio 所有；本站在你打开时从 SR 读取，不保存、不修改。</li>
     </ul>
     <div class="dlg-actions"><button value="close" class="primary">好</button></div>
   </form>

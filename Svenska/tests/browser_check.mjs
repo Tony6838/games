@@ -14,8 +14,8 @@
 //      MyMemory 由测试代答（不占真实额度）：朗读高亮（只标词：浅色红色下划线、深色黄色下划线，句子不标，排版不动）、空格暂停继续、
 //      窗口最小化时不暂停、点文章暂停、从这里读、换男女声、没有内置翻译时整页翻译的办法在说明框里、本句译文走 MyMemory、
 //      发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）、本机的声音：本篇循环、接着读下一篇、三连读。
-//   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：去掉了的话题「电动车」、标题旁边的话题菜单、列表和文章不横向溢出、「换一批」按钮换一批、点词弹框不出屏、点屏幕暂停、
-//      整页翻译的办法在说明框里、往下滚时朗读按钮粘在顶上、文章页的顶栏（话题菜单，没有「← 列表」）、点标题回到列表、320 / 375 / 430 像素宽的顶栏。
+//   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：去掉了的话题「电动车」、标题旁边的话题按钮、列表和文章不横向溢出、「换一批」按钮换一批、点词弹框不出屏、点屏幕暂停、
+//      整页翻译的办法在说明框里、往下滚时朗读按钮粘在顶上、文章页的顶栏（话题按钮，没有「← 列表」）、点标题回到列表、320 / 375 / 430 像素宽的顶栏。
 //   4. 云端语音：合成、播放、跟着播放进度标词、缓存、换声音、出错时改用本机的声音。
 //   5. 云端语音：页面藏起来时一段接一段读下去、回来时标记在正在读的词上、锁屏界面和媒体键（Media Session）、
 //      本篇循环（重读不再合成）、「下一首」接着读下一篇、换成读完就停这一遍读完就停。
@@ -337,17 +337,43 @@ await send('Log.enable');
 await send('Network.enable');
 
 const listReady = (key) => `window.SVApp && !SVApp.state().loading && ${key ? `SVApp.state().topic === ${JSON.stringify(key)} && ` : ''}(SVApp.state().view === 'list' || SVApp.state().view === 'message')`;
-// 选话题：电脑上点话题按钮；手机上用标题旁边的下拉菜单（系统自己的选择器在无头里点不开：改它的值、发 change，和选了一样）
+// 选话题：电脑上点话题按钮；手机上点标题旁边的话题按钮，在两列的话题面板里点那个话题
 async function pickTopic(key) {
   if (await evalJs(`!!document.querySelector('#topics .chip[data-topic="${key}"]')?.offsetParent`)) {
     const c = await center(`#topics .chip[data-topic="${key}"]`);
     await tap(c.x, c.y);
     return;
   }
-  await evalJs(`(() => { const s = document.querySelector('#topicSel'); s.value = ${JSON.stringify(key)}; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+  // 手机上：点话题按钮打开两列的话题面板，点那个话题（面板是 fixed 的，直接按它在屏幕上的位置点，不滚页面）
+  if (!(await openTopicMenu())) return;
+  const o = await rectOf(`#topicMenu [data-topic="${key}"]`);
+  if (o) await tap(o.x, o.y);
 }
-// 顶栏（标题、话题菜单、「← 列表」、工具按钮）：排成几行、有没有出屏或横向溢出、有没有截字；
-// 话题菜单里哪些话题的名字放不下（末尾是省略号）
+// 元素中心（视口坐标），不滚页面
+const rectOf = (sel) => evalJs(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const r = e.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`);
+// 手机上点话题按钮，打开话题面板（先滚回顶上：话题按钮在顶栏里）
+async function openTopicMenu() {
+  if (await evalJs(`!document.querySelector('#topicMenu').hidden`)) return true;
+  await evalJs('window.scrollTo(0, 0)');
+  await sleep(150);
+  const b = await rectOf('#topicSel');
+  await tap(b.x, b.y);
+  await sleep(250);
+  return evalJs(`!document.querySelector('#topicMenu').hidden`);
+}
+// 话题面板：几个话题、几列、都看得见（不用滚）、左右留边、每个多高、哪个打了 ✓、横向溢出
+const menuReport = () => evalJs(`(() => { const m = document.querySelector('#topicMenu'); const de = document.documentElement;
+  if (m.hidden) return { open: false, overflow: de.scrollWidth > de.clientWidth };
+  const r = m.getBoundingClientRect(); const items = [...m.querySelectorAll('[role="option"]')]; const rs = items.map((i) => i.getBoundingClientRect());
+  const lefts = [...new Set(rs.map((x) => Math.round(x.left)))].sort((a, b) => a - b);
+  return { open: true, n: items.length, cols: lefts.length, firstCol: rs.filter((x) => Math.round(x.left) === lefts[0]).length,
+    allVisible: rs.every((x) => x.top >= r.top - 0.5 && x.bottom <= r.bottom + 0.5 && x.bottom <= innerHeight && x.right <= de.clientWidth),
+    scroll: m.scrollHeight > m.clientHeight + 1, left: Math.round(r.left), right: Math.round(de.clientWidth - r.right), minH: Math.round(Math.min(...rs.map((x) => x.height))),
+    selected: items.filter((i) => i.getAttribute('aria-selected') === 'true').map((i) => i.dataset.topic), order: items.map((i) => i.dataset.topic).join(),
+    expanded: document.querySelector('#topicSel').getAttribute('aria-expanded'), check: items.filter((i) => i.getAttribute('aria-selected') === 'true').map((i) => getComputedStyle(i, '::before').visibility).join(),
+    overflow: de.scrollWidth > de.clientWidth }; })()`);
+// 顶栏（标题、话题按钮、「← 列表」、工具按钮）：排成几行、有没有出屏或横向溢出、有没有截字；
+// 手机上的话题按钮上哪些话题的名字放不下（末尾是省略号）
 async function headerFit() {
   return evalJs(`(() => { const de = document.documentElement;
     const items = [...document.querySelectorAll('header.top .brand, header.top .topic-sel, header.top .back-btn, header.top .tools')].filter((e) => e.offsetParent);
@@ -357,12 +383,12 @@ async function headerFit() {
     const sel = document.querySelector('#topicSel');
     let selCut = [];
     if (sel.offsetParent) {
-      const cs = getComputedStyle(sel);
-      const room = sel.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const lab = sel.querySelector('.label');
+      const room = lab.clientWidth;
       const sp = document.createElement('span');
-      sp.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:' + cs.font;
+      sp.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font:' + getComputedStyle(lab).font;
       document.body.append(sp);
-      selCut = [...sel.options].filter((o) => { sp.textContent = o.textContent; return sp.getBoundingClientRect().width > room + 0.5; }).map((o) => o.textContent);
+      selCut = [...document.querySelectorAll('#topicMenu [role="option"]')].filter((o) => { sp.textContent = o.textContent; return sp.getBoundingClientRect().width > room + 0.5; }).map((o) => o.textContent);
       sp.remove();
     }
     return { rows, overflow: de.scrollWidth > de.clientWidth || rs.some((r) => r.left < -0.5 || r.right > de.clientWidth + 0.5),
@@ -373,7 +399,7 @@ async function headerFit() {
 // 文章末尾还有没有来源、版权那一段
 // 文章开头那一行应当写的来源：「Sveriges Radio · 节目」（short：很窄的手机上「SR · 节目」）；新闻源里没有节目名时只有 Sveriges Radio
 const srcWant = (program, short) => (short ? 'SR' : 'Sveriges Radio') + (program && program !== 'Sveriges Radio' ? ' · ' + program : '');
-// 用键盘（Shift+Tab）把焦点移到标题「瑞典语读报」上（从它后面那个看得见的「← 返回列表」或话题菜单退回来），这时是键盘的焦点（:focus-visible）
+// 用键盘（Shift+Tab）把焦点移到标题「瑞典语读报」上（从它后面那个看得见的「← 返回列表」或话题按钮退回来），这时是键盘的焦点（:focus-visible）
 async function tabToTitle() {
   await evalJs(`(() => { const n = [...document.querySelectorAll('#btnBack, #topicSel')].find((e) => e.offsetParent); if (n) n.focus(); })()`);
   await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9, modifiers: 8 });
@@ -1017,7 +1043,21 @@ try {
   let ta = await tipAudit();
   check('列表页：每个按钮都有瑞典文提示（title 第一行是瑞典文）', ta.n >= 30 && !ta.bad.length, `${ta.n} 个按钮${ta.bad.length ? '，没有的：' + ta.bad.join('、') : ''}`);
   const chipTips = await evalJs(`[...document.querySelectorAll('#topics .chip')].map((b) => b.dataset.sv)`);
-  check('20 个话题按钮各有自己的瑞典文名字（「电动车」去掉了）', chipTips.length === 20 && new Set(chipTips).size === 20, chipTips.join('、'));
+  check('22 个话题按钮各有自己的瑞典文名字（「电动车」去掉了，加了「宗教」「趣闻轶事」）', chipTips.length === 22 && new Set(chipTips).size === 22 && chipTips.includes('Religion') && chipTips.includes('Kuriosa'), chipTips.join('、'));
+  // 宗教、趣闻轶事的关键词（Fable 的审查找到的）：词头匹配碰到了地名、人名；趣闻轶事不要的词太宽（brand 把「消防员救猫」也去掉了）
+  const kwT = await evalJs(`(() => { const T = SV.sources.TOPICS; const t = (k) => T.find((x) => x.key === k);
+    const sc = (k, title, body = '') => SV.sources.score({ title, blocks: [{ text: body }], programId: 0 }, t(k));
+    return {
+      relNo: [sc('religion', 'Skottlossning i Biskopsgården natten till fredag', 'Polisen larmades till Biskopsgården i Göteborg.'), sc('religion', 'Trafikolycka utanför Munkedal'),
+        sc('religion', 'Pakistan: protester i Islamabad'), sc('religion', 'Mette Kristensen blir ny vd'), sc('religion', 'Klostergatan stängs av för bilar'), sc('religion', 'Prästgårdens skola får ny rektor')],
+      relYes: [sc('religion', 'Biskopen: Visby stift riskerar att läggas ner'), sc('religion', 'Moskén i Uppsala öppnar för besökare'), sc('religion', 'Munkarna i klostret firar 100 år')],
+      kurNo: [sc('kuriosa', 'Björn Söder kritiserar regeringen'), sc('kuriosa', 'Gunde Svan om skidsäsongen'), sc('kuriosa', 'Magnus Uggla släpper ny skiva'), sc('kuriosa', 'Brand i villa – katten räddades')],
+      kurYes: [sc('kuriosa', 'Brandmän räddade katten från taket'), sc('kuriosa', 'Skottland: ovanlig säl simmade upp i floden'), sc('kuriosa', 'Han skjuter upp sitt rekordförsök')],
+    }; })()`);
+  check('宗教的关键词不碰地名、人名（Biskopsgården、Munkedal、Islamabad、Kristensen、Klostergatan、Prästgården），真讲宗教的照样够分（6 分）',
+    kwT.relNo.every((x) => x < 6) && kwT.relYes.every((x) => x >= 6), JSON.stringify({ relNo: kwT.relNo, relYes: kwT.relYes }));
+  check('趣闻轶事不碰人名（Björn、Gunde Svan、Magnus Uggla），火灾（Brand i villa）不算；消防员救猫（Brandmän）、苏格兰（Skottland）、推迟（skjuter upp）不被排除',
+    kwT.kurNo.every((x) => x < 6) && kwT.kurYes.every((x) => x >= 6), JSON.stringify({ kurNo: kwT.kurNo, kurYes: kwT.kurYes }));
   const iconTip = await evalJs(`document.querySelector('#btnSettings').title`);
   check('提示是两行：瑞典文，然后是中文说明', /^Inställningar\n设置/.test(iconTip), JSON.stringify(iconTip));
   // 云端语音用的微软 Speech SDK：固定版本，完整性校验（integrity）对得上，真的能从 CDN 加载
@@ -1442,7 +1482,7 @@ try {
   const elb = await evalJs(`({ topic: SVApp.state().topic, shown: Object.keys(JSON.parse(localStorage.getItem('sv.shown.v1') || '{}')), zh: document.documentElement.textContent.includes('电动车'),
     topics: SV.sources.TOPICS.length, keyLeft: SV.sources.TOPICS.some((t) => t.key === 'elbilar') })`);
   check('存着的话题是「电动车」（去掉了）：打开「今日要闻」，它的记录丢掉了；页面上（话题按钮、菜单、说明）哪里也没有「电动车」',
-    elb.topic === 'idag' && !elb.shown.includes('elbilar') && !elb.zh && !elb.keyLeft && elb.topics === 20, JSON.stringify(elb));
+    elb.topic === 'idag' && !elb.shown.includes('elbilar') && !elb.zh && !elb.keyLeft && elb.topics === 22, JSON.stringify(elb));
   check('网址里是 ?topic=elbilar：也打开「今日要闻」', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA, query: '?topic=elbilar' }) && (await state()).topic === 'idag', (await state()).topic);
   check('手机上打开页面（安卓 Chrome 的用户代理）', await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA }));
   const ml = await layoutReport('#list');
@@ -1452,24 +1492,82 @@ try {
   check('手机上朗读按钮都在屏幕内、没有说明文字、里面的东西没有被截断', ml.playerFits && !ml.cutText.length && ml.labels === 0, ml.cutText.join(',') + ' ' + ml.faces.join('|'));
   const mBtn = await evalJs(`[...document.querySelectorAll('#player button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })`);
   check('手机上播放栏的按钮一样宽、至少 40 像素高（好点）', mBtn.every(([w, h]) => h >= 40 && w >= 44 && Math.abs(w - mBtn[0][0]) <= 1), JSON.stringify(mBtn));
-  // 手机上话题是标题旁边的下拉菜单（话题按钮那一行不显示，省一行），选项和话题按钮是同一张表
+  // 手机上话题是标题旁边的话题按钮和两列的话题面板（话题按钮那一行不显示，省一行），面板里的话题和话题按钮是同一张表
   const selP = await evalJs(`(() => { const s = document.querySelector('#topicSel'); const r = s.getBoundingClientRect(); const b = document.querySelector('#brand').getBoundingClientRect();
-    return { shown: !!s.offsetParent, chipsShown: !!document.querySelector('#topics .chip').offsetParent, sameRow: Math.abs((r.top + r.bottom) / 2 - (b.top + b.bottom) / 2) < 8, value: s.value, h: Math.round(r.height),
-      opts: [...s.options].map((o) => o.value + ':' + o.textContent).join(), chips: [...document.querySelectorAll('#topics .chip')].map((c) => c.dataset.topic + ':' + c.textContent).join() }; })()`);
-  check('手机上话题是标题旁边的下拉菜单（话题按钮那一行不显示），选项和话题按钮一样，选着现在的话题',
-    selP.shown && !selP.chipsShown && selP.sameRow && selP.opts === selP.chips && selP.value === (await state()).topic && selP.h >= 36, JSON.stringify(selP).slice(0, 240));
+    return { shown: !!s.offsetParent, tag: s.tagName, chipsShown: !!document.querySelector('#topics .chip').offsetParent, sameRow: Math.abs((r.top + r.bottom) / 2 - (b.top + b.bottom) / 2) < 8, value: s.dataset.topic, label: s.querySelector('.label').textContent, h: Math.round(r.height),
+      popup: s.getAttribute('aria-haspopup'), expanded: s.getAttribute('aria-expanded'), selects: document.querySelectorAll('select').length,
+      opts: [...document.querySelectorAll('#topicMenu [role="option"]')].map((o) => o.dataset.topic + ':' + o.textContent).join(), chips: [...document.querySelectorAll('#topics .chip')].map((c) => c.dataset.topic + ':' + c.textContent).join() }; })()`);
+  check('手机上话题是标题旁边的一个按钮（不是系统的下拉菜单），面板里的话题和话题按钮一样，按钮上是现在的话题',
+    selP.shown && selP.tag === 'BUTTON' && !selP.selects && selP.popup === 'listbox' && selP.expanded === 'false' && !selP.chipsShown && selP.sameRow && selP.opts === selP.chips && selP.value === (await state()).topic && selP.label === '今日要闻' && selP.h >= 36, JSON.stringify(selP).slice(0, 240));
+  // 点话题按钮：两列的话题面板，22 个话题一眼看全（不用滚），左右留 16 像素，每个至少 44 像素高，现在的话题打 ✓（左边一列先排满）
+  check('手机 390×844：点话题按钮打开面板', await openTopicMenu());
+  let mr = await menuReport();
+  summary.topicMenu390 = mr;
+  check('手机 390×844：话题面板两列，22 个话题都看得见、不用滚，左右留 16 像素，每个至少 44 像素高，现在的话题打 ✓，左边一列 11 个',
+    mr.open && mr.n === 22 && mr.cols === 2 && mr.firstCol === 11 && mr.allVisible && !mr.scroll && mr.left >= 16 && mr.right >= 16 && mr.minH >= 44 && mr.selected.join() === 'idag' && mr.check === 'visible' && mr.expanded === 'true' && !mr.overflow
+    && mr.order === (await evalJs(`SV.sources.TOPICS.map((t) => t.key).join()`)), JSON.stringify(mr));
+  await shot('phone-topic-menu');
+  // 点面板外面：关上，这一下不算点了下面的东西（不会打开一篇文章）
+  await tap(Math.round(ml.vw / 2), 800);
+  await sleep(300);
+  check('点话题面板外面：面板关上，下面的文章没有被打开', !(await menuReport()).open && (await state()).view === 'list' && (await evalJs(`document.querySelector('#topicSel').getAttribute('aria-expanded')`)) === 'false');
+  // 再点一次话题按钮：关上
+  await openTopicMenu();
+  const tb = await rectOf('#topicSel');
+  await tap(tb.x, tb.y);
+  await sleep(250);
+  check('面板开着时再点话题按钮：关上', !(await menuReport()).open);
+  // Esc：关上，焦点回到话题按钮
+  await openTopicMenu();
+  await pressKey('Escape', 'Escape', 27);
+  check('面板开着时按 Esc：关上', !(await menuReport()).open);
+  // 键盘：Tab 到话题按钮（键盘的焦点），回车打开，焦点在现在的话题上；↓ 下一个，→ 右边一列；回车选那个话题
+  await evalJs(`document.querySelector('#brand').focus()`);
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 });
+  const onBtn = await evalJs(`document.activeElement && document.activeElement.id`);
+  await pressKey('Enter', 'Enter', 13);
+  const k1 = await evalJs(`({ open: !document.querySelector('#topicMenu').hidden, focus: document.activeElement && document.activeElement.dataset.topic })`);
+  await pressKey('ArrowDown', 'ArrowDown', 40);
+  const k2 = await evalJs(`document.activeElement && document.activeElement.dataset.topic`);
+  await pressKey('ArrowRight', 'ArrowRight', 39);
+  const k3 = await evalJs(`document.activeElement && document.activeElement.dataset.topic`);
+  await pressKey('ArrowLeft', 'ArrowLeft', 37);
+  await pressKey('ArrowUp', 'ArrowUp', 38);
+  const k4 = await evalJs(`document.activeElement && document.activeElement.dataset.topic`);
+  const keys = await evalJs(`SV.sources.TOPICS.map((t) => t.key)`);
+  check('键盘：Tab 到话题按钮、回车打开（焦点在现在的话题上），↓ 下一个、→ 右边一列、← ↑ 回来', onBtn === 'topicSel' && k1.open && k1.focus === 'idag' && k2 === keys[1] && k3 === keys[12] && k4 === 'idag', JSON.stringify({ onBtn, k1, k2, k3, k4 }));
+  await pressKey('ArrowDown', 'ArrowDown', 40);
+  await pressKey('ArrowDown', 'ArrowDown', 40);
+  await pressKey('Enter', 'Enter', 13);
+  const kSel = await waitFor(listReady(keys[2]), 40000);
+  check('键盘：回车选「政治」，列出政治的文章，焦点回到话题按钮', kSel && (await evalJs(`document.activeElement && document.activeElement.id`)) === 'topicSel' && (await evalJs(`document.querySelector('#topicSel .label').textContent`)) === '政治', (await state()).topic);
+  await evalJs(`document.activeElement && document.activeElement.blur()`);
   const hdP = await headerFit();
   summary.phoneHeader = hdP;
-  check('手机 390 像素宽：标题、话题菜单和工具按钮在一行，不出屏、不截字，菜单里「今日要闻」放得下', hdP.rows === 1 && !hdP.overflow && !hdP.clipped.length && !hdP.selCut.includes('今日要闻'), JSON.stringify(hdP));
+  check('手机 390 像素宽：标题、话题按钮和工具按钮在一行，不出屏、不截字，按钮上「今日要闻」放得下', hdP.rows === 1 && !hdP.overflow && !hdP.clipped.length && !hdP.selCut.includes('今日要闻'), JSON.stringify(hdP));
   const barP = await evalJs(`Math.round(document.querySelector('#topbar').getBoundingClientRect().height)`);
   check('手机上粘在顶上的只有朗读按钮一行（不到 60 像素高）', barP < 60, `${barP}px`);
   await shot('phone-list');
   // 在菜单里选另一个话题：和点话题按钮一样
   await pickTopic('politik');
   const selOk = await waitFor(listReady('politik'), 40000);
-  check('手机上在菜单里选「政治」，列出政治的文章，菜单上是「政治」', selOk && (await evalJs(`document.querySelector('#topicSel').selectedOptions[0].textContent`)) === '政治', (await state()).topic);
+  check('手机上在话题面板里点「政治」：列出政治的文章，按钮上是「政治」', selOk && (await evalJs(`document.querySelector('#topicSel .label').textContent`)) === '政治', (await state()).topic);
+  // 新加的两个话题：宗教、趣闻轶事，都能打开（SR 最近有文章时列出文章，没有时说明）
+  for (const [k, zh] of [['religion', '宗教'], ['kuriosa', '趣闻轶事']]) {
+    await pickTopic(k);
+    const okT = await waitFor(listReady(k), 60000);
+    const st2 = await state();
+    check(`新话题「${zh}」：在面板里点它，列出文章（或者说明最近没有）`, okT && st2.topic === k && (st2.view === 'list' ? st2.batch.length > 0 : st2.view === 'message') && (await evalJs(`document.querySelector('#topicSel .label').textContent`)) === zh, `${st2.view}，${st2.batch.length} 篇`);
+  }
   await pickTopic('idag');
   await waitFor(listReady('idag'), 40000);
+  // 在面板里再点一次现在的话题（打了 ✓ 的那个）：换一批，和电脑上再点一次话题按钮一样
+  const bA = (await state()).batch;
+  const bnA = (await state()).batchNo;
+  await pickTopic('idag');
+  const nextOk = await waitFor(`${listReady('idag')} && SVApp.state().batchNo === ${bnA + 1}`, 40000);
+  check('在话题面板里再点一次现在的话题：换一批', nextOk && !(await state()).batch.some((id) => bA.includes(id)), `第 ${(await state()).batchNo} 批`);
   // 手机上没有悬停：按住按钮半秒显示瑞典文提示，松手不算点击（男女声不变）
   const gender0 = (await state()).settings.gender;
   const vbP = await center('#btnVoice');
@@ -1482,10 +1580,11 @@ try {
   check('手机上按住看提示，松手不算点击', (await state()).settings.gender === gender0, `${gender0} → ${(await state()).settings.gender}`);
   // 换一批：手机上菜单里选同一个话题不算换，用播放栏最右边的按钮（列表页上是「换一批」）
   const b1 = (await state()).batch;
+  const bn1 = (await state()).batchNo;
   const nbP = await center('#btnNext');
   check('手机上列表页播放栏最右边的按钮是「换一批」', (await evalJs(`document.querySelector('#btnNext').getAttribute('aria-label') + ' ' + document.querySelector('#btnNext').dataset.sv`)) === '换一批 Fler artiklar');
   await tap(nbP.x, nbP.y);
-  await waitFor(`${listReady('')} && SVApp.state().batchNo === 2`, 20000);
+  await waitFor(`${listReady('')} && SVApp.state().batchNo === ${bn1 + 1}`, 20000);
   const b2 = (await state()).batch;
   check('手机上点播放栏最右边的「换一批」，换一批', b2.length > 0 && !b2.some((id) => b1.includes(id)), `${b2.length} 篇`);
   check('手机上点一篇打开文章', await openFirstCard(0), (await state()).title);
@@ -1526,7 +1625,7 @@ try {
   await space();
   // 没有内置翻译：提示安卓 Chrome 自己的整页翻译（本站没有「全文翻译」按钮）
   const hintP = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: !!document.querySelector('.page-tr-hint, .safari-hint'), help: document.querySelector('#helpTrHint').textContent })`);
-  check('手机上没有「全文翻译」按钮，文章上不提示整页翻译，说明框里写着安卓 Chrome 的「⋮ → 翻译…」', !hintP.btn && !hintP.hint && /点右上角 ⋮ →「翻译…」/.test(hintP.help), JSON.stringify(hintP));
+  check('手机上没有「全文翻译」按钮，文章上不提示整页翻译，说明框里写着安卓 Chrome 的「⋮ → 翻译…」', !hintP.btn && !hintP.hint && /点右上角的 ⋮，再点「翻译…」/.test(hintP.help), JSON.stringify(hintP));
   // 往下滚：话题和朗读按钮粘在顶上，还点得到
   // 短的文章（来源那一段去掉以后）一屏放得下：先在下面加一点空白，页面才滚得动
   await evalJs(`document.querySelector('main').style.paddingBottom = '1500px'; window.scrollTo(0, document.documentElement.scrollHeight)`);
@@ -1543,10 +1642,10 @@ try {
   await sleep(200);
   const ml2 = await layoutReport('#article');
   check('手机上滚动以后也没有横向溢出', ml2.scrollW <= ml2.vw, `${ml2.scrollW} <= ${ml2.vw}`);
-  // 手机上文章页的顶栏：没有「← 列表」（点标题回到列表），和列表页一样是标题、话题菜单（选着现在的话题）和工具按钮，一行
+  // 手机上文章页的顶栏：没有「← 列表」（点标题回到列表），和列表页一样是标题、话题按钮（选着现在的话题）和工具按钮，一行
   const hdA = await headerFit();
-  const selA = await evalJs(`({ back: !!document.querySelector('#btnBack').offsetParent, sel: !!document.querySelector('#topicSel').offsetParent, value: document.querySelector('#topicSel').value })`);
-  check('手机上文章页的顶栏：没有「← 列表」，是标题、话题菜单（选着现在的话题）和工具按钮，一行，不出屏、不截字',
+  const selA = await evalJs(`({ back: !!document.querySelector('#btnBack').offsetParent, sel: !!document.querySelector('#topicSel').offsetParent, value: document.querySelector('#topicSel').dataset.topic })`);
+  check('手机上文章页的顶栏：没有「← 列表」，是标题、话题按钮（现在的话题）和工具按钮，一行，不出屏、不截字',
     !selA.back && selA.sel && selA.value === (await state()).topic && hdA.rows === 1 && !hdA.overflow && !hdA.clipped.length, JSON.stringify({ ...selA, rows: hdA.rows, items: hdA.items }));
   // 文章开头一行：手机上「SR · 节目」、时间、「原文 ↗」；文章末尾没有来源、版权那一段
   st = await state();
@@ -1554,13 +1653,13 @@ try {
   check('手机（390 像素宽）上文章开头一行写着「Sveriges Radio · 节目」、时间和「原文 ↗」（链到 SR 的这篇文章），不出屏；文章末尾没有来源、版权那一段',
     slP && slP.text === srcWant(st.program) && slP.link === st.link && slP.rows <= 2 && slP.right <= slP.vw && !slP.footer && !slP.copyright && !/瑞典时间/.test(slP.metaText), JSON.stringify(slP));
   const brHit = await evalJs(`(() => { const b = document.querySelector('#brand').getBoundingClientRect(); const s = document.querySelector('#topicSel').getBoundingClientRect(); return { w: Math.round(b.width), h: Math.round(b.height), gap: Math.round(s.left - b.right) }; })()`);
-  check('手机上标题好点：能点的地方至少 40 像素高，和话题菜单不重叠', brHit.h >= 40 && brHit.gap >= 1, JSON.stringify(brHit));
+  check('手机上标题好点：能点的地方至少 40 像素高，和话题按钮不重叠', brHit.h >= 40 && brHit.gap >= 1, JSON.stringify(brHit));
   // 手机上点标题：回到列表
   const brP = await center('#brand');
   await tap(brP.x, brP.y);
   await waitFor(`SVApp.state().view === 'list'`, 5000);
   check('手机上点标题「瑞典语读报」回到列表', (await state()).view === 'list');
-  // 文章页上在话题菜单里选另一个话题：和电脑上在文章页点那个话题按钮一样，列出那个话题的文章。
+  // 文章页上在话题按钮里选另一个话题：和电脑上在文章页点那个话题按钮一样，列出那个话题的文章。
   // 浏览器历史里文章那一步退掉了（不是改掉）：回到列表那一步（先做个记号），再按「后退」不会白按一次
   await evalJs(`history.replaceState({ mark: 'list' }, '')`);
   await openFirstCard(0);
@@ -1569,13 +1668,27 @@ try {
   const selArt = await waitFor(listReady('sverige'), 40000);
   await sleep(300);
   const hsArt = await evalJs(`({ mark: history.state && history.state.mark, sv: history.state && history.state.sv })`);
-  check('手机上文章页在话题菜单里选「瑞典」：列出瑞典的文章；浏览器历史里文章那一步退掉了（再按后退不会白按一次）',
-    selArt && inArt === 'article' && (await state()).topic === 'sverige' && (await evalJs(`document.querySelector('#topicSel').value`)) === 'sverige' && hsArt.mark === 'list' && !hsArt.sv, JSON.stringify(hsArt));
+  check('手机上文章页在话题按钮里选「瑞典」：列出瑞典的文章；浏览器历史里文章那一步退掉了（再按后退不会白按一次）',
+    selArt && inArt === 'article' && (await state()).topic === 'sverige' && (await evalJs(`document.querySelector('#topicSel').dataset.topic`)) === 'sverige' && hsArt.mark === 'list' && !hsArt.sv, JSON.stringify(hsArt));
   const hb = await center('#btnSettings');
   await tap(hb.x, hb.y);
   await sleep(400);
-  const dlg = await evalJs(`(() => { const d = document.querySelector('#dlgSettings'); const r = d.getBoundingClientRect(); return { open: d.open, left: r.left, right: r.right, vw: document.documentElement.clientWidth, voices: d.querySelector('#selVoice').options.length }; })()`);
-  check('手机上设置对话框在屏幕内，列出声音', dlg.open && dlg.left >= 0 && dlg.right <= dlg.vw && dlg.voices >= 3, JSON.stringify(dlg));
+  const dlg = await evalJs(`(() => { const d = document.querySelector('#dlgSettings'); const r = d.getBoundingClientRect(); return { open: d.open, left: r.left, right: r.right, vw: document.documentElement.clientWidth, voices: d.querySelectorAll('#voiceMenu [role="option"]').length, selects: document.querySelectorAll('select').length }; })()`);
+  check('手机上设置对话框在屏幕内，列出声音（自己的选择列表，不是系统的下拉菜单）', dlg.open && dlg.left >= 0 && dlg.right <= dlg.vw && dlg.voices >= 3 && !dlg.selects, JSON.stringify(dlg));
+  // 声音列表：点开是一列，现在的声音打 ✓，选另一个声音就用它；单选、勾选、滑块是自己画的（各个平台一样）
+  const sv0 = await evalJs(`document.querySelector('#selVoice').dataset.value`);
+  const vb = await rectOf('#selVoice');
+  await tap(vb.x, vb.y);
+  await sleep(250);
+  const vm = await evalJs(`(() => { const m = document.querySelector('#voiceMenu'); if (m.hidden) return null; const r = m.getBoundingClientRect(); const items = [...m.querySelectorAll('[role="option"]')];
+    return { n: items.length, cols: new Set(items.map((i) => Math.round(i.getBoundingClientRect().left))).size, inView: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight + 0.5, selected: items.filter((i) => i.getAttribute('aria-selected') === 'true').map((i) => i.dataset.value) }; })()`);
+  await shot('phone-voice-menu');
+  check('设置里的声音列表：点开是一列，在屏幕内，现在的声音打 ✓', vm && vm.n >= 3 && vm.cols === 1 && vm.inView && vm.selected.length === 1 && vm.selected[0] === sv0, JSON.stringify(vm));
+  const pickV = await evalJs(`(() => { const o = [...document.querySelectorAll('#voiceMenu [role="option"]')].find((i) => i.getAttribute('aria-selected') !== 'true' && i.dataset.value); if (!o) return null; const r = o.getBoundingClientRect(); return { v: o.dataset.value, x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`);
+  if (pickV) { await tap(pickV.x, pickV.y); await sleep(300); }
+  check('在声音列表里选另一个声音：用它（设置里存下），列表关上', !!pickV && (await state()).settings.voiceURI === pickV.v && (await evalJs(`document.querySelector('#voiceMenu').hidden`)) && (await evalJs(`document.querySelector('#selVoice').dataset.value`)) === pickV.v, JSON.stringify(pickV));
+  const ctlS = await evalJs(`[...document.querySelectorAll('#dlgSettings input')].map((i) => i.type + ':' + getComputedStyle(i).appearance)`);
+  check('设置里的单选、勾选、滑块都是自己画的（appearance: none），没有系统的下拉菜单', ctlS.length >= 7 && ctlS.every((x) => x.endsWith(':none')), ctlS.join(' '));
   await shot('phone-settings');
   // 对话框里的按钮：提示要放进对话框（最上层）才看得见；按住「试听」不应该真的读
   const spoken0 = await evalJs('__speechLog.length');
@@ -1591,12 +1704,134 @@ try {
   const rateOpts = await evalJs(`[...document.querySelectorAll('#rateRow input[name="rate"]')].map((r) => r.value + (r.checked ? '*' : ''))`);
   check('设置里的语速只有 0.8×、0.9×、1× 和循序渐进三连读，选着现在的语速', rateOpts.map((x) => x.replace('*', '')).join() === '0.8,0.9,1,ramp' && rateOpts.filter((x) => x.endsWith('*')).length === 1, rateOpts.join(' '));
   await evalJs(`document.querySelector('#dlgSettings').close()`);
-  // 别的手机宽度（320、375、430 像素）：顶栏不出屏、不横向滚动、不截字；列表页、文章页一样是标题、话题菜单、工具按钮
-  // （文章页上没有「← 列表」），375 以上一行，320 时话题菜单自己一行
+
+  // ---- 读着的时候的话题面板和声音列表（Fable 的审查找到的）----
+  // 从文章后面的一个词读起，再用滚轮回到最上面：正在读的词在屏幕下面，朗读过一会儿（读者滚过以后 2.5 秒）要把页面往下滚。
+  // 以前页面一滚面板就关上（打开 1.7 秒就关了），读者下一下点在文章上：暂停了、弹出一个词
+  const wheel = async (x, y, dy) => { await send('Input.dispatchMouseEvent', { type: 'mouseWheel', x, y, deltaX: 0, deltaY: dy }); await sleep(350); };
+  // 这一批里最长的文章，字放大（只在这一页改 --scale，不存进设置），从第一屏下面的一个词读起；一个词 400 毫秒，几秒里读不完
+  const nCards = await evalJs(`document.querySelectorAll('#list .card').length`);
+  let longest = { i: 0, h: 0 };
+  for (let ci = 0; ci < Math.min(nCards, 9); ci++) {
+    await openFirstCard(ci);
+    const hh = await evalJs('document.documentElement.scrollHeight');
+    if (hh > longest.h) longest = { i: ci, h: hh };
+    await evalJs(`document.querySelector('#brand').click()`);
+    await waitFor(`SVApp.state().view === 'list'`, 5000);
+  }
+  await openFirstCard(longest.i);
+  const scale0 = await evalJs(`getComputedStyle(document.documentElement).getPropertyValue('--scale') || '1'`);
+  await evalJs(`document.documentElement.style.setProperty('--scale', '1.8')`);
+  await evalJs('window.__speechWordMs = 400');
+  const deepI = await evalJs(`(() => { const ws = [...document.querySelectorAll('#article .w')]; const i = ws.findIndex((w) => w.getBoundingClientRect().top + window.scrollY > innerHeight + 60); return i < 0 ? Math.max(0, ws.length - 15) : i; })()`);
+  const dw = await center('#article .w', deepI);
+  await tap(dw.x, dw.y);
+  await sleep(500);
+  const fromOk = await clickButtonText('#popup .acts button', '从这里读');
+  await sleep(700);
+  await wheel(200, 500, -20000);
+  const tbA = await rectOf('#topicSel');
+  await tap(tbA.x, tbA.y);
+  await sleep(250);
+  const y0 = await evalJs('Math.round(window.scrollY)');
+  await sleep(3500);
+  const rdP = await evalJs(`({ open: !document.querySelector('#topicMenu').hidden, reader: SVApp.state().reader, y: Math.round(window.scrollY), si: SVApp.state().si })`);
+  // 对照：面板关上以后朗读接着把页面滚到正在读的地方（说明上面那几秒里朗读本来是要滚的）
+  await pressKey('Escape', 'Escape', 27);
+  await sleep(1500);
+  const yAfter = await evalJs('Math.round(window.scrollY)');
+  check('手机上读着的时候打开话题面板：朗读一直往下读，面板不自己关上（面板开着时朗读不把页面滚走；关上以后才接着滚）',
+    fromOk && rdP.open && rdP.reader === 'speaking' && Math.abs(rdP.y - y0) < 2 && yAfter > y0 + 100, JSON.stringify({ y0, ...rdP, yAfter }));
+  await wheel(200, 500, -20000);
+  await tap(tbA.x, tbA.y);
+  await sleep(250);
+  // 页面被程序滚动（三连读回到开头、iPhone 的回弹……）：面板不关，还在屏幕内
+  await evalJs('window.scrollBy(0, 30)');
+  await sleep(300);
+  const prog = await evalJs(`(() => { const m = document.querySelector('#topicMenu'); const r = m.getBoundingClientRect(); return { open: !m.hidden, inView: r.top >= 0 && r.bottom <= innerHeight + 0.5 }; })()`);
+  check('面板开着时页面被程序滚动：面板不关，还在屏幕内', prog.open && prog.inView, JSON.stringify(prog));
+  await shot('phone-topic-menu-reading');
+  // 读着的时候在面板里点一个话题：选的是话题（不是点到文章上：不暂停、不弹出词）
+  const opE = await rectOf('#topicMenu [data-topic="ekonomi"]');
+  await tap(opE.x, opE.y);
+  const okE = await waitFor(listReady('ekonomi'), 40000);
+  check('读着的时候在面板里点「经济」：列出经济的文章，没有点到文章上（没有弹出框）', okE && (await state()).topic === 'ekonomi' && !(await popupReport()), (await state()).topic);
+  // 读者自己滚（滚轮）：面板关上
+  await openFirstCard(0);
+  await evalJs('window.scrollTo(0, 0)');
+  await sleep(200);
+  const tbB = await rectOf('#topicSel');
+  await tap(tbB.x, tbB.y);
+  await sleep(250);
+  await wheel(200, 600, 300);
+  check('面板开着时读者自己滚页面（滚轮）：面板关上', (await evalJs(`document.querySelector('#topicMenu').hidden`)) === true);
+  // 手指（或鼠标）打开的面板，按 Esc 关上，再按空格：是暂停、继续，不是又打开面板（焦点不留在话题按钮上）
+  await evalJs('window.scrollTo(0, 0)');
+  await sleep(200);
+  const ppB = await center('#btnPlay');
+  await tap(ppB.x, ppB.y);
+  await sleep(600);
+  const tbC = await rectOf('#topicSel');
+  await tap(tbC.x, tbC.y);
+  await sleep(250);
+  const wasOpen = await evalJs(`!document.querySelector('#topicMenu').hidden`);
+  const rd1 = (await state()).reader;
+  await pressKey('Escape', 'Escape', 27);
+  const escP = await evalJs(`({ open: !document.querySelector('#topicMenu').hidden, focusOnBtn: document.activeElement === document.querySelector('#topicSel') })`);
+  await space();
+  await sleep(200);
+  const afterSp = await evalJs(`({ open: !document.querySelector('#topicMenu').hidden, reader: SVApp.state().reader })`);
+  check('手指打开的话题面板：Esc 关上（焦点不回到按钮），接着按空格是暂停，不是又打开面板',
+    wasOpen && rd1 === 'speaking' && !escP.open && !escP.focusOnBtn && !afterSp.open && afterSp.reader === 'paused', JSON.stringify({ wasOpen, rd1, escP, afterSp }));
+  // 手指打开的面板：按 ↓ 焦点进到面板里（现在的话题），再按 ↓ 到下一个；Esc 关上，焦点回到按钮
+  await tap(tbC.x, tbC.y);
+  await sleep(250);
+  await pressKey('ArrowDown', 'ArrowDown', 40);
+  const ad1 = await evalJs(`(() => { const a = document.activeElement; return { topic: a && a.dataset ? a.dataset.topic : null, sel: a && a.getAttribute ? a.getAttribute('aria-selected') : null }; })()`);
+  await pressKey('ArrowDown', 'ArrowDown', 40);
+  const ad2 = await evalJs(`document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.topic : null`);
+  const keysT = await evalJs(`SV.sources.TOPICS.map((t) => t.key)`);
+  await pressKey('Escape', 'Escape', 27);
+  const ad3 = await evalJs(`({ open: !document.querySelector('#topicMenu').hidden, focus: document.activeElement && document.activeElement.id })`);
+  check('手指打开的话题面板：按 ↓ 焦点到现在的话题（经济），再按 ↓ 到下一个（股市）；Esc 关上，焦点回到话题按钮',
+    ad1.topic === 'ekonomi' && ad1.sel === 'true' && ad2 === keysT[keysT.indexOf('ekonomi') + 1] && !ad3.open && ad3.focus === 'topicSel', JSON.stringify({ ad1, ad2, ad3 }));
+  await evalJs('document.activeElement && document.activeElement.blur()');
+  // 设置里的声音列表：读着的时候（后面的页面被朗读滚动）不自己关上；读者自己滚设置才关上
+  await space();
+  await sleep(300);
+  await wheel(200, 500, -20000);
+  const hbV = await center('#btnSettings');
+  await tap(hbV.x, hbV.y);
+  await sleep(400);
+  const vbV = await rectOf('#selVoice');
+  await tap(vbV.x, vbV.y);
+  await sleep(250);
+  const vy0 = await evalJs('Math.round(window.scrollY)');
+  await sleep(3500);
+  const vmR = await evalJs(`({ open: !document.querySelector('#voiceMenu').hidden, reader: SVApp.state().reader, y: Math.round(window.scrollY) })`);
+  check('设置里的声音列表：读着的时候不自己关上（后面的页面被朗读滚动也不关）', vmR.open && vmR.reader === 'speaking', JSON.stringify({ vy0, ...vmR }));
+  await shot('phone-voice-menu-reading');
+  // 滚轮放在设置的下半（不在声音列表上）
+  const dbR = await evalJs(`(() => { const r = document.querySelector('#dlgSettings .dlg-body').getBoundingClientRect(); return { x: Math.round(r.left + 30), y: Math.round(r.bottom - 40) }; })()`);
+  await wheel(dbR.x, dbR.y, 300);
+  check('读者自己在设置里往下滚：声音列表关上', (await evalJs(`document.querySelector('#voiceMenu').hidden`)) === true);
+  await evalJs(`document.querySelector('#dlgSettings').close()`);
+  await evalJs(`document.documentElement.style.setProperty('--scale', ${JSON.stringify(String(scale0).trim() || '1')})`);
+  await evalJs('window.__ms && window.__ms.stop ? window.__ms.stop() : SVApp.state()');
+  // 别的手机宽度（320、375、430 像素）：顶栏不出屏、不横向滚动、不截字；列表页、文章页一样是标题、话题按钮、工具按钮
+  // （文章页上没有「← 列表」），375 以上一行，320 时话题按钮自己一行
   for (const [w, hh] of [[320, 568], [375, 667], [430, 932]]) {
     await openPage({ width: w, height: hh, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA });
     const hl = await headerFit();
     if (w === 320) await shot('phone-320-list');
+    // 话题面板：375×667 以上 22 个话题两列一眼看全、不用滚；320×568 太矮，面板里面自己滚（页面不横向滚动）
+    const okMw = await openTopicMenu();
+    const mw = await menuReport();
+    if (w === 320) await shot('phone-320-topic-menu');
+    summary['topicMenu' + w] = mw;
+    check(`手机 ${w}×${hh}：话题面板两列、22 个，左右留 16 像素，${w >= 375 ? '都看得见、不用滚' : '太矮时面板里面滚'}，不横向溢出`,
+      okMw && mw.n === 22 && mw.cols === 2 && mw.left >= 16 && mw.right >= 16 && mw.minH >= 44 && !mw.overflow && (w < 375 ? true : (mw.allVisible && !mw.scroll)), JSON.stringify(mw));
+    await pressKey('Escape', 'Escape', 27);
     await openFirstCard(0);
     const ha = await headerFit();
     const la = await layoutReport('#article');
@@ -1672,7 +1907,7 @@ try {
   const sbC = await center('#btnSettings');
   await tap(sbC.x, sbC.y);
   await sleep(400);
-  const setC = await evalJs(`({ row: !document.querySelector('#engineRow').hidden, cloud: document.querySelector('#engineRow input[value="cloud"]').checked, opts: [...document.querySelectorAll('#selVoice option')].map((o) => o.value), note: document.querySelector('#voiceNote').textContent.slice(0, 12) })`);
+  const setC = await evalJs(`({ row: !document.querySelector('#engineRow').hidden, cloud: document.querySelector('#engineRow input[value="cloud"]').checked, opts: [...document.querySelectorAll('#voiceMenu [role="option"]')].map((o) => o.dataset.value), note: document.querySelector('#voiceNote').textContent.slice(0, 12) })`);
   check('云端：设置里有「声音来源」，列出 Sofie、Hillevi、Mattias', setC.row && setC.cloud && setC.opts.join() === 'sv-SE-SofieNeural,sv-SE-HilleviNeural,sv-SE-MattiasNeural', JSON.stringify(setC));
   await shot('desktop-cloud-settings');
   await evalJs(`(() => { const r = document.querySelector('#engineRow input[value="device"]'); r.checked = true; r.dispatchEvent(new Event('change', { bubbles: true })); })()`);
@@ -2041,8 +2276,8 @@ try {
   const capped = await waitFor(`SVApp.state().capNext && SVApp.state().reader === 'idle'`, 150000, 100);
   st = await state();
   const capToast = await evalJs(`document.querySelector('#toast').textContent`);
-  check('读者没碰页面，又连着自动读了 2 篇（AUTO_NEXT_MAX，测试里改小）：读完第 2 篇停下，说「已经连续读了 2 篇，停下了；点 ▶ 接着读」',
-    capped && st.id === capIds[3] && st.autoCount === 2 && /已经连续读了 2 篇，停下了；点 ▶ 接着读/.test(capToast) && (await evalJs('navigator.mediaSession.playbackState')) === 'none', `${st.title}；${capToast}`);
+  check('读者没碰页面，又连着自动读了 2 篇（AUTO_NEXT_MAX，测试里改小）：读完第 2 篇停下，说「已经连续读了 2 篇，停下了；点蓝色的朗读按钮接着读」',
+    capped && st.id === capIds[3] && st.autoCount === 2 && /已经连续读了 2 篇，停下了；点蓝色的朗读按钮接着读/.test(capToast) && (await evalJs('navigator.mediaSession.playbackState')) === 'none', `${st.title}；${capToast}`);
   await shot('desktop-auto-next-cap');
   await press('#btnPlay');
   const capGo = await waitFor(`SVApp.state().id === ${JSON.stringify(capIds[4])} && SVApp.state().reader === 'speaking'`, 15000, 50);
@@ -2096,7 +2331,8 @@ try {
   st = await state();
   check('三连读：两遍之间按暂停，不读下一遍（停在开头，下一遍是第 2 遍 0.9×）', st.reader === 'paused' && !st.held && st.pass === 2 && st.rate === 0.9 && st.si === 0, JSON.stringify({ reader: st.reader, pass: st.pass, rate: st.rate, si: st.si }));
   await press('#btnPlay');
-  await sleep(600);
+  // 一开始读就看（假的 SDK 的词很短，等久了已经读到后面几句）
+  await waitFor(`SVApp.state().reader === 'speaking'`, 5000, 20);
   st = await state();
   check('三连读：再按 ▶ 读第 2 遍，0.9×，从开头', st.reader === 'speaking' && st.pass === 2 && st.audioRate === 0.9 && st.si <= 2, JSON.stringify({ pass: st.pass, audioRate: st.audioRate, si: st.si }));
   await shot('desktop-ramp-pass2');

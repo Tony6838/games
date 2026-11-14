@@ -4,6 +4,8 @@
   const SV = window.SV;
   const { h } = SV;
   const $ = (sel) => document.querySelector(sel);
+  // 图标（css/style.css 的 .ic：CSS mask 画的，各个平台一样；不用 ← → ↗ 这些字符）
+  const icon = (name) => h('i', { class: 'ic ic-' + name, 'aria-hidden': 'true' });
 
   // ---------- 设置 ----------
   const SET_KEY = 'sv.settings.v1';
@@ -48,9 +50,10 @@
   const IS_IOS = /iP(hone|ad|od)/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1); // iPadOS 默认报成 Mac
   const IS_SAFARI = !/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|MicroMessenger|YaBrowser|Mercury/i.test(UA) &&
     (IS_IOS || (/AppleWebKit/.test(UA) && /Safari\//.test(UA) && !/Chrome|Chromium|Edg|OPR|Firefox|Android/.test(UA)));
-  const PAGE_TR_HINT = IS_SAFARI ? '整篇翻译：点地址栏「aA → 翻译成中文」'
+  // 不用 → 这些箭头字符：本站的字体里没有，各个平台的系统字体画得不一样
+  const PAGE_TR_HINT = IS_SAFARI ? '整篇翻译：点地址栏的「aA」，再点「翻译成中文」'
     : /Firefox\/|FxiOS/.test(UA) ? '整篇翻译：用地址栏的翻译图标'
-      : /Android/.test(UA) && /Chrome\//.test(UA) && !/EdgA|SamsungBrowser|OPR|YaBrowser|MicroMessenger/.test(UA) ? '整篇翻译：点右上角 ⋮ →「翻译…」'
+      : /Android/.test(UA) && /Chrome\//.test(UA) && !/EdgA|SamsungBrowser|OPR|YaBrowser|MicroMessenger/.test(UA) ? '整篇翻译：点右上角的 ⋮，再点「翻译…」'
         : '整篇翻译：用浏览器自带的翻译功能';
   const PAGE_TR_KNOWN = PAGE_TR_HINT !== '整篇翻译：用浏览器自带的翻译功能'; // 认出了是哪个浏览器
   // 内置翻译能不能用（瑞典语→中文），开始时查一次，记在 body 的 no-builtin 上（给测试看，样子不跟着变）
@@ -62,7 +65,7 @@
     topbar: $('#topbar'), topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'),
     popup: $('#popup'), toast: $('#toast'), player: $('#player'),
     play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), after: $('#btnAfter'), next: $('#btnNext'),
-    back: $('#btnBack'), brand: $('#brand'), topicSel: $('#topicSel'),
+    back: $('#btnBack'), brand: $('#brand'), topicSel: $('#topicSel'), topicMenu: $('#topicMenu'),
   };
 
   // view：'loading' | 'list' | 'article' | 'message'
@@ -282,7 +285,7 @@
       : e && (e.code === 'forbidden' || e.code === 'auth') ? '云端语音的设置有问题（令牌服务或 Azure 密钥）'
         : e && e.code === 'network' ? '连不上云端语音'
           : '云端语音这次没成功';
-    toast(why + '，先改用这台设备自己的声音' + (was !== 'idle' ? '，点蓝色的 ▶ 按钮接着读。' : '。'), 6000);
+    toast(why + '，先改用这台设备自己的声音' + (was !== 'idle' ? '，点蓝色的朗读按钮接着读。' : '。'), 6000);
     switchReader();
     refreshVoice();
   }
@@ -334,6 +337,9 @@
   function ensureVisible(el) {
     // 页面藏着时不滚（回到前台时再滚到正在读的词）；用户刚自己滚过时也不滚
     if (document.hidden || Date.now() - lastUserScroll < 2500) return;
+    // 话题面板开着时不滚（读者正在选话题；关上以后下一个词接着滚）
+    const opk = openPicker();
+    if (opk && !opk.panel.closest('dialog')) return;
     const r = el.getBoundingClientRect();
     const band = visibleBand();
     if (r.top >= band.top && r.bottom <= band.bottom) return;
@@ -414,17 +420,187 @@
   }
 
   // ---------- 话题 ----------
-  // 电脑、平板上是一排话题按钮；手机上是标题旁边的下拉菜单，列表页、文章页都有（css/style.css 按屏幕宽度显示其中一个），
-  // 两个都用 TOPICS 这一张表做，选了以后都走 chooseTopic。再点一次同一个话题换一批（菜单里选同一个不算换，
-  // 手机上换一批用列表最下面的「换一批」或播放栏最右边的按钮）。
+  // 电脑、平板上是一排话题按钮；手机上是标题旁边的话题按钮和两列的话题面板，列表页、文章页都有（css/style.css 按屏幕宽度显示其中一个），
+  // 两个都用 TOPICS 这一张表做，选了以后都走 chooseTopic。再点一次同一个话题换一批（手机上：面板里再点一次打了 ✓ 的那个；
+  // 列表最下面的「换一批」、播放栏最右边的按钮也行）。
   // 正在取文章（loading）时再点同一个话题不算「换一批」（还没列出来）；但「接着读下一篇」在取下一批时（还有 gap），
   // 和平常一样换一批（朗读停下，列出下一批）
   function chooseTopic(t) {
     showTopic(t, cur.topic === t && (!loading || !!gap) && (cur.view === 'list' || cur.view === 'article'));
   }
+  // ---------- 自己的弹出选择（手机上的话题面板、设置里的声音）：各个平台一样 ----------
+  // 系统的下拉菜单（<select>）每个平台都不一样：iPhone 是窄窄的一列、要滑（Tony 的截图），安卓是一个对话框，电脑上又是另一种。
+  // 所以用自己的：一个按钮（现在选的 ▾），点开是一个面板，里面一个个选项（44 像素高，可以一列或者两列，先排满左边一列）。
+  // 关上：选了、点面板外面（这一下不算点了下面的东西，免得一不小心打开了一篇文章）、Esc、再点按钮、读者自己滚页面
+  // （滚轮、手指、翻页键）、安卓的「返回」（CloseWatcher）、按钮不在了（换页面时按钮藏起来）。
+  // 页面自己滚（朗读跟着往下滚、iPhone 的回弹、三连读回到开头、接着读下一篇换文章）不关：面板跟着按钮重新放好；
+  // 面板开着时朗读不自动滚页面（关上以后接着滚）。
+  // 键盘：按钮上回车、空格、↓ 打开（焦点到现在选的那个）；用鼠标、手指打开的，按 ↑↓ 焦点也进到面板里；
+  // ↑↓ 在一列里走，←→ 换一列；回车选；Esc 关上（焦点在面板里时回到按钮）。
+  const pickers = [];
+  function makePicker({ button, panel, cols = 1, place, onPick }) {
+    const pk = { button, panel, cols, open: false, rows: 1, cw: null };
+    pk.items = () => [...panel.querySelectorAll('[role="option"]')];
+    pk.place = () => place(pk);
+    // 焦点进到面板里：现在选的那个（用鼠标、手指打开以后按 ↑↓）
+    pk.focusCurrent = () => {
+      const items = pk.items();
+      const on = items.find((o) => o.tabIndex === 0) || items.find((o) => o.getAttribute('aria-selected') === 'true') || items[0];
+      if (on) on.focus({ preventScroll: true });
+    };
+    // list：[{ value, text, sv, zh, cls }]；sv、zh 是瑞典文提示（按住半秒）
+    pk.setOptions = (list) => {
+      panel.textContent = '';
+      for (const it of list) {
+        const o = h('button', { type: 'button', class: 'opt' + (it.cls ? ' ' + it.cls : ''), role: 'option', 'aria-selected': 'false', tabindex: '-1', 'data-value': it.value, lang: 'zh-CN' }, it.text);
+        if (it.attrs) for (const [k, v] of Object.entries(it.attrs)) o.setAttribute(k, v);
+        if (it.sv) tip(o, it.sv, it.zh || '');
+        o.addEventListener('click', (e) => {
+          const kb = e.detail === 0; // 用键盘（回车、空格）选的：焦点回到按钮；点的：不留焦点
+          pk.hide(kb);
+          if (!kb) button.blur();
+          onPick(it.value, kb);
+        });
+        panel.append(o);
+      }
+      pk.rows = Math.max(1, Math.ceil(list.length / cols));
+      panel.style.gridTemplateRows = `repeat(${pk.rows}, 44px)`;
+    };
+    pk.select = (value) => { for (const o of pk.items()) o.setAttribute('aria-selected', o.dataset.value === String(value) ? 'true' : 'false'); };
+    pk.show = (byKeyboard) => {
+      if (pk.open) return;
+      for (const other of pickers) if (other !== pk) other.hide(false);
+      hidePopup();
+      hideTip();
+      pk.open = true;
+      panel.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+      pk.place();
+      panel.scrollTop = 0;
+      // 安卓的「返回」键（和电脑上的 Esc 一样是「关上」的请求）：只关面板，不离开这一页。
+      // 没有 CloseWatcher 的浏览器（Safari、Firefox）「返回」照常后退，面板在 popstate 里关上
+      if (typeof window.CloseWatcher === 'function') {
+        try { pk.cw = new window.CloseWatcher(); pk.cw.onclose = () => { pk.cw = null; pk.hide(false); }; } catch (err) { pk.cw = null; }
+      }
+      const items = pk.items();
+      const on = items.find((o) => o.getAttribute('aria-selected') === 'true') || items[0];
+      for (const o of items) o.tabIndex = o === on ? 0 : -1;
+      if (on) {
+        // 太矮的屏幕面板里面要滚：现在选的那个滚到看得见的地方（只滚面板，不滚页面）
+        if (on.offsetTop + on.offsetHeight > panel.clientHeight) panel.scrollTop = on.offsetTop - 6;
+        if (byKeyboard) on.focus({ preventScroll: true });
+      }
+    };
+    pk.hide = (focusButton) => {
+      if (!pk.open) return;
+      pk.open = false;
+      panel.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+      if (pk.cw) { const cw = pk.cw; pk.cw = null; try { cw.destroy(); } catch (err) { /* 忽略 */ } }
+      if (focusButton) button.focus({ preventScroll: true });
+      else if (panel.contains(document.activeElement)) document.activeElement.blur();
+    };
+    // detail === 0：用键盘（回车、空格）按的
+    button.addEventListener('click', (e) => { if (pk.open) pk.hide(false); else pk.show(e.detail === 0); });
+    button.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (pk.open) pk.focusCurrent(); else pk.show(true); }
+    });
+    panel.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); pk.hide(true); return; }
+      if (e.key === 'Tab') { pk.hide(false); return; }
+      const items = pk.items();
+      const i = items.indexOf(document.activeElement);
+      if (i < 0) return;
+      const rows = pk.rows;
+      let j = -1;
+      if (e.key === 'ArrowDown') j = i % rows < rows - 1 && i + 1 < items.length ? i + 1 : i;
+      else if (e.key === 'ArrowUp') j = i % rows > 0 ? i - 1 : i;
+      else if (e.key === 'ArrowRight') j = i + rows < items.length ? i + rows : i;
+      else if (e.key === 'ArrowLeft') j = i - rows >= 0 ? i - rows : i;
+      else if (e.key === 'Home') j = 0;
+      else if (e.key === 'End') j = items.length - 1;
+      else return;
+      e.preventDefault();
+      for (const o of items) o.tabIndex = o === items[j] ? 0 : -1;
+      items[j].focus({ preventScroll: false });
+    });
+    pickers.push(pk);
+    return pk;
+  }
+  const openPicker = () => pickers.find((pk) => pk.open) || null;
+  const hidePickers = () => { for (const pk of pickers) pk.hide(false); };
+  // 面板放在按钮下面：左右至少留 16 像素，宽 width；下面放不下、上面地方更大时（手机横着拿、按钮在屏幕下半）放在按钮上面；
+  // 还放不下时面板里面自己滚
+  function placeUnder(pk, width) {
+    const r = pk.button.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = window.innerHeight;
+    const w = Math.min(width, vw - 32);
+    const left = SV.clamp(Math.round(r.left), 16, Math.max(16, vw - w - 16));
+    const st = pk.panel.style;
+    Object.assign(st, { left: left + 'px', width: w + 'px', top: '0px', maxHeight: 'none' });
+    const need = pk.panel.offsetHeight; // 不用滚时要多高（连边框；max-height 也是连边框算的）
+    const below = vh - r.bottom - 6 - 8;
+    const above = r.top - 6 - 8;
+    if (need > below && above > below) {
+      const hh = Math.min(need, above);
+      Object.assign(st, { top: Math.round(r.top - 6 - hh) + 'px', maxHeight: hh + 'px' });
+    } else {
+      const top = SV.clamp(Math.round(r.bottom + 6), 8, Math.max(8, vh - 140));
+      Object.assign(st, { top: top + 'px', maxHeight: Math.max(132, vh - top - 8) + 'px' });
+    }
+  }
+  // 点在面板外面：关上，这一下不算点了下面的东西
+  let pickerSwallow = 0;
+  document.addEventListener('pointerdown', (e) => {
+    const pk = openPicker();
+    if (!pk || pk.panel.contains(e.target) || pk.button.contains(e.target)) return;
+    pk.hide(false);
+    pickerSwallow = Date.now();
+  }, true);
+  document.addEventListener('click', (e) => {
+    if (!pickerSwallow) return;
+    const t = pickerSwallow;
+    pickerSwallow = 0;
+    if (Date.now() - t < 1000 && !pickers.some((pk) => pk.button.contains(e.target))) { e.preventDefault(); e.stopPropagation(); }
+  }, true);
+  // 读者自己滚（滚轮、手指在面板外面划、翻页键、空格）：记下时间。页面的 scroll 事件在这之后不到 0.4 秒来的，才算读者滚的
+  let scrollIntent = 0;
+  const inOpenPanel = (t) => pickers.some((pk) => pk.open && t && pk.panel.contains(t));
+  ['wheel', 'touchmove'].forEach((ev) => window.addEventListener(ev, (e) => { if (!inOpenPanel(e.target)) scrollIntent = Date.now(); }, { passive: true, capture: true }));
+  document.addEventListener('keydown', (e) => {
+    if (['PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key) && !inOpenPanel(e.target)) scrollIntent = Date.now();
+  }, true);
+  const userScrolled = () => Date.now() - scrollIntent < 400;
+  window.addEventListener('scroll', () => {
+    const pk = openPicker();
+    // 对话框里的声音列表：后面的页面滚（朗读还在往下滚）不管它；对话框自己滚时见下面声音列表那里
+    if (!pk || pk.panel.closest('dialog')) return;
+    if (userScrolled()) pk.hide(false);
+    else pk.place(); // 页面自己滚的：面板跟着按钮
+  }, { passive: true });
+  // 窗口大小变了（手机的地址栏伸缩、转屏）：重新放好，不关；窗口变宽、话题按钮藏起来了（电脑的排版）才关
+  window.addEventListener('resize', () => syncPickers());
+  // 换页面（列表、文章，也可能是「接着读下一篇」自己换的）：按钮还在就让面板开着、重新放好（面板下面的东西变了，手指还在面板上）；
+  // 按钮不在了才关上，这时下一下点击不算，免得点到下面的东西
+  function syncPickers() {
+    for (const pk of pickers) {
+      if (!pk.open) continue;
+      if (pk.button.offsetParent) pk.place();
+      else { pk.hide(false); pickerSwallow = Date.now(); }
+    }
+  }
+
+  // 手机上的话题面板：两列，先排满左边一列再排右边（和电脑上话题按钮的顺序一样往下读），所有话题一眼看全。
+  // 现在的话题打 ✓；点它就是换一批（和电脑上再点一次现在的话题按钮一样，都走 chooseTopic）
+  const topicPicker = makePicker({
+    button: els.topicSel, panel: els.topicMenu, cols: 2,
+    place: (pk) => placeUnder(pk, 360),
+    onPick: (key) => { const t = TOPICS.find((x) => x.key === key); if (t) chooseTopic(t); },
+  });
+  tip(els.topicSel, 'Välj ämne', '选话题（再选一次现在的话题：换一批）');
   function renderChips() {
     els.topics.textContent = '';
-    els.topicSel.textContent = '';
     for (const t of TOPICS) {
       const b = h('button', { type: 'button', class: 'chip' + (t.key === 'latt' ? ' extra' : ''), 'data-topic': t.key }, t.zh);
       tip(b, t.sv, `看「${t.zh}」的新闻`);
@@ -433,17 +609,17 @@
         chooseTopic(t);
       });
       els.topics.append(b);
-      els.topicSel.append(h('option', { value: t.key, lang: 'zh-CN' }, t.zh));
     }
+    topicPicker.setOptions(TOPICS.map((t) => ({ value: t.key, text: t.zh, sv: t.sv, zh: `看「${t.zh}」的新闻`, cls: t.key === 'latt' ? 'extra' : '', attrs: { 'data-topic': t.key } })));
   }
-  tip(els.topicSel, 'Välj ämne', '选话题');
-  els.topicSel.addEventListener('change', () => {
-    const t = TOPICS.find((x) => x.key === els.topicSel.value);
-    els.topicSel.blur();
-    if (t) chooseTopic(t);
-  });
+
   function markChip(topic, busy) {
-    if (topic) els.topicSel.value = topic.key;
+    if (topic) {
+      els.topicSel.querySelector('.label').textContent = topic.zh;
+      els.topicSel.dataset.topic = topic.key;
+      els.topicSel.setAttribute('aria-label', '话题：' + topic.zh);
+      topicPicker.select(topic.key);
+    }
     for (const b of els.topics.children) {
       const on = !!topic && b.dataset.topic === topic.key;
       b.classList.toggle('active', on);
@@ -462,6 +638,7 @@
     els.back.hidden = view !== 'article';
     document.body.dataset.view = view;
     updateButtons();
+    syncPickers();
   }
 
   function message(...children) {
@@ -625,7 +802,7 @@
       h('h2', null, topic.zh),
       h('span', null, `第 ${cur.batchNo} 批 · ${cur.batch.length} 篇 · 选一篇来读；`,
         h('span', { class: 'wide-only' }, `再点一次「${topic.zh}」换一批`),
-        h('span', { class: 'narrow-only' }, '点最下面的「换一批」换一批'))));
+        h('span', { class: 'narrow-only' }, '再选一次现在的话题，或者点最下面的「换一批」'))));
     const ol = h('ol', { class: 'cards' });
     for (const it of cur.batch) {
       const a = h('a', { class: 'card' + (read.has(it.id) ? ' read' : ''), href: '?topic=' + topic.key + '&a=' + encodeURIComponent(it.id), 'data-id': it.id },
@@ -645,7 +822,7 @@
     }
     els.list.append(ol);
     els.list.append(h('div', { class: 'list-foot' },
-      tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); showTopic(topic, true); } }, cur.more ? '换一批 →' : '从最新的重新列 →'),
+      tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); showTopic(topic, true); } }, cur.more ? '换一批' : '从最新的重新列', ' ', icon('arrow-r')),
         cur.more ? 'Fler artiklar' : 'Börja om från de senaste',
         cur.more ? `「${topic.zh}」的下一批文章` : '都列过了，从最新的文章重新列')));
     els.article.textContent = '';
@@ -694,6 +871,7 @@
   }
   window.addEventListener('popstate', () => {
     leaving = false;
+    hidePickers(); // 「返回」：开着的面板关上（有 CloseWatcher 的安卓 Chrome 上「返回」只关面板，不到这里）
     if (ignorePop) { // 自己退掉文章那一步引起的：不管；退的时候又打开了文章（接着读下一批），现在记下
       ignorePop--;
       if (pendingPush && cur.view === 'article') { const id = pendingPush; pendingPush = null; pushArticle(id); }
@@ -724,10 +902,10 @@
     const art = els.article;
     art.textContent = '';
     art.dataset.id = item.id;
-    const back = () => tip(h('button', { type: 'button', class: 'back-btn', lang: 'zh-CN', onclick: (e) => { e.currentTarget.blur(); backToList(false); } }, `← 返回「${topic.zh}」列表`),
+    const back = () => tip(h('button', { type: 'button', class: 'back-btn', lang: 'zh-CN', onclick: (e) => { e.currentTarget.blur(); backToList(false); } }, icon('arrow-l'), ' ', `返回「${topic.zh}」列表`),
       'Tillbaka till listan', `返回「${topic.zh}」列表`);
     // 文章开头的「返回列表」放在顶栏标题旁边（setView 显示它），省一行
-    els.back.querySelector('.long').textContent = `← 返回「${topic.zh}」列表`;
+    els.back.querySelector('.long').textContent = `返回「${topic.zh}」列表`;
     tip(els.back, 'Tillbaka till listan', `返回「${topic.zh}」列表`);
     // 文章开头一行：来源（SR 的条款要写清楚材料来自 SR：「Sveriges Radio · 节目」，不到 360 像素宽的手机上「SR · 节目」）、时间、「原文 ↗」。
     // 新闻源里没有节目名时（sources.js 填的是 'Sveriges Radio'）只写一次 Sveriges Radio
@@ -739,7 +917,7 @@
         h('span', { class: 'src-long', lang: 'sv' }, 'Sveriges Radio'), h('abbr', { class: 'src-short', lang: 'sv', title: 'Sveriges Radio（瑞典广播电台）' }, 'SR'),
         prog ? ' · ' : null, prog ? h('span', { lang: 'sv' }, prog) : null),
       h('span', { class: 'when', title: '瑞典时间' }, when(item), h('span', { class: 'wide-only' }, '（瑞典时间）')),
-      h('a', { href: item.link, target: '_blank', rel: 'noopener', title: '在 SR 网站上看原文（还可以听电台的原声）' }, '原文 ↗')));
+      h('a', { href: item.link, target: '_blank', rel: 'noopener', title: '在 SR 网站上看原文（还可以听电台的原声）' }, '原文', icon('ext'))));
     const title = h('h1');
     const body = h('div', { class: 'body' });
     art.append(title, body);
@@ -748,8 +926,8 @@
     art.append(h('div', { class: 'next-row', lang: 'zh-CN' },
       back(),
       idx >= 0 && idx < cur.batch.length - 1
-        ? tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); nextArticle(); } }, '下一篇 →'), 'Nästa artikel', '列表里的下一篇')
-        : tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); nextArticle(); } }, '下一批 →'), 'Fler artiklar', '这一批读完了，列下一批')));
+        ? tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); nextArticle(); } }, '下一篇', ' ', icon('arrow-r')), 'Nästa artikel', '列表里的下一篇')
+        : tip(h('button', { type: 'button', onclick: (e) => { e.currentTarget.blur(); nextArticle(); } }, '下一批', ' ', icon('arrow-r')), 'Fler artiklar', '这一批读完了，列下一批')));
     els.notice.hidden = true;
     setView('article');
     window.scrollTo({ top: 0 });
@@ -788,7 +966,7 @@
     if (what === 'next' && autoCount >= autoNextMax) {
       // 读者没碰页面，已经连着自动读了 AUTO_NEXT_MAX 篇：停下（免得没人听时把一个话题的文章全读完，花掉大家共用的额度）
       capNext = true;
-      toast(`已经连续读了 ${autoNextMax} 篇，停下了；点 ▶ 接着读`, 10000);
+      toast(`已经连续读了 ${autoNextMax} 篇，停下了；点蓝色的朗读按钮接着读`, 10000);
       return false;
     }
     cancelGap();
@@ -923,7 +1101,7 @@
   const engineLabel = (r) => (ENGINE[r.engine] ? ENGINE[r.engine] + (r.engine !== 'azure' && r.azure === 'quota' ? '（微软翻译的免费额度用完了）' : '') : '');
 
   function onDownload(p) {
-    toast(`正在下载浏览器的瑞典语→中文翻译模型：${Math.round((p || 0) * 100)}%`, 3000);
+    toast(`正在下载浏览器的瑞典语到中文的翻译模型：${Math.round((p || 0) * 100)}%`, 3000);
   }
 
   // 整句译文先占多大地方：中文译文的字数一般是瑞典语句子长度的 0.28–0.37 倍（2026-11-13 的评估集，140 句），
@@ -1232,9 +1410,29 @@
   // 空格：暂停 / 继续；Esc：关掉弹出框
   let spaceHandled = false;
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (pop.open) hidePopup(); return; }
+    if (e.key === 'Escape') {
+      // 打开着的话题面板、声音列表：Esc 只关它（在设置里也不把设置关了）。用鼠标、手指打开的（焦点不在面板里）：
+      // 焦点不回到按钮、按钮也放开焦点，不然接着按空格是又打开面板，不是暂停、继续
+      const pk = openPicker();
+      if (pk) {
+        e.preventDefault();
+        const kb = pk.panel.contains(document.activeElement);
+        pk.hide(kb);
+        if (!kb && document.activeElement === pk.button) pk.button.blur();
+        return;
+      }
+      if (pop.open) hidePopup();
+      return;
+    }
+    // 用鼠标、手指打开的面板：↑↓ 让焦点进到面板里（现在选的那个），不滚页面、不改设置里的单选
+    const opk = openPicker();
+    if (opk && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && !e.defaultPrevented && !opk.panel.contains(document.activeElement)) {
+      e.preventDefault();
+      opk.focusCurrent();
+      return;
+    }
     if (e.code !== 'Space' && e.key !== ' ') return;
-    if (document.querySelector('dialog[open]') || cur.view !== 'article') return;
+    if (document.querySelector('dialog[open]') || cur.view !== 'article' || opk) return;
     const t = e.target;
     if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"]')) return;
     // 用键盘（Tab）到了一个按钮上（比如标题「瑞典语读报」）：空格按这个按钮，不是暂停、继续。
@@ -1288,7 +1486,7 @@
     if (S.ramp) setRate(RATES[0], false);
     else if (S.rate >= RATES[RATES.length - 1]) setRate(RATES[0], true);
     else setRate(RATES[RATES.indexOf(S.rate) + 1], false);
-    toast(S.ramp ? '循序渐进三连读：一篇读三遍，0.8× 慢读理解 → 0.9× 练习 → 1× 正常速度' : '语速 ' + fmtRate(S.rate), S.ramp ? 3500 : 1500);
+    toast(S.ramp ? '循序渐进三连读：一篇读三遍，先 0.8× 慢读理解，再 0.9× 练习，最后 1× 正常速度' : '语速 ' + fmtRate(S.rate), S.ramp ? 3500 : 1500);
   });
   els.voice.addEventListener('click', () => {
     els.voice.blur();
@@ -1341,7 +1539,7 @@
   for (const d of document.querySelectorAll('dialog')) {
     d.addEventListener('close', () => { const a = document.activeElement; if (a && a !== document.body && a.blur && !d.contains(a)) a.blur(); });
   }
-  // 说明框「整篇翻译」：认得出的浏览器，它的办法放在最前面（Safari、iPhone 是「点地址栏『aA → 翻译成中文』」）；
+  // 说明框「整篇翻译」：认得出的浏览器，它的办法放在最前面（Safari、iPhone 是「点地址栏的『aA』，再点『翻译成中文』」）；
   // 认不出的不说「你现在用的浏览器：用浏览器自带的翻译功能」，只列各个浏览器的办法
   $('#helpTrHint').textContent = PAGE_TR_KNOWN ? '你现在用的浏览器：' + PAGE_TR_HINT.replace('整篇翻译：', '') + '。' : '';
   $('#helpTrOthers').textContent = PAGE_TR_KNOWN ? '别的浏览器：' : '比如：';
@@ -1365,49 +1563,77 @@
 
   // ---------- 设置对话框 ----------
   const selVoice = $('#selVoice');
+  // 声音列表：和话题面板一样的自己的选择（一列），选了以后和以前的 <select> 一样
+  const voicePicker = makePicker({
+    button: selVoice, panel: $('#voiceMenu'), cols: 1,
+    place: (pk) => placeUnder(pk, Math.max(240, Math.round(selVoice.getBoundingClientRect().width))),
+    onPick: (value) => pickVoice(value),
+  });
+  tip(selVoice, 'Välj röst', '选声音');
+  // 读者自己在设置里往下滚、设置关上：声音列表关上（设置自己滚的、后面的页面滚的都不关，见上面 scroll）
+  $('#dlgSettings .dlg-body').addEventListener('scroll', () => {
+    if (!voicePicker.open) return;
+    if (userScrolled()) voicePicker.hide(false);
+    else voicePicker.place();
+  }, { passive: true });
+  $('#dlgSettings').addEventListener('close', () => voicePicker.hide(false));
+  function setVoiceOptions(list, value) {
+    voicePicker.setOptions(list);
+    showVoiceValue(value);
+  }
+  function showVoiceValue(value) {
+    const o = voicePicker.items().find((x) => x.dataset.value === String(value)) || voicePicker.items()[0];
+    selVoice.dataset.value = o ? o.dataset.value : '';
+    selVoice.querySelector('.label').textContent = o ? o.textContent : '';
+    selVoice.setAttribute('aria-label', '声音：' + (o ? o.textContent : ''));
+    if (o) voicePicker.select(o.dataset.value);
+  }
   const CLOUD_NOTE = '云端自然语音：微软 Azure 的瑞典语神经语音，电脑、手机、任何浏览器上都一样。朗读时文章的文字发给微软的语音服务合成声音（Edge 浏览器的在线声音也是这样），要联网。';
   function fillVoiceSelect() {
     // 声音来源：只有设了云端语音（js/config.js 的 ttsUrl）才显示
     $('#engineRow').hidden = !cloudReader;
     const eng = cloudReader && S.engine === 'cloud' ? 'cloud' : 'device';
     for (const r of document.querySelectorAll('#engineRow input[name="engine"]')) r.checked = r.value === eng;
-    selVoice.textContent = '';
     const note = $('#voiceNote');
     if (useCloud()) {
-      for (const v of SV.cloud.VOICES) selVoice.append(h('option', { value: v.name }, `${v.label}（${v.gender === 'm' ? '男' : '女'}，云端）`));
-      selVoice.value = cloudVoice().name;
+      // 每个选项也有瑞典文提示（和别的按钮一样）：kvinnoröst 女声、mansröst 男声
+      setVoiceOptions(SV.cloud.VOICES.map((v) => ({ value: v.name, text: `${v.label}（${v.gender === 'm' ? '男' : '女'}，云端）`,
+        sv: `${v.label}, ${v.gender === 'm' ? 'mansröst' : 'kvinnoröst'}`, zh: `用云端的 ${v.label} 朗读` })), cloudVoice().name);
       note.textContent = CLOUD_NOTE;
       return;
     }
     const list = SV.speech.voices();
-    selVoice.append(h('option', { value: '' }, `自动（${S.gender === 'm' ? '男声' : '女声'}优先）`));
-    for (const x of list) {
+    setVoiceOptions([{ value: '', text: `自动（${S.gender === 'm' ? '男声' : '女声'}优先）`, sv: 'Automatiskt', zh: '自动选一个瑞典语声音' }].concat(list.map((x) => {
       const g = x.gender === 'f' ? '女' : x.gender === 'm' ? '男' : '性别不明';
-      selVoice.append(h('option', { value: x.v.voiceURI }, `${x.v.name}（${g}）`));
-    }
-    selVoice.value = list.some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '';
+      return { value: x.v.voiceURI, text: `${x.v.name}（${g}）`, sv: x.gender === 'f' ? 'Kvinnoröst' : x.gender === 'm' ? 'Mansröst' : 'Röst', zh: `用这台设备的 ${x.v.name} 朗读` };
+    })), list.some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '');
     let t;
     if (!SV.speech.supported) t = '这个浏览器不支持朗读。';
-    else if (!list.length) t = '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 → 时间和语言 → 语音」里添加瑞典语语音；iPhone / iPad 在「设置 → 辅助功能 → 朗读内容 → 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。';
+    else if (!list.length) t = '这台设备上没有瑞典语声音。办法：用 Edge 浏览器（自带微软的瑞典语在线声音 Sofie、Mattias）；Windows 可以在「设置 > 时间和语言 > 语音」里添加瑞典语语音；iPhone / iPad 在「设置 > 辅助功能 > 朗读内容 > 声音」里下载瑞典语声音；安卓在系统的「文字转语音」设置里安装瑞典语。';
     else t = `这台设备有 ${list.length} 个瑞典语声音。认不出男女的标为「性别不明」，可以试听后自己选。`;
     t += ' 手机锁屏后，这台设备的声音会停下（回到前台从停下的词接着读）；锁屏后继续朗读需要云端语音。';
+    // 设备自己的声音是平台的东西（有没有瑞典语声音、听起来怎样、锁屏后停不停），各个平台一样的办法是云端语音
+    if (cloudReader) t += ' 每台设备自己的声音不一样；要在电脑、手机、平板上都一样，选上面的「云端自然语音」。';
     if (cloudReader && S.engine === 'cloud' && quotaOut()) t = '云端语音这个月的免费额度用完了，下个月自动再用；现在用的是这台设备自己的声音。' + t;
     else if (cloudReader && S.engine === 'cloud' && cloudDown) t = '云端语音这次没成功，现在用的是这台设备自己的声音；刷新网页会再试云端。' + t;
     note.textContent = t;
   }
-  selVoice.addEventListener('change', () => {
+  function pickVoice(value) {
+    // 又选了现在的声音：什么也不变（正在读的这句不重读）
+    if (selVoice.dataset.value === String(value)) return;
+    showVoiceValue(value);
     if (useCloud()) {
-      const v = SV.cloud.voiceByName(selVoice.value);
+      const v = SV.cloud.voiceByName(value);
       if (v) { S.cloudVoice = v.name; S.gender = v.gender; }
     } else {
-      S.voiceURI = selVoice.value;
+      S.voiceURI = value;
       const x = SV.speech.voices().find((v) => v.v.voiceURI === S.voiceURI);
       if (x && x.gender !== '?') S.gender = x.gender;
     }
     save();
     refreshVoice();
     if (reader.state === 'speaking' && !reader.held) reader.play(reader.si, reader.wi);
-  });
+  }
   // 声音来源：云端自然语音 / 这台设备自己的声音。选回云端时，之前出过的错不算，再试一次
   for (const r of document.querySelectorAll('#engineRow input[name="engine"]')) {
     r.addEventListener('change', () => {
@@ -1443,9 +1669,9 @@
     rngFont.value = S.scale;
     $('#outFont').textContent = Math.round(S.scale * 100) + '%';
     $('#chkOnline').checked = S.online !== false;
-    if (!selVoice.options.length) return;
-    if (useCloud()) selVoice.value = cloudVoice().name;
-    else selVoice.value = SV.speech.voices().some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '';
+    if (!voicePicker.items().length) return;
+    if (useCloud()) showVoiceValue(cloudVoice().name);
+    else showVoiceValue(SV.speech.voices().some((x) => x.v.voiceURI === S.voiceURI) ? S.voiceURI : '');
   }
   async function updateTrNote() {
     const a = await SV.tr.builtinAvailability();
@@ -1456,7 +1682,7 @@
     else if (az !== 'off') t = '查词和「本句译文」先用微软翻译（微软不保存收到的文字；免费额度所有读者共用，用完时自动改用下面的）。';
     const lead = az === 'off' ? '浏览器内置翻译：可用' : '微软翻译用不了时，用浏览器内置翻译';
     if (a === 'ready' || a === 'available') t += lead + '（在本机翻译，文字不离开这台设备，不限量）。';
-    else if (a === 'downloadable' || a === 'downloading') t += lead + '。第一次用时浏览器要下载瑞典语→中文的翻译模型（点一个词就开始）。';
+    else if (a === 'downloadable' || a === 'downloading') t += lead + '。第一次用时浏览器要下载瑞典语到中文的翻译模型（点一个词就开始）。';
     else t += '这个浏览器没有内置翻译（Chrome、Edge 的电脑版才有）：' + (az === 'off' ? '' : '微软翻译用不了时，') + '查词和「本句译文」用 MyMemory 在线翻译；整篇翻译请用浏览器自带的翻译功能' + (PAGE_TR_KNOWN ? '（' + PAGE_TR_HINT.replace('整篇翻译：', '') + '）' : '') + '。';
     if (u.chars) t += ` 今天已用 MyMemory 在线翻译约 ${u.chars} 个字符。`;
     $('#trNote').textContent = t;
@@ -1538,6 +1764,7 @@
       voice: useCloud() ? cloudVoice().name : voiceInfo.voice ? voiceInfo.voice.name : null,
       voiceGender: useCloud() ? cloudVoice().gender : voiceInfo.gender,
       popup: pop.open ? { pinned: pop.pinned, text: pop.text } : null,
+      topicMenu: topicPicker.open,
       senseApplied,
       settings: Object.assign({}, S),
     }),

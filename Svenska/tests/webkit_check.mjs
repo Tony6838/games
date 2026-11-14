@@ -23,7 +23,7 @@ try { pw = await import('playwright'); } catch {
   if (!process.env.PLAYWRIGHT_DIR) { console.error('找不到 playwright：请设 PLAYWRIGHT_DIR（见文件开头）'); process.exit(2); }
   pw = createRequire(join(process.env.PLAYWRIGHT_DIR, 'x.js'))('playwright');
 }
-const { webkit, firefox, devices } = pw;
+const { webkit, firefox, chromium, devices } = pw;
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 let server = null;
@@ -154,22 +154,22 @@ try {
   check('在线翻译（查词用）默认开着', (await seen(page)).s.settings.online === true);
   await page.waitForFunction(() => document.body.classList.contains('no-builtin'), null, { timeout: 5000 }).catch(() => {});
   let tr = await trState(page, '#list');
-  check('没有「全文翻译」按钮，列表上不提示整页翻译，说明框里写着 Safari 的「aA → 翻译成中文」', !tr.btn && !tr.hint && tr.help === '你现在用的浏览器：点地址栏「aA → 翻译成中文」。', JSON.stringify(tr));
+  check('没有「全文翻译」按钮，列表上不提示整页翻译，说明框里写着 Safari 的「aA」→「翻译成中文」', !tr.btn && !tr.hint && tr.help === '你现在用的浏览器：点地址栏的「aA」，再点「翻译成中文」。', JSON.stringify(tr));
   let lay = await layout(page);
   check('iPhone 上列表不横向溢出、朗读按钮在屏幕内', lay.scrollW <= lay.vw && lay.playerFits, JSON.stringify(lay));
   await shot(page, 'iphone-list');
   check('iPhone 上点一篇打开文章', await openArticle(page));
   tr = await trState(page, '#article');
   check('文章页上也不提示（在说明框里）', !tr.btn && !tr.hint, JSON.stringify(tr));
-  // 文章页的顶栏：没有「← 列表」（点标题回到列表），是标题、话题菜单（选着现在的话题）和工具按钮，一行
+  // 文章页的顶栏：没有「← 列表」（点标题回到列表），是标题、话题按钮（选着现在的话题）和工具按钮，一行
   const hdr = await page.evaluate(() => {
     const items = [...document.querySelectorAll('header.top .brand, header.top .topic-sel, header.top .back-btn, header.top .tools')].filter((e) => e.offsetParent);
     const mids = items.map((e) => { const r = e.getBoundingClientRect(); return (r.top + r.bottom) / 2; });
     const de = document.documentElement;
-    return { items: items.map((e) => e.id || e.className.split(' ')[0]), oneRow: mids.every((m) => Math.abs(m - mids[0]) < 10), sel: document.querySelector('#topicSel').value, topic: SVApp.state().topic,
+    return { items: items.map((e) => e.id || e.className.split(' ')[0]), oneRow: mids.every((m) => Math.abs(m - mids[0]) < 10), sel: document.querySelector('#topicSel').dataset.topic, topic: SVApp.state().topic,
       fits: items.every((e) => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= de.clientWidth + 0.5; }), scrollW: de.scrollWidth, vw: de.clientWidth };
   });
-  check('iPhone 上文章页的顶栏：没有「← 列表」，是标题、话题菜单（选着现在的话题）和工具按钮，一行，不出屏',
+  check('iPhone 上文章页的顶栏：没有「← 列表」，是标题、话题按钮（选着现在的话题）和工具按钮，一行，不出屏',
     hdr.items.join() === 'brand,topicSel,tools' && hdr.oneRow && hdr.sel === hdr.topic && hdr.fits && hdr.scrollW <= hdr.vw, JSON.stringify(hdr));
   // 文章开头一行：「SR · 节目」、时间、「原文 ↗」；文章末尾没有来源、版权那一段；没有「怎么用」小说明和第一次打开时的说明框
   const srcW = await page.evaluate(() => {
@@ -337,11 +337,22 @@ try {
   azMode = 'ok';
   azPlan = {};
   ({ ctx, page, ok } = await newPage('iPhone 13', MM.ok));
-  await openArticle(page);
-  const wk = await page.evaluate(() => [...document.querySelectorAll('#article .w')].map((w, i) => {
+  // 用列表里第一篇有两句带「能挑的词」的文章（SR 每天的文章不一样，第一篇不一定有）
+  const scanW = () => page.evaluate(() => [...document.querySelectorAll('#article .w')].map((w, i) => {
     const sEl = w.closest('.s'); const gl = SV.glossary.lookup(w.textContent); const ss = SV.sense.senses(gl);
     return { i, si: +sEl.dataset.si, text: w.textContent, gl: !!gl, n: ss.length, pickable: SV.sense.pickable(gl, ss), keys: ss.map((x) => x.keys) };
   }));
+  let wk = [];
+  const nCards = await page.locator('#list .card').count();
+  for (let ci = 0; ci < nCards; ci++) {
+    await touch(page, '#list .card', ci);
+    await page.waitForFunction(() => SVApp.state().view === 'article' && SVApp.state().sentences > 0, null, { timeout: 10000 }).catch(() => {});
+    wk = await scanW();
+    const a = wk.find((x) => x.pickable);
+    if (a && wk.some((x) => x.pickable && x.si !== a.si)) break;
+    await touch(page, '#brand');
+    await page.waitForFunction(() => SVApp.state().view === 'list', null, { timeout: 5000 }).catch(() => {});
+  }
   const popW = () => page.evaluate(() => {
     const p = document.querySelector('#popup'); if (p.hidden) return null; const r = p.getBoundingClientRect();
     const best = p.querySelector('.sense.best'); const c = best ? getComputedStyle(best) : null; const box = p.querySelector('.ctxs'); const key = box && box.querySelector('.key');
@@ -400,7 +411,7 @@ try {
     lay = await layout(page);
     check(`${device} 上不横向溢出、朗读按钮在屏幕内`, lay.scrollW <= lay.vw && lay.playerFits, JSON.stringify(lay));
     tr = await trState(page, '#list');
-    check(`${device}：没有「全文翻译」按钮，列表上不提示，说明框里是「aA → 翻译成中文」`, !tr.btn && !tr.hint && /aA → 翻译成中文/.test(tr.help), JSON.stringify(tr));
+    check(`${device}：没有「全文翻译」按钮，列表上不提示，说明框里是「aA」→「翻译成中文」`, !tr.btn && !tr.hint && /「aA」，再点「翻译成中文」/.test(tr.help), JSON.stringify(tr));
     await openArticle(page);
     await shot(page, device.replace(/\W+/g, '-') + '-article');
     await ctx.close();
@@ -534,6 +545,151 @@ try {
     await cctx.close();
     await ff.close();
   }
+
+  // ---------- 各个平台一样（Tony 定的，2026-11-14：「Win 和 Mac 的桌面浏览器体验一致，iOS 和 Android 手机和平板的体验也需要一致」） ----------
+  // Playwright 的三个引擎：Chromium（Windows 的 Edge、Chrome；也当安卓的 Chrome）、WebKit（Mac、iPhone、iPad 的 Safari）、Firefox。
+  // 每一对（Windows 和 Mac 的电脑、iPhone 和安卓手机、iPad 和安卓平板）比：同一个排版（手机还是电脑的样子）、同样的部件（话题面板、
+  // 设置里自己画的控件和声音列表、播放栏）、同样的字（本站带的 Noto Sans），电脑上同样宽的窗口里文章折行一样。截图放在 shots-platforms 里对着看。
+  // 云端语音用假的令牌服务和假的 SDK（声音列表是同样的三个云端声音；各个设备自己的声音不一样，那是平台自己的）。
+  console.log('\n== 各个平台一样：电脑（Chromium / WebKit / Firefox）、手机（iPhone / 安卓）、平板（iPad / 安卓）');
+  const platDir = join(outDir, '..', 'shots-platforms');
+  mkdirSync(platDir, { recursive: true });
+  const ANDROID_PHONE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Mobile Safari/537.36';
+  const ANDROID_TAB_UA = 'Mozilla/5.0 (Linux; Android 14; SM-X710) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/157.0.0.0 Safari/537.36';
+  const MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+  const IPHONE_UA = devices['iPhone 13'].userAgent;
+  const IPAD_UA = devices['iPad Pro 11'] ? devices['iPad Pro 11'].userAgent : 'Mozilla/5.0 (iPad; CPU OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1';
+  let chromeB = null;
+  try { chromeB = await chromium.launch({ channel: 'msedge' }); } catch (e) { try { chromeB = await chromium.launch(); } catch (e2) { console.log('  没有 Chromium，跳过：' + String(e2.message).split('\n')[0]); } }
+  let ffB = null;
+  try { ffB = await firefox.launch(); } catch (e) { console.log('  没有 Firefox：' + String(e.message).split('\n')[0]); }
+  const engines = { chromium: chromeB, webkit: browser, firefox: ffB };
+  const PLAT = [
+    { name: 'desktop-1280-chromium', group: 'desk1280', engine: 'chromium', vp: [1280, 800], touch: false },
+    { name: 'desktop-1280-webkit-mac', group: 'desk1280', engine: 'webkit', vp: [1280, 800], touch: false, ua: MAC_UA },
+    { name: 'desktop-1280-firefox', group: 'desk1280', engine: 'firefox', vp: [1280, 800], touch: false },
+    { name: 'desktop-1440-chromium', group: 'desk1440', engine: 'chromium', vp: [1440, 900], touch: false },
+    { name: 'desktop-1440-webkit-mac', group: 'desk1440', engine: 'webkit', vp: [1440, 900], touch: false, ua: MAC_UA },
+    { name: 'desktop-1440-firefox', group: 'desk1440', engine: 'firefox', vp: [1440, 900], touch: false },
+    { name: 'phone-iphone-webkit', group: 'phone', engine: 'webkit', vp: [390, 844], touch: true, ua: IPHONE_UA, dpr: 3 },
+    { name: 'phone-android-chromium', group: 'phone', engine: 'chromium', vp: [412, 915], touch: true, ua: ANDROID_PHONE_UA, dpr: 2.625 },
+    { name: 'tablet-ipad-webkit', group: 'tablet', engine: 'webkit', vp: [820, 1180], touch: true, ua: IPAD_UA, dpr: 2 },
+    { name: 'tablet-android-chromium', group: 'tablet', engine: 'chromium', vp: [800, 1280], touch: true, ua: ANDROID_TAB_UA, dpr: 2 },
+    // 对照：安卓（Chromium）用和 iPhone、iPad 一样大的屏幕，排版、折行应当一模一样（上面两台安卓设备的屏幕本来就宽一点、窄一点）
+    { name: 'phone-android-chromium-390', group: 'phone', engine: 'chromium', vp: [390, 844], touch: true, ua: ANDROID_PHONE_UA, dpr: 3 },
+    { name: 'tablet-android-chromium-820', group: 'tablet', engine: 'chromium', vp: [820, 1180], touch: true, ua: ANDROID_TAB_UA, dpr: 2 },
+  ];
+  const plat = {};
+  let pn = 0;
+  for (const c of PLAT) {
+    const eng = engines[c.engine];
+    if (!eng) { console.log('  跳过 ' + c.name); continue; }
+    const opts = { viewport: { width: c.vp[0], height: c.vp[1] }, hasTouch: c.touch, deviceScaleFactor: c.dpr || 1, ...(c.ua ? { userAgent: c.ua } : {}) };
+    if (c.engine !== 'firefox' && c.touch) opts.isMobile = true;
+    const pctx = await eng.newContext(opts);
+    await pctx.addInitScript({ content: `window.SV_CONFIG = { ttsUrl: 'https://svtts.test' };` });
+    await pctx.addInitScript({ content: FAKE_AZURE });
+    const pp = await pctx.newPage();
+    pp.on('pageerror', (e) => allErrors.push(c.name + ': ' + e.message));
+    await pp.route('https://svtts.test/**', (route) => json(route, { token: 'tok-plat', region: 'northeurope' }));
+    await pp.route('https://svtts.test/translate', azRoute);
+    await pp.route('**/api.mymemory.translated.net/**', (route) => MM.ok(route, []));
+    await pp.goto(baseUrl);
+    const okP = await pp.waitForFunction(() => window.SVApp && SVApp.state().view === 'list' && !SVApp.state().loading, null, { timeout: 60000 }).then(() => true, () => false);
+    await pp.evaluate(() => document.fonts.ready);
+    const snapP = (nm) => pp.screenshot({ path: join(platDir, `${String(++pn).padStart(2, '0')}-${c.name}-${nm}.png`) });
+    const tapP = async (sel) => { if (c.touch) await pp.locator(sel).first().tap(); else await pp.locator(sel).first().click(); };
+    const m = await pp.evaluate(() => {
+      const de = document.documentElement;
+      const card = document.querySelector('#list .card .c-title');
+      const btns = [...document.querySelectorAll('#player button')].map((b) => Math.round(b.getBoundingClientRect().height));
+      return {
+        layout: getComputedStyle(document.querySelector('#topicSel')).display !== 'none' ? 'phone' : 'desktop',
+        chipsShown: !!document.querySelector('#topics .chip').offsetParent,
+        selects: document.querySelectorAll('select').length,
+        font: document.fonts.check('16px "SV Sans"') && [...document.fonts].some((f) => f.family.replace(/"/g, '') === 'SV Sans' && f.status === 'loaded'),
+        cardFont: card ? getComputedStyle(card).fontFamily.split(',')[0].replace(/"/g, '').trim() : '',
+        players: btns.length, playerH: btns, bar: Math.round(document.querySelector('#topbar').getBoundingClientRect().height),
+        overflow: de.scrollWidth > de.clientWidth,
+      };
+    });
+    await snapP('list');
+    if (m.layout === 'phone') {
+      await tapP('#topicSel');
+      await pp.waitForTimeout(250);
+      m.menu = await pp.evaluate(() => { const mm = document.querySelector('#topicMenu'); if (mm.hidden) return null; const items = [...mm.querySelectorAll('[role="option"]')]; const r = mm.getBoundingClientRect();
+        return { n: items.length, cols: new Set(items.map((i) => Math.round(i.getBoundingClientRect().left))).size, scroll: mm.scrollHeight > mm.clientHeight + 1, fits: r.left >= 16 && r.right <= document.documentElement.clientWidth - 16 && r.bottom <= innerHeight }; });
+      await snapP('topic-menu');
+      await tapP('#topicSel');
+      await pp.waitForTimeout(150);
+    }
+    await tapP('#btnSettings');
+    await pp.waitForTimeout(300);
+    m.settings = await pp.evaluate(() => {
+      const d = document.querySelector('#dlgSettings');
+      return { open: d.open, controls: [...d.querySelectorAll('input')].map((i) => getComputedStyle(i).appearance).every((a) => a === 'none'), picker: !!d.querySelector('#selVoice.pick-btn'), voices: d.querySelectorAll('#voiceMenu [role="option"]').length };
+    });
+    await snapP('settings');
+    await pp.evaluate(() => document.querySelector('#dlgSettings').close());
+    await pp.locator('#list .card').first().click();
+    await pp.waitForFunction(() => SVApp.state().view === 'article' && SVApp.state().sentences > 0, null, { timeout: 10000 });
+    await pp.waitForTimeout(300);
+    m.article = await pp.evaluate(() => {
+      const lines = (el) => { if (!el) return 0; const r = document.createRange(); r.selectNodeContents(el); return new Set([...r.getClientRects()].filter((x) => x.width > 0).map((x) => Math.round(x.bottom / 4))).size; };
+      const h1 = document.querySelector('#article h1');
+      const p1 = document.querySelector('#article .body p, #article .body li');
+      return { id: SVApp.state().id, h1: lines(h1), p1: lines(p1), body: lines(document.querySelector('#article .body')), font: getComputedStyle(document.querySelector('#article')).fontFamily.split(',')[0].replace(/"/g, '').trim(), meta: document.querySelector('#article .meta .src-line').innerText.replace(/\s+/g, ' ') };
+    });
+    await snapP('article');
+    plat[c.name] = { ...c, ok: okP, m };
+    console.log('  ', c.name, JSON.stringify(m));
+    check(`${c.name}：打开、本站的字体（SV Sans）用上了、没有系统的下拉菜单、设置里的控件自己画、声音是自己的选择列表、不横向溢出`,
+      okP && m.font && m.cardFont === 'SV Sans' && m.article.font === 'SV Sans' && !m.selects && m.settings.open && m.settings.controls && m.settings.picker && m.settings.voices === 3 && !m.overflow, JSON.stringify(m).slice(0, 300));
+    await pctx.close();
+  }
+  // 每一对比一比
+  const same = (a, b, keys) => keys.every((k) => JSON.stringify(k(a)) === JSON.stringify(k(b)));
+  for (const size of ['1280', '1440']) {
+    const a = plat['desktop-' + size + '-chromium'];
+    const b = plat['desktop-' + size + '-webkit-mac'];
+    const f = plat['desktop-' + size + '-firefox'];
+    if (a && b) {
+      const sameArticle = a.m.article.id === b.m.article.id;
+      check(`电脑 ${size}：Windows（Chromium）和 Mac（WebKit）一样：电脑的排版、话题按钮占的行数、播放栏、同一篇文章的标题和正文折成一样多的行`,
+        a.m.layout === 'desktop' && b.m.layout === 'desktop' && Math.abs(a.m.bar - b.m.bar) <= 2 && same(a, b, [(x) => x.m.playerH]) && (!sameArticle || (a.m.article.h1 === b.m.article.h1 && a.m.article.body === b.m.article.body)),
+        JSON.stringify({ sameArticle, chromium: { bar: a.m.bar, h1: a.m.article.h1, body: a.m.article.body }, webkit: { bar: b.m.bar, h1: b.m.article.h1, body: b.m.article.body } }));
+    }
+    if (a && f) {
+      check(`电脑 ${size}：Firefox 和 Chromium 一样（排版、话题按钮的行数、文章折行）`, f.m.layout === 'desktop' && Math.abs(a.m.bar - f.m.bar) <= 2 && (a.m.article.id !== f.m.article.id || (a.m.article.h1 === f.m.article.h1 && a.m.article.body === f.m.article.body)),
+        JSON.stringify({ sameArticle: a.m.article.id === f.m.article.id, chromium: { bar: a.m.bar, h1: a.m.article.h1, body: a.m.article.body }, firefox: { bar: f.m.bar, h1: f.m.article.h1, body: f.m.article.body } }));
+    }
+  }
+  const ip = plat['phone-iphone-webkit'];
+  const an = plat['phone-android-chromium'];
+  if (ip && an) {
+    check('手机：iPhone（WebKit）和安卓（Chromium）一样：手机的排版、两列的话题面板（22 个，不用滚）、播放栏、顶上粘着的一行、文章开头「Sveriges Radio · 节目」',
+      ip.m.layout === 'phone' && an.m.layout === 'phone' && ip.m.menu && an.m.menu && ip.m.menu.n === 22 && an.m.menu.n === 22 && ip.m.menu.cols === 2 && an.m.menu.cols === 2 && !ip.m.menu.scroll && !an.m.menu.scroll && ip.m.menu.fits && an.m.menu.fits
+      && same(ip, an, [(x) => x.m.playerH]) && Math.abs(ip.m.bar - an.m.bar) <= 2 && /^Sveriges Radio/.test(ip.m.article.meta) && /^Sveriges Radio/.test(an.m.article.meta), JSON.stringify({ iphone: ip.m.menu, android: an.m.menu, bars: [ip.m.bar, an.m.bar] }));
+  }
+  const ipad = plat['tablet-ipad-webkit'];
+  const atab = plat['tablet-android-chromium'];
+  if (ipad && atab) {
+    check('平板：iPad（WebKit）和安卓平板（Chromium）一样：电脑的排版（话题按钮、「← 返回列表」）、播放栏一样', ipad.m.layout === 'desktop' && atab.m.layout === 'desktop' && ipad.m.chipsShown && atab.m.chipsShown && same(ipad, atab, [(x) => x.m.playerH]),
+      JSON.stringify({ ipad: { layout: ipad.m.layout, bar: ipad.m.bar }, android: { layout: atab.m.layout, bar: atab.m.bar } }));
+  }
+  // 一样大的屏幕：iPhone 和安卓 390×844、iPad 和安卓平板 820×1180，顶栏一样高、同一篇文章的标题和正文折成一样多的行
+  for (const [x, y, what] of [['phone-iphone-webkit', 'phone-android-chromium-390', '手机 390×844'], ['tablet-ipad-webkit', 'tablet-android-chromium-820', '平板 820×1180']]) {
+    const a = plat[x];
+    const b = plat[y];
+    if (!a || !b) continue;
+    const sameArticle = a.m.article.id === b.m.article.id;
+    check(`${what}：iOS（WebKit）和安卓（Chromium）一模一样：顶栏一样高、播放栏一样、${a.m.menu ? '话题面板一样、' : ''}同一篇文章的标题和正文折成一样多的行`,
+      a.m.layout === b.m.layout && a.m.bar === b.m.bar && same(a, b, [(z) => z.m.playerH, (z) => z.m.menu || null]) && (!sameArticle || (a.m.article.h1 === b.m.article.h1 && a.m.article.body === b.m.article.body)),
+      JSON.stringify({ sameArticle, ios: { bar: a.m.bar, h1: a.m.article.h1, body: a.m.article.body }, android: { bar: b.m.bar, h1: b.m.article.h1, body: b.m.article.body } }));
+  }
+  writeFileSync(join(platDir, 'platforms.json'), JSON.stringify(plat, null, 1));
+  if (chromeB) await chromeB.close();
+  if (ffB) await ffB.close();
 } catch (e) {
   check('测试脚本没有出错', false, e.stack || String(e));
 }

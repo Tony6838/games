@@ -1,4 +1,8 @@
-/* 瑞典语读报：浅色纸面，深色模式跟随系统。正文用满可用的宽度，两边留边距。 */
+/* 瑞典语读报：浅色纸面，深色模式跟随系统。正文用满可用的宽度，两边留边距。
+   各个平台一样（Tony 定的，2026-11-14：「不同平台的体验必须一致」）：拉丁字母用本站自己带的 Noto Sans（fonts/，两个字重共约 26 KB，
+   OFL 许可；@font-face 在 css/fonts.css 里），Windows、Mac、iPhone、安卓上瑞典文的字宽、折行都一样；汉字用系统的中文字体（中文网页字体要好几 MB）。
+   表单控件（单选、勾选、滑块）、焦点框、图标都自己画，不用各个系统自己的样子；滚动条在 Chrome、Edge、Firefox 里是细的、跟着主题的颜色。
+   Windows 的高对比度（forced colors）见最后。 */
 :root {
   --bg: #f8f7f3;
   --card: #ffffff;
@@ -22,8 +26,16 @@
   --key-bottom: #e4e9f0;
   --key-edge: #aab5c3;
   --key-shine: rgba(255, 255, 255, .95);
-  --ui-font: system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
-  --zh-font: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif;
+  --ui-font: "SV Sans", system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --zh-font: "SV Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", system-ui, sans-serif;
+  --scroll: #c9c4b8; /* 滚动条 */
+  /* 图标（用 CSS mask 画，颜色跟着文字；不用 ← → ↗ ✓ ⟳ 这些字符，各个系统的字体画出来不一样） */
+  --ic-play: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M7 4.5v15l13-7.5z' fill='black'/%3E%3C/svg%3E");
+  --ic-check: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --ic-arrow-l: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 12H6M11 6l-6 6 6 6' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --ic-arrow-r: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12h13M13 6l6 6-6 6' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --ic-ext: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M14 5h5v5M19 5l-8 8M18 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --ic-refresh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 8a8 8 0 1 0 1 6M19 3v5h-5' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -47,15 +59,26 @@
     --key-bottom: #262d36;
     --key-edge: #11161c;
     --key-shine: rgba(255, 255, 255, .12);
+    --scroll: #3d4550;
   }
 }
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%; /* 安卓、iPhone 不自己放大字 */
+  -webkit-tap-highlight-color: transparent; /* 点的时候不出系统自己的灰块（按钮、卡片有自己的按下去的样子） */
+  /* 细的滚动条、颜色跟着主题（Chrome、Edge、Firefox）。scrollbar-color 会继承，scrollbar-width 不会：里面能滚的格子（对话框、面板、译文）也写上。
+     不用 ::-webkit-scrollbar：Mac 上的 Safari 用了它就一直显示滚动条，和同一台 Mac 上的 Chrome（滚动时才出现）不一样了 */
+  scrollbar-width: thin; scrollbar-color: var(--scroll) transparent;
+}
+.dlg-body, .topic-menu, .pick-menu, .popup .ctxs { scrollbar-width: thin; }
 body {
   margin: 0;
   min-height: 100vh;
+  min-height: 100dvh; /* 手机上去掉地址栏的那一块（iPhone、安卓一样） */
+  /* 横着拿有刘海的手机：两边让开 */
+  padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right);
   background: var(--bg);
   color: var(--ink);
   font-family: var(--ui-font);
@@ -65,13 +88,38 @@ button {
   font: inherit;
   color: inherit;
   cursor: pointer;
+  -webkit-appearance: none; appearance: none;
   border: 1px solid var(--line);
   background: var(--card);
   border-radius: 10px;
   -webkit-tap-highlight-color: transparent;
 }
 button:disabled { opacity: .45; cursor: default; }
-button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* 焦点框：只在用键盘的时候画，各个浏览器一样（鼠标、手指点的不画） */
+:focus:not(:focus-visible) { outline: none; }
+button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+/* 图标：<i class="ic ic-arrow-r"></i> */
+.ic { display: inline-block; flex: none; width: 1em; height: 1em; vertical-align: -0.14em; background-color: currentColor;
+  -webkit-mask: var(--ic) center / contain no-repeat; mask: var(--ic) center / contain no-repeat; }
+.ic-check { --ic: var(--ic-check); } .ic-arrow-l { --ic: var(--ic-arrow-l); } .ic-arrow-r { --ic: var(--ic-arrow-r); }
+.ic-ext { --ic: var(--ic-ext); } .ic-refresh { --ic: var(--ic-refresh); } .ic-play { --ic: var(--ic-play); }
+/* 单选、勾选、滑块：自己画（appearance: none），Windows、Mac、iPhone、安卓一样 */
+input[type="radio"], input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none; flex: none; width: 20px; height: 20px; margin: 2px 0 0; display: inline-grid; place-content: center;
+  border: 2px solid var(--muted); background: var(--card); cursor: pointer; vertical-align: middle;
+}
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"] { border-radius: 5px; }
+input[type="radio"]::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); transform: scale(0); transition: transform .1s; }
+input[type="checkbox"]::before { content: ""; width: 14px; height: 14px; background: var(--accent-ink); -webkit-mask: var(--ic-check) center / contain no-repeat; mask: var(--ic-check) center / contain no-repeat; transform: scale(0); transition: transform .1s; }
+input[type="radio"]:checked { border-color: var(--accent); }
+input[type="checkbox"]:checked { border-color: var(--accent); background: var(--accent); }
+input[type="radio"]:checked::before, input[type="checkbox"]:checked::before { transform: scale(1); }
+input[type="range"] { -webkit-appearance: none; appearance: none; height: 28px; margin: 0; background: transparent; cursor: pointer; }
+input[type="range"]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: var(--line); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--accent); border: 3px solid var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
+input[type="range"]::-moz-range-track { height: 6px; border-radius: 3px; background: var(--line); }
+input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 3px solid var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .35); }
 a { color: var(--accent); }
 kbd {
   font-family: var(--ui-font); font-size: .85em; padding: 0 .4em; border: 1px solid var(--line);
@@ -100,7 +148,7 @@ kbd {
 
 /* ---------- 话题和朗读按钮：一起粘在顶上 ---------- */
 /* 电脑上话题按钮和朗读按钮排在一行里自动折行，朗读按钮组紧跟在最后一个话题「简易瑞典语」后面；
-   手机上话题按钮不显示（话题在标题旁边的下拉菜单里），粘在顶上的只有朗读按钮一行。 */
+   手机上话题按钮那一行不显示（话题在标题旁边的话题按钮和两列的话题面板里），粘在顶上的只有朗读按钮一行。 */
 .topbar {
   position: sticky; top: 0; z-index: 5;
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
@@ -113,10 +161,11 @@ kbd {
   flex: none; height: 38px; padding: 0 16px; border-radius: 999px; font-size: 16px; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 6px;
 }
-.chip:hover { border-color: var(--accent); }
+@media (hover: hover) { .chip:hover { border-color: var(--accent); } }
+.chip:active { border-color: var(--accent); }
 .chip.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
-.chip.active::after { content: "⟳"; font-size: 14px; opacity: .85; }
-.chip.busy::after { content: "…"; }
+.chip.active::after { content: ""; width: 14px; height: 14px; background: currentColor; opacity: .85; -webkit-mask: var(--ic-refresh) center / contain no-repeat; mask: var(--ic-refresh) center / contain no-repeat; }
+.chip.busy::after { content: "…"; width: auto; height: auto; background: none; -webkit-mask: none; mask: none; }
 .chip.extra { border-style: dashed; }
 .chip.extra.active { border-style: solid; }
 
@@ -133,7 +182,8 @@ kbd {
   padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
   color: var(--ink); text-decoration: none; -webkit-tap-highlight-color: transparent;
 }
-.card:hover { border-color: var(--accent); }
+@media (hover: hover) { .card:hover { border-color: var(--accent); } }
+.card:active { border-color: var(--accent); }
 .card .c-title { font-size: calc(19px * var(--scale)); font-weight: 700; line-height: 1.35; }
 .card .c-first {
   font-size: calc(16px * var(--scale)); line-height: 1.55; color: var(--muted);
@@ -214,7 +264,7 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 /* ---------- 单词弹出框 ---------- */
 .popup {
   position: fixed; z-index: 30; left: 8px; top: 8px;
-  width: max-content; min-width: 210px; max-width: min(400px, calc(100vw - 16px));
+  width: max-content; min-width: 210px; max-width: min(400px, calc(100% - 16px));
   padding: 10px 12px 10px; border-radius: 12px;
   background: var(--card); color: var(--ink); border: 1px solid var(--line); box-shadow: var(--shadow);
   font-family: var(--ui-font); font-size: 16px; line-height: 1.5;
@@ -236,7 +286,7 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 }
 /* 有几个意思的词：弹出框宽度固定（整句译文来的时候不变宽），下面自动放这一句的译文。
    译文的格子一开始就按估计的行数占好地方，最多 4 行，更长的在格子里滚动 */
-.popup.multi { width: min(340px, calc(100vw - 16px)); }
+.popup.multi { width: min(340px, calc(100% - 16px)); }
 .popup .ctxs {
   margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--line);
   font-family: var(--zh-font); font-size: 15px; line-height: 1.6; color: var(--zh);
@@ -267,7 +317,7 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
   box-shadow: 0 2px 4px rgba(0, 0, 0, .14), inset 0 1px 0 var(--key-shine);
   transition: transform .06s, box-shadow .06s, border-bottom-width .06s;
 }
-.player button:hover:not(:disabled) { filter: brightness(1.04); }
+@media (hover: hover) { .player button:hover:not(:disabled) { filter: brightness(1.04); } }
 /* 按下去的样子；「读完以后」不是「读完就停」时一直是按下去的样子，图标是主题色 */
 .player button:active:not(:disabled), .player button.on {
   transform: translateY(2px); border-bottom-width: 2px;
@@ -303,13 +353,13 @@ body.speaking .player .play .i-pause { display: block; }
 .toast {
   position: fixed; z-index: 40; left: 50%; transform: translateX(-50%);
   bottom: calc(16px + env(safe-area-inset-bottom));
-  max-width: min(560px, calc(100vw - 24px)); padding: 10px 16px; border-radius: 12px;
+  max-width: min(560px, calc(100% - 24px)); padding: 10px 16px; border-radius: 12px;
   background: #222a33; color: #fff; font-size: 15px; line-height: 1.5; box-shadow: var(--shadow); text-align: center;
 }
 /* 按钮的瑞典文提示：手机、平板上按住按钮时显示（电脑上用浏览器自己的 title 提示） */
 .svtip {
   position: fixed; z-index: 50; left: 8px; top: 8px; pointer-events: none;
-  max-width: min(320px, calc(100vw - 16px)); padding: 8px 12px; border-radius: 10px;
+  max-width: min(320px, calc(100% - 16px)); padding: 8px 12px; border-radius: 10px;
   background: #222a33; color: #fff; border: 1px solid rgba(255, 255, 255, .16); box-shadow: var(--shadow);
   font-family: var(--ui-font); line-height: 1.4; text-align: left;
 }
@@ -320,24 +370,31 @@ button { -webkit-user-select: none; user-select: none; -webkit-touch-callout: no
 
 /* ---------- 对话框 ---------- */
 .dlg {
-  border: 0; padding: 0; border-radius: 16px; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 32px);
+  border: 0; padding: 0; border-radius: 16px; width: min(560px, calc(100% - 24px)); max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px);
   background: var(--card); color: var(--ink); box-shadow: var(--shadow);
 }
 dialog:not([open]) { display: none; } /* 老的 Safari（iOS 15.4 以前）不认识 <dialog>，别让对话框直接显示在页面里 */
 .dlg::backdrop { background: rgba(10, 14, 20, .45); }
-.dlg-body { padding: 18px 20px 16px; overflow: auto; max-height: calc(100vh - 32px); font-size: 15px; line-height: 1.65; }
+.dlg-body { padding: 18px 20px 16px; overflow: auto; max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); font-size: 15px; line-height: 1.65; overscroll-behavior: contain; }
+.dlg h2:focus { outline: none; } /* 对话框打开时焦点先放在标题上（各个浏览器一样，不会先落到某个控件上） */
 .dlg h2 { margin: 0 0 10px; font-size: 20px; }
 .dlg h3 { margin: 14px 0 6px; font-size: 16px; }
 .dlg section + section { border-top: 1px solid var(--line); margin-top: 12px; }
 .dlg .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.dlg select { flex: 1 1 220px; min-width: 0; max-width: 100%; height: 40px; font: inherit; font-size: 16px; /* 小于 16 像素 iPhone 会放大页面 */ border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--ink); padding: 0 6px; }
+/* 声音：自己的选择按钮（现在选的 ▾），点开是一列的选择列表（.pick-menu，和话题面板一样） */
+.pick-btn { flex: 1 1 220px; min-width: 0; max-width: 100%; height: 40px; font: inherit; font-size: 16px; border-radius: 8px; border: 1px solid var(--line);
+  background-color: var(--card); color: var(--ink); padding: 0 28px 0 10px; text-align: left;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 55%, calc(100% - 11px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+.pick-btn .label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlg .row .pick-btn { padding: 0 28px 0 10px; } /* 比上面 .dlg .row button 的 padding 优先：长的声音名字停在 ▾ 前面 */
 .dlg input[type="range"] { flex: 1 1 160px; }
 .dlg .row button, .dlg section > button { height: 40px; padding: 0 14px; }
 .dlg .check { display: flex; gap: 8px; align-items: flex-start; }
 .dlg .engine { margin: 2px 0 10px; }
 .dlg .rates { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 2px 0; }
 .dlg .engine .check { margin: 4px 0; }
-.dlg .check input { margin-top: 5px; }
+.dlg .check input { margin-top: 3px; }
 .dlg .note { color: var(--muted); font-size: 14px; margin: 6px 0; }
 .dlg .help li { margin-bottom: 8px; }
 .dlg ul { padding-left: 1.2em; }
@@ -345,8 +402,27 @@ dialog:not([open]) { display: none; } /* 老的 Safari（iOS 15.4 以前）不�
 .dlg-actions button { height: 42px; padding: 0 18px; }
 button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
 
-/* 手机上的话题：标题旁边的下拉菜单（系统自己的选择器）。电脑、平板上不显示，用话题按钮 */
+/* 手机上的话题：标题旁边的按钮（现在的话题 ▾），点开是两列的话题面板。电脑、平板上不显示，用话题按钮 */
 .topic-sel { display: none; }
+/* 两列的话题面板：先排满左边一列再排右边，每个 44 像素高；放在话题按钮下面，左右留 16 像素；太矮的屏幕面板里面自己滚 */
+.topic-menu, .pick-menu {
+  position: fixed; z-index: 35; display: grid; grid-auto-flow: column; grid-template-columns: 1fr 1fr; column-gap: 6px;
+  padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); box-shadow: var(--shadow);
+  overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+.pick-menu { grid-template-columns: 1fr; }
+.topic-menu .opt, .pick-menu .opt {
+  height: 44px; min-width: 0; display: flex; align-items: center; gap: 4px; padding: 0 10px;
+  border: 0; border-radius: 10px; background: none; color: var(--ink); font-size: 16px; text-align: left; white-space: nowrap; overflow: hidden;
+}
+/* 现在的话题：✓ 和主题色（别的话题留出 ✓ 的位置，对齐） */
+.topic-menu .opt::before, .pick-menu .opt::before { content: ""; flex: none; width: 1em; height: 1em; background: var(--accent); visibility: hidden;
+  -webkit-mask: var(--ic-check) center / contain no-repeat; mask: var(--ic-check) center / contain no-repeat; }
+.topic-menu .opt[aria-selected="true"], .pick-menu .opt[aria-selected="true"] { color: var(--accent); font-weight: 700; background: var(--accent-soft); }
+.topic-menu .opt[aria-selected="true"]::before, .pick-menu .opt[aria-selected="true"]::before { visibility: visible; }
+.topic-menu .opt:active, .pick-menu .opt:active { background: var(--accent-soft); }
+.topic-menu .opt:focus-visible, .pick-menu .opt:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+@media (hover: hover) { .topic-menu .opt:hover, .pick-menu .opt:hover { background: var(--accent-soft); } }
 /* 只在电脑、平板上（wide-only）或只在手机上（narrow-only）显示的说明文字 */
 .narrow-only { display: none; }
 
@@ -355,27 +431,27 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   .wide-only { display: none; }
   .narrow-only { display: inline; }
   .tagline { display: none; }
-  /* 顶栏一行：标题、话题菜单、工具按钮靠右（列表页、文章页一样；375–430 像素宽都放得下）；
-     放不下时换行，不会横向溢出（320 像素宽时话题菜单自己一行，见下面） */
+  /* 顶栏一行：标题、话题按钮、工具按钮靠右（列表页、文章页一样；375–430 像素宽都放得下）；
+     放不下时换行，不会横向溢出（320 像素宽时话题按钮自己一行，见下面） */
   .top { justify-content: flex-start; gap: 6px; padding-top: 8px; }
   .brand-row { display: contents; }
   .brand { font-size: 18px; letter-spacing: .5px; }
   .tools { margin-left: auto; gap: 4px; }
   .icon-btn { min-width: 34px; height: 36px; padding: 0 4px; }
-  /* 宽度固定（换话题时不跳），长的名字（简易瑞典语）末尾是省略号 */
+  /* 宽度固定（换话题时不跳），长的名字（简易瑞典语）末尾是省略号。字 16 像素（不是输入框，iPhone 不会放大；也看得清） */
   .topic-sel {
-    /* 16 像素：iPhone 的 Safari 碰到小于 16 像素的输入框、菜单会把页面放大（还不缩回去） */
-    display: block; flex: none; width: 5.9em; min-width: 0; height: 36px; padding: 0 16px 0 8px;
+    display: block; flex: none; width: 5.9em; min-width: 0; height: 36px; padding: 0 16px 0 8px; text-align: left;
     font: inherit; font-size: 16px; font-weight: 600; color: var(--accent);
     border: 1px solid var(--accent); border-radius: 999px; background-color: var(--accent-soft);
     /* 小三角（两个渐变拼的，跟着主题色变，日间、夜间都看得清） */
     background-image: linear-gradient(45deg, transparent 50%, var(--accent) 50%), linear-gradient(135deg, var(--accent) 50%, transparent 50%);
     background-position: calc(100% - 12px) 55%, calc(100% - 7px) 55%;
     background-size: 5px 5px, 5px 5px; background-repeat: no-repeat;
-    -webkit-appearance: none; appearance: none; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; cursor: pointer;
+    overflow: hidden; cursor: pointer;
   }
-  .topic-sel option { color: var(--ink); background: var(--card); font-weight: 400; }
-  /* 文章页上也是标题、话题菜单和工具按钮（没有「← 列表」：点标题回到列表，Tony 定的，2026-11-14） */
+  .topic-sel .label { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topic-sel[aria-expanded="true"] { background-color: var(--card); }
+  /* 文章页上也是标题、话题按钮和工具按钮（没有「← 列表」：点标题回到列表，Tony 定的，2026-11-14） */
   .brand-row .back-btn { display: none; }
   /* 话题按钮那一行没有了（话题在标题旁边的菜单里），粘在顶上的只剩朗读按钮 */
   .topics { display: none; }
@@ -390,13 +466,13 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   .card .c-first { font-size: calc(15px * var(--scale)); -webkit-line-clamp: 2; }
   .popup { font-size: 15px; }
 }
-/* 375 像素宽（iPhone SE、mini）：标题、话题菜单和工具按钮再挤一点，还是一行 */
+/* 375 像素宽（iPhone SE、mini）：标题、话题按钮和工具按钮再挤一点，还是一行 */
 @media (max-width: 389px) {
   .brand { letter-spacing: 0; }
   .tools { gap: 3px; }
   .icon-btn { min-width: 33px; }
 }
-/* 很窄的手机（320 像素宽）：标题和工具按钮挤一挤放在一行，话题菜单换到下一行 */
+/* 很窄的手机（320 像素宽）：标题和工具按钮挤一挤放在一行，话题按钮换到下一行 */
 @media (max-width: 359px) {
   .article .meta .src-long { display: none; }
   .article .meta .src-short { display: inline; }
@@ -407,3 +483,20 @@ button.primary { background: var(--accent); color: var(--accent-ink); border-col
   .topic-sel { order: 5; }
 }
 .popup .on-btn { margin-top: 6px; height: 34px; padding: 0 12px; font-size: 14px; }
+
+/* ---------- Windows 的高对比度（forced colors） ----------
+   系统把颜色换成它自己的几种，背景色、渐变画的东西会看不见：选中的单选是空的、滑块的轨道没了、✓ 和 ▾ 没了。
+   这时单选、勾选、滑块交回系统画（高对比度本来就是系统的样子，看得清最要紧）；遮罩画的图标、✓、↻ 用系统的文字颜色；▾ 用边框画 */
+@media (forced-colors: active) {
+  input[type="radio"], input[type="checkbox"], input[type="range"] { -webkit-appearance: auto; appearance: auto; border: 0; background: none; }
+  input[type="radio"]::before, input[type="checkbox"]::before { display: none; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance: auto; appearance: auto; }
+  .ic, .chip.active::after, .topic-menu .opt::before, .pick-menu .opt::before { forced-color-adjust: none; background-color: CanvasText; }
+  button .ic, .chip.active::after, .topic-menu .opt::before, .pick-menu .opt::before { background-color: ButtonText; }
+  a .ic { background-color: LinkText; }
+  .topic-sel, .pick-btn { position: relative; background-image: none; }
+  .topic-sel::after, .pick-btn::after { content: ""; position: absolute; right: 9px; top: 50%; margin-top: -2px; forced-color-adjust: none;
+    border: 5px solid transparent; border-bottom: 0; border-top-color: ButtonText; }
+  .topic-menu .opt[aria-selected="true"], .pick-menu .opt[aria-selected="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+  .dlg { border: 2px solid CanvasText; } /* 对话框和后面的页面一个底色：画个边 */
+}

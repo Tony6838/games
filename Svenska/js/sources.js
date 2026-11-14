@@ -17,8 +17,9 @@
   // 关键词写法：普通词按词头匹配（regering 也匹配 regeringen、regeringsbildning），
   // 「=」开头的必须整词相同，「_」表示词组里的空格，「+」开头的算两倍分。都用小写。
   // all：这些节目的文章不看关键词，全部属于这个话题。min：至少要几分才算（默认 3，见 score）。
-  // strict：不够分时不拿沾边的文章充数；core：「+」词至少要出现几次（标题里出现算两次）。这两个现在没有话题用（用过它们的「电动车」2026-11-14 去掉了）。
-  // 手机上话题不是一排按钮，是标题旁边的下拉菜单（js/app.js 的 renderChips 用这同一张表做按钮和菜单）。
+  // strict：不够分时不拿沾边的文章充数（宗教、趣闻轶事用：一篇提了一次 kyrkan、katten 的新闻不是宗教、趣闻）；core：「+」词至少要出现几次（标题里出现算两次），现在没有话题用（用过它的「电动车」2026-11-14 去掉了）。
+  // no：不要的词（写法和 kw 一样）：标题里出现一次、或者正文里出现两次，这篇就不算这个话题（趣闻轶事用：不要犯罪、战争、事故）。
+  // 手机上话题不是一排按钮，是标题旁边的话题按钮，点开是两列的话题面板，顺序和这张表一样（js/app.js 的 renderChips 用这同一张表做按钮和面板）。
   // 简易瑞典语只是最后一个单独的话题，别的话题都用普通的新闻。
   const TOPICS = [
     { key: 'idag', zh: '今日要闻', sv: 'Dagens nyheter', feeds: [83, 5526, 1637, 5335], all: [83, 5526, 1637, 5335], kw: '' },
@@ -91,8 +92,25 @@
       kw: 'kultur musik film =bok =boken böcker författar konst konstnär teater museum utställning konsert artist sångare sångerska roman litteratur festival opera =dans tv-serie melodifestival eurovision skådespelar regissör poesi =dikt =bio =bion biograf datorspel',
     },
     {
+      // 宗教（Tony 加的，2026-11-14）：SR 没有还在出新文章的宗教节目（「Människor och tro」2024 年停了，「Andakten」「Helgsmål」只有一句话的简介），
+      // 所以和别的话题一样从新闻里按关键词找：Ekot、Dagens Eko、P1 Morgon、Godmorgon världen 和 P4 地方台（教会的新闻多在地方台）。
+      // Konflikt、Kulturnytt 试过，一篇也没有（Kulturnytt 的源里只有音频），去掉了，少取两个源。P4 的几个地方台和趣闻轶事共用，取一次两个话题都用。
+      // 有的词要整词（=）：biskop 也是 Biskopsgården（哥德堡的一个区）的开头，munk 是 Munkedal，islam 是 Islamabad，kristen 是 Kristensen。
+      key: 'religion', zh: '宗教', sv: 'Religion', feeds: [...G, 1650, 438, ...P4, 78, 94, 101, 109, 159, 160], all: [], min: 6, strict: true,
+      kw: '+religion +religiös +religiöst +religiösa +kyrka +kyrkan +kyrkor +kyrkans svenska_kyrkan +=präst +=prästen +=präster +=prästerna +=prästens +=biskop +=biskopen +=biskopar +=biskoparna +=biskopens +ärkebiskop +påve +påven vatikanen +moské +imam +=islam +=islams +islamisk +muslim =kristen =kristet =kristna =kristnas +kristendom +judisk +judar +judendom +synagog +rabbin +buddhis +hinduis +katolsk +ortodox +frikyrk +pingstkyrk +=samfund +=samfundet +=samfunden +trossamfund +gudstjänst =gud =guds =gudar =bibeln =bibel =koranen =koran koranbränning +sekulär ateis +=kloster +=klostret +=klostren +=munk +=munken +=munkar +=munkarna +=nunna +=nunnan +=nunnor +=nunnorna pilgrim konfirmation =dopet =jul =julen =påsk =påsken =ramadan =eid =pingst helgdag antisemitism islamofobi religionsfrihet livsåskådning hijab =slöja =slöjan sharia =etik =etiska =etiskt =etisk värdegrund',
+    },
+    {
       key: 'sport', zh: '体育', sv: 'Sport', feeds: [83, 179, 5514, 6656, 5335, 103, 104], all: [179, 5514, 6656],
       kw: 'sport fotboll hockey ishockey =os olympisk =vm =em allsvensk landslag =match =matchen =matcher tränare =spelare =spelaren =seger =segern =final =finalen tennis golf friidrott skidor längdskid skidskytte handboll parahandboll bandy basket simning cykling boxning =nhl zlatan =fifa paralympics parasport idrott =guld =silver =brons',
+    },
+    {
+      // 趣闻轶事（Tony 加的，2026-11-14）：奇怪的、好玩的、出人意料的日常新闻，动物、纪录、少见的事。主要来自 P4 地方台和 P3 Nyheter。
+      // no：出现这些词（标题里一次，或者正文里两次）的文章不算，免得把犯罪、战争、事故、死人的新闻当趣闻。
+      // 有的要整词：=brand 不要火灾，但「Brandmän räddade katten」（消防员救了猫）要；=skott 不碰 Skottland；不用 skjut（skjuter upp 是推迟）。
+      // 动物也要整词，人名不算：没有 björn（Björn Ulvaeus）、svan（Gunde Svan）、uggla（Magnus Uggla），只有 björnen、svanen、ugglan 这些。
+      key: 'kuriosa', zh: '趣闻轶事', sv: 'Kuriosa', feeds: [5335, ...P4, 78, 91, 94, 101, 109, 159, 160], all: [], min: 6, strict: true,
+      kw: '+kuriosa +ovanlig +ovanligt +ovanliga +märklig +märkligt +märkliga +bisarr +udda +knasig +lustig +oväntad +oväntat +överraskning +överraskade +=rekord +=rekordet +världsrekord +=rekordförsök +guinness +=älg +=älgen +=älgar +=björnen +=björnar +=björnarna +=räv +=räven +=katt +=katten +=katter +=hund +=hunden +=hundar +=häst +=hästen +=kossa +=kossan +=säl +=sälen +=ugglan +=ugglor +=igelkott +=ekorre +=papegoja +=orm +=ormen +djurpark +=grävling +=svanen +=svanar fågel fåglar =djur =djuret =djuren jättepumpa pumpa =svamp =svampar hittade hittat upphittad =fynd =fyndet lotteri jackpot miljonvinst =vinst =vann 100-åring 100-årsdag =fyller tävling tävlade =viral ovanligt_väder snögubbe',
+      no: '=polis =polisen polisens biljakt bedrägeri =bluff mord =död =döda =dödad dödades dödsfall dödlig dödsskjut skjutning =skjuten =skjutna =skjutits =skott =skotten =skottet skottlossning krig =attack attacken bomb explosion sprängning terror gripen gripna =greps häktad åtal åtalad dömd våldtäkt =rån rånet misshandel knivhugg olycka olyckan omkom omkomna =avled =dog förolyckad =brand =branden =bränder =bränderna =svält konkurs varsel',
     },
     // 额外的一个话题：SR 专门用简易瑞典语写的新闻（句子短、词简单）
     { key: 'latt', zh: '简易瑞典语', sv: 'Lätt svenska', feeds: EASY_FEEDS, all: EASY_FEEDS, kw: '' },
@@ -109,6 +127,7 @@
   }
   for (const t of TOPICS) {
     t.kws = compileKeywords(t.kw);
+    t.noKws = compileKeywords(t.no);
     t.allSet = new Set(t.all);
   }
 
@@ -301,6 +320,8 @@
       item._tok = { t, b, tj: ' ' + t.join(' ') + ' ', bj: ' ' + b.join(' ') + ' ' };
     }
     const k = item._tok;
+    // no：标题里出现一次、或者正文里出现两次这些词，就不算这个话题（趣闻轶事不要犯罪、战争、事故）
+    if (topic.noKws.length && (countHits(k.t, k.tj, topic.noKws).hits > 0 || countHits(k.b, k.bj, topic.noKws).hits >= 2)) return 0;
     const ti = countHits(k.t, k.tj, topic.kws);
     const bo = countHits(k.b, k.bj, topic.kws);
     // core：「+」词至少要出现几次（标题里的算两次），只顺带提一句的文章不算（现在没有话题用它）
