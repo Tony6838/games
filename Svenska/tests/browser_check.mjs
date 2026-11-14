@@ -15,7 +15,7 @@
 //      窗口最小化时不暂停、点文章暂停、从这里读、换男女声、没有内置翻译时整页翻译的办法在说明框里、本句译文走 MyMemory、
 //      发给 MyMemory 的内容（不超过 500 个字符、不带电子邮件）、本机的声音：本篇循环、接着读下一篇、三连读。
 //   3. 手机 390×844 触摸、安卓 Chrome 的用户代理：去掉了的话题「电动车」、标题旁边的话题菜单、列表和文章不横向溢出、「换一批」按钮换一批、点词弹框不出屏、点屏幕暂停、
-//      整页翻译的办法在说明框里、往下滚时朗读按钮粘在顶上、返回列表、「怎么用」、320 / 375 / 430 像素宽的顶栏。
+//      整页翻译的办法在说明框里、往下滚时朗读按钮粘在顶上、文章页的顶栏（话题菜单，没有「← 列表」）、点标题回到列表、320 / 375 / 430 像素宽的顶栏。
 //   4. 云端语音：合成、播放、跟着播放进度标词、缓存、换声音、出错时改用本机的声音。
 //   5. 云端语音：页面藏起来时一段接一段读下去、回来时标记在正在读的词上、锁屏界面和媒体键（Media Session）、
 //      本篇循环（重读不再合成）、「下一首」接着读下一篇、换成读完就停这一遍读完就停。
@@ -369,6 +369,40 @@ async function headerFit() {
       clipped: [...document.querySelectorAll('header.top button')].filter((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1).map((e) => e.id || e.className),
       items: items.map((e) => e.id || e.className.split(' ')[0]), selCut, height: Math.round(document.querySelector('header.top').getBoundingClientRect().height) }; })()`);
 }
+// 文章开头那一行：来源（「Sveriges Radio · 节目」，手机上「SR · 节目」）、时间、「原文 ↗」；排成几行、出没出屏；
+// 文章末尾还有没有来源、版权那一段
+// 文章开头那一行应当写的来源：「Sveriges Radio · 节目」（short：很窄的手机上「SR · 节目」）；新闻源里没有节目名时只有 Sveriges Radio
+const srcWant = (program, short) => (short ? 'SR' : 'Sveriges Radio') + (program && program !== 'Sveriges Radio' ? ' · ' + program : '');
+// 用键盘（Shift+Tab）把焦点移到标题「瑞典语读报」上（从它后面那个看得见的「← 返回列表」或话题菜单退回来），这时是键盘的焦点（:focus-visible）
+async function tabToTitle() {
+  await evalJs(`(() => { const n = [...document.querySelectorAll('#btnBack, #topicSel')].find((e) => e.offsetParent); if (n) n.focus(); })()`);
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9, modifiers: 8 });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9, modifiers: 8 });
+  await sleep(100);
+  return evalJs(`(() => { const b = document.querySelector('#brand'); let fv = false; try { fv = b.matches(':focus-visible'); } catch (e) {} return document.activeElement === b && fv; })()`);
+}
+async function pressKey(key, code, vk) {
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, text: key === 'Enter' ? '\r' : key === ' ' ? ' ' : undefined });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk });
+  await sleep(150);
+}
+async function srcLine() {
+  return evalJs(`(() => { const m = document.querySelector('#article .meta'); if (!m) return null;
+    const vis = (e) => !!e && e.getClientRects().length > 0;
+    const s = m.querySelector('.src-line'); const a = [...m.querySelectorAll('a')].find((x) => /原文/.test(x.textContent));
+    const rs = [...m.children].filter(vis).map((e) => e.getBoundingClientRect());
+    const mids = rs.map((r) => (r.top + r.bottom) / 2);
+    const art = document.querySelector('#article');
+    return { text: s ? s.innerText.replace(/\\s+/g, ' ').trim() : '', link: a ? a.getAttribute('href') : '', rows: mids.filter((y, i) => mids.findIndex((z) => Math.abs(z - y) < 8) === i).length,
+      right: Math.round(Math.max(...rs.map((r) => r.right))), vw: document.documentElement.clientWidth, footer: !!art.querySelector('.src'),
+      copyright: /版权|不保存|来源：|原声/.test(art.textContent), todayBadge: !!m.querySelector('.badge.today'), metaText: m.innerText.replace(/\\s+/g, ' ').trim() }; })()`);
+}
+// 回到列表：电脑上点「← 返回列表」，手机上点标题「瑞典语读报」（手机的文章页上没有「← 列表」）
+async function toList() {
+  if ((await state()).view !== 'article') return true;
+  if (!(await clickButtonText('#btnBack', '列表'))) { const b = await center('#brand'); await tap(b.x, b.y); }
+  return waitFor(`SVApp.state().view === 'list'`, 5000);
+}
 async function openFirstCard(index = 0) {
   const c = await center('#list .card', index);
   if (!c) return false;
@@ -462,8 +496,7 @@ async function articleWithSenses(need, freshSi = 0) {
       const sis = new Set(pool.filter((x) => x.pickable).map((x) => x.si));
       const fsi = new Set(pool.filter((x) => !x.gl && x.text.length >= 4 && /^\p{L}+$/u.test(x.text)).map((x) => x.si));
       if (sis.size >= need && fsi.size >= freshSi && pool.some((x) => x.n >= 2 && !x.pickable)) return pool;
-      await clickButtonText('#btnBack', '列表');
-      await waitFor(`SVApp.state().view === 'list'`, 5000);
+      await toList();
     }
   }
   return null;
@@ -1080,19 +1113,52 @@ try {
   await hover(5, 880);
   await sleep(900);
   check('鼠标移开后弹出框消失', !(await popupReport()));
-  // 「怎么用」：鼠标停在标题上出现，移开就消失，不挡话题按钮
+  // 文章开头一行写着来源：电脑上「Sveriges Radio · 节目」、时间（瑞典时间）、「原文 ↗」；文章末尾没有来源、版权那一段（版权在说明框里）
   await evalJs('window.scrollTo(0, 0)');
   await sleep(200);
-  const br = await center('#brand');
-  await hover(br.x, br.y);
+  st = await state();
+  let sl = await srcLine();
+  check('电脑上文章开头一行：「Sveriges Radio · 节目」、时间（瑞典时间）、「原文 ↗」（链到 SR 的这篇文章），一行；文章末尾没有来源、版权、作者那一段',
+    sl && sl.text === srcWant(st.program) && sl.link === st.link && /sverigesradio\.se/.test(sl.link) && /（瑞典时间）/.test(sl.metaText) && sl.rows === 1 && !sl.footer && !sl.copyright && !sl.todayBadge, JSON.stringify(sl));
+  const helpSrc = await evalJs(`(() => { const t = document.querySelector('#dlgHelp').textContent; return { src: /文章来源/.test(t) && /版权归 Sveriges Radio 所有/.test(t) && /不保存、不修改/.test(t) && /原声/.test(t), title: /标题「瑞典语读报」回到列表/.test(t), settings: /右上角的齿轮按钮/.test(t) && /清除阅读记录/.test(t) }; })()`);
+  check('说明框里有「文章来源」（版权、不保存不修改、SR 网站上听原声）、点标题回到列表、设置在哪里', helpSrc.src && helpSrc.title && helpSrc.settings, JSON.stringify(helpSrc));
+  // 标题「瑞典语读报」是一个按钮：文章页上点一下回到列表（和「← 返回列表」一样，浏览器的「后退」照旧），列表页上回到最上面；
+  // 回车、空格也能按。以前的「怎么用」小说明和第一次打开时的说明框都去掉了
+  check('没有「怎么用」小说明、没有第一次打开时的说明框；标题是按钮，有瑞典文提示', await evalJs(`!document.querySelector('#guide') && !document.querySelector('#tip') && document.querySelector('#brand').tagName === 'BUTTON' && document.querySelector('#brand').dataset.sv === 'Tillbaka till listan' && document.querySelector('#brand').getAttribute('aria-label') === '瑞典语读报：回到列表'`));
+  const idT = (await state()).id;
+  const brT = await center('#brand');
+  await tap(brT.x, brT.y);
+  await waitFor(`SVApp.state().view === 'list'`, 5000);
+  st = await state();
+  const hsT = await evalJs(`history.state && history.state.sv`);
+  check('文章页上点标题「瑞典语读报」：回到列表（和「← 返回列表」一样，浏览器历史里的文章那一步退掉了），这一篇标上「已读」', st.view === 'list' && hsT !== 'article' && await evalJs(`!!document.querySelector('#list .card.read[data-id=${JSON.stringify(idT)}]')`), `${st.view} ${hsT}`);
+  check('列表页上标题的提示是「回到最上面」', (await evalJs(`document.querySelector('#brand').dataset.sv + '|' + document.querySelector('#brand').getAttribute('aria-label')`)) === 'Till toppen|瑞典语读报：回到最上面');
+  // 1600×900 上这一批放得下一屏：先在下面加一点空白，页面才滚得动
+  await evalJs(`document.querySelector('main').style.paddingBottom = '1500px'; window.scrollTo(0, 10)`);
   await sleep(300);
-  const g = await evalJs(`(() => { const g = document.querySelector('#guide'); if (g.hidden) return null; const r = g.getBoundingClientRect(); return { on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight, lines: g.querySelectorAll('li').length }; })()`);
-  check('鼠标停在顶栏标题上，出现「怎么用」，在屏幕内', g && g.on && g.lines >= 4, JSON.stringify(g));
-  await shot('desktop-guide');
-  const chipC = await center('#topics .chip[data-topic="sverige"]');
-  await hover(chipC.x, chipC.y);
+  const brL = await evalJs(`(() => { const r = document.querySelector('#brand').getBoundingClientRect(); return { x: Math.round(r.left + 30), y: Math.round(r.top + r.height / 2), sy: Math.round(scrollY) }; })()`);
+  await tap(brL.x, brL.y);
+  const topOk = await waitFor(`scrollY === 0`, 3000, 100);
+  check('列表页上点标题：回到最上面', brL.sy > 0 && topOk && (await state()).view === 'list', JSON.stringify(brL));
+  await evalJs(`document.querySelector('main').style.paddingBottom = ''`);
+  // 键盘：用 Shift+Tab 到了标题上（键盘的焦点），回车、空格都回到列表（空格不是暂停、继续）
+  for (const [key, code, vk] of [['Enter', 'Enter', 13], [' ', 'Space', 32]]) {
+    await openFirstCard(0);
+    const onTitle = await tabToTitle();
+    await pressKey(key, code, vk);
+    const kOk = await waitFor(`SVApp.state().view === 'list'`, 3000);
+    check(`用键盘（Tab）到了标题上按${key === 'Enter' ? '回车' : '空格'}：回到列表`, onTitle && kOk && (await state()).reader === 'idle', `${onTitle} ${(await state()).view}`);
+  }
+  // 标题连按两下（同一下里）：只退一步（不会退出本站）。列表那一步先做个记号，退回来时看得到
+  await evalJs(`history.replaceState({ mark: 'list' }, '')`);
+  await openFirstCard(0);
+  await evalJs(`(() => { const b = document.querySelector('#brand'); b.click(); b.click(); })()`);
+  await sleep(1500);
+  const dbl = await evalJs(`({ path: location.pathname, view: window.SVApp && SVApp.state().view, mark: history.state && history.state.mark })`);
+  check('标题连按两下：只回到列表一次，不会退出本站', /\/Svenska\//.test(dbl.path) && dbl.view === 'list' && dbl.mark === 'list', JSON.stringify(dbl));
+  await openFirstCard(1);
+  await evalJs('window.scrollTo(0, 0)');
   await sleep(200);
-  check('鼠标移到话题按钮上，「怎么用」马上消失', await evalJs(`document.querySelector('#guide').hidden`));
   // 真实声音
   const voices = await evalJs(`speechSynthesis.getVoices().filter((v) => /^sv/i.test(v.lang)).map((v) => v.name)`);
   summary.realVoices = voices;
@@ -1343,6 +1409,28 @@ try {
   await tap(rcD.x, rcD.y); // 三连读 → 0.8×
   await tap(rcD.x, rcD.y); // → 0.9×
   check('本机的声音：语速按钮离开三连读是 0.8×，再点 0.9×', !(await state()).ramp && (await state()).settings.rate === 0.9);
+  // 点了顶上的工具按钮、关了对话框（按钮、Esc）、点了弹出框里的按钮以后，空格还是朗读、暂停（焦点不留在那个按钮上）
+  const spaceToggles = async (label, act) => {
+    await act();
+    await sleep(300);
+    const s0 = await state();
+    await space();
+    await sleep(300);
+    const s1 = await state();
+    const open = await evalJs(`!!document.querySelector('dialog[open]')`);
+    const focus = await evalJs(`document.activeElement ? document.activeElement.id || document.activeElement.tagName : ''`);
+    check(`${label}，再按空格：朗读开始或暂停（不是又按了一次那个按钮）`, s0.view === 'article' && s1.reader !== s0.reader && s1.settings.scale === s0.settings.scale && !open,
+      `${s0.reader} → ${s1.reader}，字号 ${s0.settings.scale} → ${s1.settings.scale}，对话框 ${open}，焦点 ${focus}，第 ${s0.si} → ${s1.si} 句`);
+    if (s1.reader === 'speaking') await space();
+  };
+  // 从开头读、一个词 400 毫秒：这几下里读不完这一篇
+  await evalJs('window.__ms.stop(); window.__speechWordMs = 400');
+  await spaceToggles('点了 A+', async () => { const c = await center('#btnBigger'); await tap(c.x, c.y); });
+  await spaceToggles('点了 A−', async () => { const c = await center('#btnSmaller'); await tap(c.x, c.y); });
+  await spaceToggles('打开说明框、点「好」关上', async () => { const c = await center('#btnHelp'); await tap(c.x, c.y); await sleep(300); const b = await evalJs(`(() => { const e = document.querySelector('#dlgHelp .dlg-actions button'); e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; })()`); await sleep(200); await tap(b.x, b.y); });
+  await spaceToggles('打开设置、按 Esc 关上', async () => { const c = await center('#btnSettings'); await tap(c.x, c.y); await sleep(300); await pressKey('Escape', 'Escape', 27); });
+  await spaceToggles('点了弹出框里的喇叭「读」', async () => { const w = await center('#article .body .w', 3); await tap(w.x, w.y); await sleep(400); await clickButtonText('#popup .acts button', '读'); await sleep(300); await evalJs(`document.querySelector('#main').click()`); });
+  await evalJs('window.__ms.stop(); window.__speechWordMs = 0');
   await evalJs('window.__speechWordMs = 0');
 
   // ================= 3. 手机 390×844 触摸 =================
@@ -1440,7 +1528,8 @@ try {
   const hintP = await evalJs(`({ btn: !!document.querySelector('#btnTranslate'), hint: !!document.querySelector('.page-tr-hint, .safari-hint'), help: document.querySelector('#helpTrHint').textContent })`);
   check('手机上没有「全文翻译」按钮，文章上不提示整页翻译，说明框里写着安卓 Chrome 的「⋮ → 翻译…」', !hintP.btn && !hintP.hint && /点右上角 ⋮ →「翻译…」/.test(hintP.help), JSON.stringify(hintP));
   // 往下滚：话题和朗读按钮粘在顶上，还点得到
-  await evalJs('window.scrollTo(0, document.documentElement.scrollHeight)');
+  // 短的文章（来源那一段去掉以后）一屏放得下：先在下面加一点空白，页面才滚得动
+  await evalJs(`document.querySelector('main').style.paddingBottom = '1500px'; window.scrollTo(0, document.documentElement.scrollHeight)`);
   await sleep(400);
   const stick = await evalJs(`(() => { const bar = document.querySelector('#topbar').getBoundingClientRect(); const p = document.querySelector('#btnPlay').getBoundingClientRect(); return { barTop: Math.round(bar.top), playTop: Math.round(p.top), playBottom: Math.round(p.bottom), scrolled: Math.round(scrollY) }; })()`);
   check('手机上往下滚以后，朗读按钮还粘在顶上', stick.scrolled > 200 && stick.barTop === 0 && stick.playTop >= 0 && stick.playBottom < 130, JSON.stringify(stick));
@@ -1454,23 +1543,34 @@ try {
   await sleep(200);
   const ml2 = await layoutReport('#article');
   check('手机上滚动以后也没有横向溢出', ml2.scrollW <= ml2.vw, `${ml2.scrollW} <= ${ml2.vw}`);
-  const hdrP = await evalJs(`(() => { const b = document.querySelector('#btnBack'); const br = document.querySelector('#brand'); const t = document.querySelector('.tools'); if (!b || b.hidden) return null; const rb = b.getBoundingClientRect(), rr = br.getBoundingClientRect(), rt = t.getBoundingClientRect(); const de = document.documentElement; return { text: b.innerText.trim(), sameRow: Math.abs((rb.top + rb.bottom) / 2 - (rr.top + rr.bottom) / 2) < 8 && Math.abs((rt.top + rt.bottom) / 2 - (rr.top + rr.bottom) / 2) < 8, h: Math.round(rb.height), w: Math.round(rb.width), inView: rb.left >= 0 && rb.right <= de.clientWidth, clipped: b.scrollWidth > b.clientWidth + 1 }; })()`);
-  check('手机上「← 列表」和标题、工具按钮在同一行，不截字，好点', hdrP && hdrP.sameRow && hdrP.inView && !hdrP.clipped && hdrP.h >= 36, JSON.stringify(hdrP));
-  // 点标题：打开「怎么用」，点别处关上
+  // 手机上文章页的顶栏：没有「← 列表」（点标题回到列表），和列表页一样是标题、话题菜单（选着现在的话题）和工具按钮，一行
+  const hdA = await headerFit();
+  const selA = await evalJs(`({ back: !!document.querySelector('#btnBack').offsetParent, sel: !!document.querySelector('#topicSel').offsetParent, value: document.querySelector('#topicSel').value })`);
+  check('手机上文章页的顶栏：没有「← 列表」，是标题、话题菜单（选着现在的话题）和工具按钮，一行，不出屏、不截字',
+    !selA.back && selA.sel && selA.value === (await state()).topic && hdA.rows === 1 && !hdA.overflow && !hdA.clipped.length, JSON.stringify({ ...selA, rows: hdA.rows, items: hdA.items }));
+  // 文章开头一行：手机上「SR · 节目」、时间、「原文 ↗」；文章末尾没有来源、版权那一段
+  st = await state();
+  const slP = await srcLine();
+  check('手机（390 像素宽）上文章开头一行写着「Sveriges Radio · 节目」、时间和「原文 ↗」（链到 SR 的这篇文章），不出屏；文章末尾没有来源、版权那一段',
+    slP && slP.text === srcWant(st.program) && slP.link === st.link && slP.rows <= 2 && slP.right <= slP.vw && !slP.footer && !slP.copyright && !/瑞典时间/.test(slP.metaText), JSON.stringify(slP));
+  const brHit = await evalJs(`(() => { const b = document.querySelector('#brand').getBoundingClientRect(); const s = document.querySelector('#topicSel').getBoundingClientRect(); return { w: Math.round(b.width), h: Math.round(b.height), gap: Math.round(s.left - b.right) }; })()`);
+  check('手机上标题好点：能点的地方至少 40 像素高，和话题菜单不重叠', brHit.h >= 40 && brHit.gap >= 1, JSON.stringify(brHit));
+  // 手机上点标题：回到列表
   const brP = await center('#brand');
   await tap(brP.x, brP.y);
-  await sleep(300);
-  const gP = await evalJs(`(() => { const g = document.querySelector('#guide'); if (g.hidden) return null; const r = g.getBoundingClientRect(); return { on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight, text: g.innerText.slice(0, 20) }; })()`);
-  check('手机上点标题打开「怎么用」，在屏幕内', gP && gP.on && /怎么用/.test(gP.text), JSON.stringify(gP));
-  await shot('phone-guide');
-  // 点「怎么用」外面（正文左边的空白，不是词）：关上
-  const outP = await evalJs(`(() => { const g = document.querySelector('#guide').getBoundingClientRect(); return { x: 6, y: Math.round(Math.min(innerHeight - 30, g.bottom + 30)) }; })()`);
-  await tap(outP.x, outP.y);
-  await sleep(300);
-  check('手机上点别处关上「怎么用」', await evalJs(`document.querySelector('#guide').hidden`), JSON.stringify(outP));
-  await clickButtonText('#btnBack', '列表');
   await waitFor(`SVApp.state().view === 'list'`, 5000);
-  check('手机上「← 返回列表」', (await state()).view === 'list');
+  check('手机上点标题「瑞典语读报」回到列表', (await state()).view === 'list');
+  // 文章页上在话题菜单里选另一个话题：和电脑上在文章页点那个话题按钮一样，列出那个话题的文章。
+  // 浏览器历史里文章那一步退掉了（不是改掉）：回到列表那一步（先做个记号），再按「后退」不会白按一次
+  await evalJs(`history.replaceState({ mark: 'list' }, '')`);
+  await openFirstCard(0);
+  const inArt = await evalJs(`history.state && history.state.sv`);
+  await pickTopic('sverige');
+  const selArt = await waitFor(listReady('sverige'), 40000);
+  await sleep(300);
+  const hsArt = await evalJs(`({ mark: history.state && history.state.mark, sv: history.state && history.state.sv })`);
+  check('手机上文章页在话题菜单里选「瑞典」：列出瑞典的文章；浏览器历史里文章那一步退掉了（再按后退不会白按一次）',
+    selArt && inArt === 'article' && (await state()).topic === 'sverige' && (await evalJs(`document.querySelector('#topicSel').value`)) === 'sverige' && hsArt.mark === 'list' && !hsArt.sv, JSON.stringify(hsArt));
   const hb = await center('#btnSettings');
   await tap(hb.x, hb.y);
   await sleep(400);
@@ -1491,8 +1591,8 @@ try {
   const rateOpts = await evalJs(`[...document.querySelectorAll('#rateRow input[name="rate"]')].map((r) => r.value + (r.checked ? '*' : ''))`);
   check('设置里的语速只有 0.8×、0.9×、1× 和循序渐进三连读，选着现在的语速', rateOpts.map((x) => x.replace('*', '')).join() === '0.8,0.9,1,ramp' && rateOpts.filter((x) => x.endsWith('*')).length === 1, rateOpts.join(' '));
   await evalJs(`document.querySelector('#dlgSettings').close()`);
-  // 别的手机宽度（320、375、430 像素）：顶栏不出屏、不横向滚动、不截字；375 以上列表页一行（标题、话题菜单、工具按钮），
-  // 320 时话题菜单自己一行；文章页一行（标题、「← 列表」、工具按钮，不显示话题菜单）
+  // 别的手机宽度（320、375、430 像素）：顶栏不出屏、不横向滚动、不截字；列表页、文章页一样是标题、话题菜单、工具按钮
+  // （文章页上没有「← 列表」），375 以上一行，320 时话题菜单自己一行
   for (const [w, hh] of [[320, 568], [375, 667], [430, 932]]) {
     await openPage({ width: w, height: hh, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, ua: ANDROID_UA });
     const hl = await headerFit();
@@ -1502,8 +1602,11 @@ try {
     const la = await layoutReport('#article');
     if (w === 320) await shot('phone-320-article');
     summary['phoneHeader' + w] = { list: hl, article: ha };
+    const slw = await srcLine();
+    const pw = (await state()).program;
+    check(`手机 ${w} 像素宽：文章开头一行是「${w < 360 ? 'SR' : 'Sveriges Radio'} · 节目」，不出屏`, slw.text === srcWant(pw, w < 360) && slw.right <= slw.vw, JSON.stringify(slw));
     check(`手机 ${w} 像素宽：列表页（${hl.rows} 行）和文章页（${ha.rows} 行）的顶栏不出屏、不横向滚动、不截字，播放栏在屏幕内`,
-      !hl.overflow && !ha.overflow && !hl.clipped.length && !ha.clipped.length && ha.rows === 1 && !ha.items.includes('topicSel') && (w < 360 || hl.rows === 1) && hl.items.includes('topicSel')
+      !hl.overflow && !ha.overflow && !hl.clipped.length && !ha.clipped.length && (w < 360 || (hl.rows === 1 && ha.rows === 1)) && hl.items.includes('topicSel') && ha.items.join() === hl.items.join() && !ha.items.includes('btnBack')
       && !hl.selCut.includes('今日要闻') && la.playerFits && la.scrollW <= la.vw, JSON.stringify({ list: hl, article: ha }));
   }
 

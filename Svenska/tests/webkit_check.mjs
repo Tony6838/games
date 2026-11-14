@@ -161,23 +161,25 @@ try {
   check('iPhone 上点一篇打开文章', await openArticle(page));
   tr = await trState(page, '#article');
   check('文章页上也不提示（在说明框里）', !tr.btn && !tr.hint, JSON.stringify(tr));
+  // 文章页的顶栏：没有「← 列表」（点标题回到列表），是标题、话题菜单（选着现在的话题）和工具按钮，一行
   const hdr = await page.evaluate(() => {
-    const b = document.querySelector('#btnBack'), br = document.querySelector('#brand'), t = document.querySelector('.tools');
-    const rb = b.getBoundingClientRect(), rr = br.getBoundingClientRect(), rt = t.getBoundingClientRect();
-    const mid = (r) => (r.top + r.bottom) / 2;
-    return { shown: !b.hidden, text: b.innerText.trim(), sameRow: Math.abs(mid(rb) - mid(rr)) < 8 && Math.abs(mid(rt) - mid(rr)) < 8, h: Math.round(rb.height), inView: rb.left >= 0 && rb.right <= document.documentElement.clientWidth, clipped: b.scrollWidth > b.clientWidth + 1 };
+    const items = [...document.querySelectorAll('header.top .brand, header.top .topic-sel, header.top .back-btn, header.top .tools')].filter((e) => e.offsetParent);
+    const mids = items.map((e) => { const r = e.getBoundingClientRect(); return (r.top + r.bottom) / 2; });
+    const de = document.documentElement;
+    return { items: items.map((e) => e.id || e.className.split(' ')[0]), oneRow: mids.every((m) => Math.abs(m - mids[0]) < 10), sel: document.querySelector('#topicSel').value, topic: SVApp.state().topic,
+      fits: items.every((e) => { const r = e.getBoundingClientRect(); return r.left >= 0 && r.right <= de.clientWidth + 0.5; }), scrollW: de.scrollWidth, vw: de.clientWidth };
   });
-  check('iPhone 上「← 列表」在顶栏标题旁边、同一行，不截字，好点', hdr.shown && hdr.sameRow && hdr.inView && !hdr.clipped && hdr.h >= 36, JSON.stringify(hdr));
-  await touch(page, '#brand');
-  await page.waitForTimeout(300);
-  const g = await page.evaluate(() => { const g = document.querySelector('#guide'); if (g.hidden) return null; const r = g.getBoundingClientRect(); return { on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.bottom <= innerHeight, lines: g.querySelectorAll('li').length }; });
-  check('iPhone 上点标题打开「怎么用」，在屏幕内', g && g.on && g.lines >= 4, JSON.stringify(g));
-  await shot(page, 'iphone-guide');
-  // 点「怎么用」外面（正文左边的空白，不是词）：关上。手机上话题不再占一行，文章开头那一行现在被「怎么用」盖着
-  const outW = await page.evaluate(() => { const g = document.querySelector('#guide').getBoundingClientRect(); return { x: 6, y: Math.round(Math.min(innerHeight - 30, g.bottom + 30)) }; });
-  await page.touchscreen.tap(outW.x, outW.y);
-  await page.waitForTimeout(300);
-  check('iPhone 上点别处关上「怎么用」', await page.evaluate(() => document.querySelector('#guide').hidden), JSON.stringify(outW));
+  check('iPhone 上文章页的顶栏：没有「← 列表」，是标题、话题菜单（选着现在的话题）和工具按钮，一行，不出屏',
+    hdr.items.join() === 'brand,topicSel,tools' && hdr.oneRow && hdr.sel === hdr.topic && hdr.fits && hdr.scrollW <= hdr.vw, JSON.stringify(hdr));
+  // 文章开头一行：「SR · 节目」、时间、「原文 ↗」；文章末尾没有来源、版权那一段；没有「怎么用」小说明和第一次打开时的说明框
+  const srcW = await page.evaluate(() => {
+    const m = document.querySelector('#article .meta'); const s = m.querySelector('.src-line'); const a = [...m.querySelectorAll('a')].find((x) => /原文/.test(x.textContent));
+    return { text: s.innerText.replace(/\s+/g, ' ').trim(), program: SVApp.state().program, link: a && a.getAttribute('href'), item: SVApp.state().link, footer: !!document.querySelector('#article .src'),
+      copyright: /版权|不保存|来源：/.test(document.querySelector('#article').textContent), guide: !!document.querySelector('#guide'), tip: !!document.querySelector('#tip') };
+  });
+  check('iPhone 上文章开头一行写着「Sveriges Radio · 节目」和「原文 ↗」（链到 SR 的这篇文章）；末尾没有来源、版权那一段；没有「怎么用」和第一次的说明框',
+    srcW.text === 'Sveriges Radio' + (srcW.program && srcW.program !== 'Sveriges Radio' ? ' · ' + srcW.program : '') && srcW.link === srcW.item && !srcW.footer && !srcW.copyright && !srcW.guide && !srcW.tip, JSON.stringify(srcW));
+  await shot(page, 'iphone-article-top');
   await touch(page, '#article .body .w', 2);
   await page.waitForTimeout(800);
   const pop = await page.evaluate(() => { const p = document.querySelector('#popup'); if (p.hidden) return null; const r = p.getBoundingClientRect(); return { word: p.querySelector('.pw b').textContent, text: (p.querySelector('.gl')?.textContent || '') + (p.querySelector('.mt')?.textContent || ''), on: r.left >= 0 && r.right <= document.documentElement.clientWidth && r.top >= 0 && r.bottom <= innerHeight }; });
@@ -191,11 +193,16 @@ try {
   await shot(page, 'iphone-sentence');
   await page.evaluate(() => document.querySelector('#main').click());
   // 往下滚：话题和朗读按钮粘在顶上
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  // 短的文章一屏放得下：先在下面加一点空白，页面才滚得动
+  await page.evaluate(() => { document.querySelector('main').style.paddingBottom = '1500px'; window.scrollTo(0, document.documentElement.scrollHeight); });
   await page.waitForTimeout(400);
   const stick = await page.evaluate(() => { const bar = document.querySelector('#topbar').getBoundingClientRect(); const p = document.querySelector('#btnPlay').getBoundingClientRect(); return { barTop: Math.round(bar.top), playTop: Math.round(p.top), playBottom: Math.round(p.bottom), scrolled: Math.round(scrollY) }; });
   check('iPhone 上往下滚，朗读按钮还粘在顶上', stick.barTop === 0 && stick.playTop >= 0 && stick.playBottom < 130, JSON.stringify(stick));
   await page.evaluate(() => window.scrollTo(0, 0));
+  // 点标题「瑞典语读报」：回到列表
+  await touch(page, '#brand');
+  const backW = await page.waitForFunction(() => SVApp.state().view === 'list', null, { timeout: 5000 }).then(() => true, () => false);
+  check('iPhone 上点标题「瑞典语读报」回到列表', backW);
   console.log('  朗读：', env.speech ? `有 speechSynthesis，${env.voices} 个瑞典语声音` : '这个 WebKit 没有 speechSynthesis（Windows 上的 WebKit 不带语音），朗读只能在真的苹果设备上试');
   await ctx.close();
 

@@ -15,7 +15,7 @@
   // 'loop' 本篇循环（从头再读）。旧版本的 loop: true（「循环」开着）当作 'loop'。
   // rate：语速只有 0.8、0.9、1 三档（Tony 定的，2026-11-14）；ramp：循序渐进三连读（第 1 遍 0.8×、第 2 遍 0.9×、第 3 遍 1×）。
   // 这些这个浏览器都记住；存不了（隐私模式等）时只在这次打开的页面里有效
-  const DEFAULTS = { scale: 1, rate: 0.9, ramp: false, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, tip: true, topic: 'idag', after: 'stop' };
+  const DEFAULTS = { scale: 1, rate: 0.9, ramp: false, gender: 'f', voiceURI: '', engine: 'cloud', cloudVoice: '', cloudOffMonth: '', online: true, topic: 'idag', after: 'stop' };
   const AFTER = ['stop', 'next', 'loop'];
   const RATES = [0.8, 0.9, 1];
   // 三连读的三遍：语速和为什么这样读
@@ -26,6 +26,7 @@
   delete S.level; // 旧版本的「简易优先」设置，不再用
   if (!AFTER.includes(saved.after)) S.after = saved.loop === true ? 'loop' : 'stop'; // 旧版本的「循环」开关（看存下来的，不看默认值）
   delete S.loop;
+  delete S.tip; // 以前第一次打开时列表上面的一小段说明（tip）去掉了，用法都在说明框「?」里
   // 设置的版本：第一版在说明框里点「不用」会把在线翻译一直关着（Safari 上点词只看到「在线翻译已关闭」）。
   // 现在在线翻译默认开着、不再先问，所以旧版本留下的状态一律改回默认一次；
   // 这个版本以后在「设置」里自己关掉的（v = 3），照样保留。
@@ -58,10 +59,10 @@
   }
   const BATCH = 9; // 一批几篇
   const els = {
-    topbar: $('#topbar'), topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'), tip: $('#tip'),
+    topbar: $('#topbar'), topics: $('#topics'), list: $('#list'), article: $('#article'), main: $('#main'), notice: $('#notice'),
     popup: $('#popup'), toast: $('#toast'), player: $('#player'),
     play: $('#btnPlay'), rate: $('#btnRate'), voice: $('#btnVoice'), after: $('#btnAfter'), next: $('#btnNext'),
-    back: $('#btnBack'), brand: $('#brand'), guide: $('#guide'), topicSel: $('#topicSel'),
+    back: $('#btnBack'), brand: $('#brand'), topicSel: $('#topicSel'),
   };
 
   // view：'loading' | 'list' | 'article' | 'message'
@@ -402,6 +403,9 @@
     els.after.classList.toggle('on', S.after !== 'stop');
     els.after.setAttribute('aria-label', '读完以后：' + a.zh); // 三种状态：读屏软件听 aria-label，不用 aria-pressed
     tip(els.after, a.sv, '读完以后：' + a.tip);
+    // 标题：文章页上回到列表，别的时候回到最上面
+    els.brand.setAttribute('aria-label', inArticle ? '瑞典语读报：回到列表' : '瑞典语读报：回到最上面');
+    tip(els.brand, inArticle ? 'Tillbaka till listan' : 'Till toppen', inArticle ? `回到「${cur.topic ? cur.topic.zh : ''}」的文章列表` : '回到最上面');
     // 下一篇 / 换一批
     els.next.disabled = !(inArticle || inList);
     els.next.setAttribute('aria-label', inList ? '换一批' : '下一篇');
@@ -410,7 +414,7 @@
   }
 
   // ---------- 话题 ----------
-  // 电脑、平板上是一排话题按钮；手机上是标题旁边的下拉菜单（css/style.css 按屏幕宽度显示其中一个），
+  // 电脑、平板上是一排话题按钮；手机上是标题旁边的下拉菜单，列表页、文章页都有（css/style.css 按屏幕宽度显示其中一个），
   // 两个都用 TOPICS 这一张表做，选了以后都走 chooseTopic。再点一次同一个话题换一批（菜单里选同一个不算换，
   // 手机上换一批用列表最下面的「换一批」或播放栏最右边的按钮）。
   // 正在取文章（loading）时再点同一个话题不算「换一批」（还没列出来）；但「接着读下一篇」在取下一批时（还有 gap），
@@ -470,8 +474,19 @@
     setView('message');
   }
 
+  // 从文章直接去别处（换话题、下一批）：浏览器历史里文章那一步退掉（history.back()，它引起的那一次 popstate 不管），
+  // 这样再按「后退」不会白按一次（以前用 replaceState，留下两个一样的列表）。退的时候要记下新的文章：等退完了再记（pendingPush）
+  let ignorePop = 0;
+  let pendingPush = null;
+  let leaving = false; // 已经调了 history.back() 回列表，还没等到 popstate：标题、「← 列表」连按两下不会退两步
   const dropArticleHistory = () => {
-    if (history.state && history.state.sv === 'article') { try { history.replaceState(null, ''); } catch (e) { /* 忽略 */ } }
+    if (!(history.state && history.state.sv === 'article') || ignorePop) return;
+    ignorePop++;
+    try { history.back(); } catch (e) { ignorePop--; }
+  };
+  const pushArticle = (id) => {
+    if (ignorePop) { pendingPush = id; return; }
+    try { history.pushState({ sv: 'article', id }, ''); } catch (e) { /* 不支持就算了 */ }
   };
   // again：再点一次同一个话题 → 下一批。
   // auto：读的时候读完了这一批的最后一篇（接着读下一篇），或者在最后一篇点了「下一篇」：取下一批，打开第一篇接着读。
@@ -586,12 +601,13 @@
   }
 
   // ---------- 文章列表 ----------
-  function when(item, long) {
+  // 发布时间（瑞典时间）：「今天 08:00」「昨天 17:35」「11月9日 17:35」，不是今年的加上年份
+  function when(item) {
     const [y, m, d] = item.day.split('-');
     const today = SV.stockholmDay(new Date());
     const diff = SV.dayDiff(today, item.day);
     const rel = diff === 0 ? '今天' : diff === 1 ? '昨天' : `${+m}月${+d}日`;
-    return `${rel} ${SV.stockholmTime(item.published)}${long ? '（瑞典时间）' : ''}${diff > 1 && y !== today.slice(0, 4) ? ' ' + y + '年' : ''}`;
+    return `${rel} ${SV.stockholmTime(item.published)}${diff > 1 && y !== today.slice(0, 4) ? ' ' + y + '年' : ''}`;
   }
   function firstLine(item) {
     const t = item.blocks.length ? item.blocks[0].text : '';
@@ -652,7 +668,10 @@
   // 从文章回到列表（列表还是原来那一批，滚动位置也回到原处）
   function backToList(fromHistory) {
     if (cur.view !== 'article') return;
-    if (!fromHistory && history.state && history.state.sv === 'article') { history.back(); return; }
+    if (!fromHistory && history.state && history.state.sv === 'article' && !ignorePop) {
+      if (!leaving) { leaving = true; history.back(); } // 回到列表在 popstate 里做
+      return;
+    }
     cancelGap();
     reader.stop();
     capNext = false;
@@ -673,7 +692,16 @@
     showNotices();
     window.scrollTo({ top: cur.listScroll });
   }
-  window.addEventListener('popstate', () => { if (cur.view === 'article') backToList(true); });
+  window.addEventListener('popstate', () => {
+    leaving = false;
+    if (ignorePop) { // 自己退掉文章那一步引起的：不管；退的时候又打开了文章（接着读下一批），现在记下
+      ignorePop--;
+      if (pendingPush && cur.view === 'article') { const id = pendingPush; pendingPush = null; pushArticle(id); }
+      pendingPush = null;
+      return;
+    }
+    if (cur.view === 'article') backToList(true);
+  });
 
   // ---------- 文章 ----------
   // keep：接着读下一篇（readOn）：朗读不停（reader 等着，马上从头读新的这一篇），锁屏时也接得上
@@ -684,9 +712,7 @@
     hidePopup();
     hlW = null;
     if (cur.view === 'list') cur.listScroll = window.scrollY;
-    if (push && !(history.state && history.state.sv === 'article')) {
-      try { history.pushState({ sv: 'article', id: item.id }, ''); } catch (e) { /* 不支持就算了 */ }
-    }
+    if (push && (ignorePop || !(history.state && history.state.sv === 'article'))) pushArticle(item.id);
     cur.item = item;
     SV.sources.markRead(item.id);
     // 换了一篇文章：上一篇合成好的云端语音放掉（同一篇再打开时还留着；循环朗读重读时不再花额度）
@@ -698,26 +724,26 @@
     const art = els.article;
     art.textContent = '';
     art.dataset.id = item.id;
-    const today = SV.stockholmDay(new Date()) === item.day;
     const back = () => tip(h('button', { type: 'button', class: 'back-btn', lang: 'zh-CN', onclick: (e) => { e.currentTarget.blur(); backToList(false); } }, `← 返回「${topic.zh}」列表`),
       'Tillbaka till listan', `返回「${topic.zh}」列表`);
     // 文章开头的「返回列表」放在顶栏标题旁边（setView 显示它），省一行
     els.back.querySelector('.long').textContent = `← 返回「${topic.zh}」列表`;
     tip(els.back, 'Tillbaka till listan', `返回「${topic.zh}」列表`);
+    // 文章开头一行：来源（SR 的条款要写清楚材料来自 SR：「Sveriges Radio · 节目」，不到 360 像素宽的手机上「SR · 节目」）、时间、「原文 ↗」。
+    // 新闻源里没有节目名时（sources.js 填的是 'Sveriges Radio'）只写一次 Sveriges Radio
+    const prog = item.program && item.program !== 'Sveriges Radio' ? item.program : '';
+    // 文章末尾不再有一段来源和版权（Tony 定的，2026-11-14）；版权、「不保存、不修改」写在说明框「?」的「文章来源」里
     art.append(h('div', { class: 'meta', lang: 'zh-CN' },
       item.easy ? h('span', { class: 'badge', title: '这篇是用简易瑞典语写的' }, '简易瑞典语') : null,
-      today ? h('span', { class: 'badge today' }, '今天') : null,
-      h('span', { lang: 'sv' }, item.program),
-      h('span', null, when(item, true)),
-      h('a', { href: item.link, target: '_blank', rel: 'noopener' }, '原文 ↗')));
+      h('span', { class: 'src-line', title: '来源：Sveriges Radio（瑞典广播电台）' + (prog ? '的节目 ' + prog : '') },
+        h('span', { class: 'src-long', lang: 'sv' }, 'Sveriges Radio'), h('abbr', { class: 'src-short', lang: 'sv', title: 'Sveriges Radio（瑞典广播电台）' }, 'SR'),
+        prog ? ' · ' : null, prog ? h('span', { lang: 'sv' }, prog) : null),
+      h('span', { class: 'when', title: '瑞典时间' }, when(item), h('span', { class: 'wide-only' }, '（瑞典时间）')),
+      h('a', { href: item.link, target: '_blank', rel: 'noopener', title: '在 SR 网站上看原文（还可以听电台的原声）' }, '原文 ↗')));
     const title = h('h1');
     const body = h('div', { class: 'body' });
     art.append(title, body);
     cur.model = SV.text.renderArticle(item, title, body);
-    art.append(h('div', { class: 'src', lang: 'zh-CN' },
-      h('p', null, '来源：Sveriges Radio（瑞典广播电台）· ', h('span', { lang: 'sv' }, item.program), item.byline ? h('span', { lang: 'sv' }, ' · ' + item.byline) : null),
-      h('p', null, '原文：', h('a', { href: item.link, target: '_blank', rel: 'noopener' }, item.link), '（在 SR 网站上还可以听电台的原声）'),
-      h('p', null, '文章版权归 Sveriges Radio 所有。本站在你打开时从 SR 的开放接口读取，不保存、不修改。')));
     const idx = cur.batch.indexOf(item);
     art.append(h('div', { class: 'next-row', lang: 'zh-CN' },
       back(),
@@ -1138,7 +1164,7 @@
   // 点文章：正在读就暂停（点在词上同时显示这个词）；没在读时点词显示中文
   els.main.addEventListener('click', (e) => {
     if (cur.view !== 'article') return;
-    if (e.target.closest('a, button, input, select, .tip')) return;
+    if (e.target.closest('a, button, input, select')) return;
     const sel = window.getSelection ? window.getSelection() : null;
     if (sel && !sel.isCollapsed && String(sel).trim().length > 1 && lastPointer === 'mouse') return;
     const wEl = e.target.closest('#article .w');
@@ -1178,7 +1204,11 @@
   });
   els.popup.addEventListener('pointerenter', () => clearTimeout(hideTimer));
   els.popup.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && pop.open && !pop.pinned) scheduleHide(); });
-  els.popup.addEventListener('click', (e) => e.stopPropagation());
+  els.popup.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const b = e.target.closest && e.target.closest('button'); // 弹出框里点过的按钮放开焦点：再按空格是暂停、继续
+    if (b) b.blur();
+  });
   document.addEventListener('click', (e) => {
     if (!pop.open || els.popup.contains(e.target) || els.main.contains(e.target)) return;
     if (e.target.closest('dialog')) return;
@@ -1202,11 +1232,17 @@
   // 空格：暂停 / 继续；Esc：关掉弹出框
   let spaceHandled = false;
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') { if (pop.open) hidePopup(); if (!els.guide.hidden) hideGuide(); return; }
+    if (e.key === 'Escape') { if (pop.open) hidePopup(); return; }
     if (e.code !== 'Space' && e.key !== ' ') return;
     if (document.querySelector('dialog[open]') || cur.view !== 'article') return;
     const t = e.target;
     if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"]')) return;
+    // 用键盘（Tab）到了一个按钮上（比如标题「瑞典语读报」）：空格按这个按钮，不是暂停、继续。
+    // 用鼠标、手指点过的按钮不算（:focus-visible 只在键盘的焦点上），空格照样暂停、继续
+    const btn = t && t.closest ? t.closest('button') : null;
+    let kbd = false;
+    try { kbd = !!btn && btn.matches(':focus-visible'); } catch (err) { kbd = false; } // 老的浏览器不认识 :focus-visible
+    if (kbd) return;
     e.preventDefault();
     spaceHandled = true;
     if (e.repeat) return;
@@ -1296,38 +1332,36 @@
     syncSettingsForm();
     if (pop.open) placePopup();
   }
-  $('#btnSmaller').addEventListener('click', () => setScale(S.scale - 0.1));
-  $('#btnBigger').addEventListener('click', () => setScale(S.scale + 0.1));
-  $('#btnHelp').addEventListener('click', () => { const d = $('#dlgHelp'); if (d.showModal) d.showModal(); });
+  // 顶上的工具按钮点完就放开焦点；对话框关上时，浏览器把焦点还给打开它的按钮，也放开：不然再按空格是又按了一次那个按钮，
+  // 不是暂停、继续
+  const blurAfter = (el, fn) => el.addEventListener('click', (e) => { el.blur(); fn(e); });
+  blurAfter($('#btnSmaller'), () => setScale(S.scale - 0.1));
+  blurAfter($('#btnBigger'), () => setScale(S.scale + 0.1));
+  blurAfter($('#btnHelp'), () => { const d = $('#dlgHelp'); if (d.showModal) d.showModal(); });
+  for (const d of document.querySelectorAll('dialog')) {
+    d.addEventListener('close', () => { const a = document.activeElement; if (a && a !== document.body && a.blur && !d.contains(a)) a.blur(); });
+  }
   // 说明框「整篇翻译」：认得出的浏览器，它的办法放在最前面（Safari、iPhone 是「点地址栏『aA → 翻译成中文』」）；
   // 认不出的不说「你现在用的浏览器：用浏览器自带的翻译功能」，只列各个浏览器的办法
   $('#helpTrHint').textContent = PAGE_TR_KNOWN ? '你现在用的浏览器：' + PAGE_TR_HINT.replace('整篇翻译：', '') + '。' : '';
   $('#helpTrOthers').textContent = PAGE_TR_KNOWN ? '别的浏览器：' : '比如：';
-  $('#btnSettings').addEventListener('click', () => {
+  blurAfter($('#btnSettings'), () => {
     const d = $('#dlgSettings');
     fillVoiceSelect();
     syncSettingsForm();
     updateTrNote();
     if (d.showModal) d.showModal();
   });
-  $('#btnTipClose').addEventListener('click', () => { els.tip.hidden = true; S.tip = false; save(); });
   els.back.addEventListener('click', () => { els.back.blur(); backToList(false); });
 
-  // 「怎么用」小说明：鼠标停在顶栏标题上时出现，移开就消失（不挡住下面的话题按钮）；
-  // 手机上点一下标题打开，点别处关上（点到的按钮照常起作用）。
-  let guidePinned = false;
-  const showGuide = (pin) => { els.guide.hidden = false; guidePinned = guidePinned || !!pin; };
-  const hideGuide = () => { els.guide.hidden = true; guidePinned = false; };
-  els.brand.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') showGuide(false); });
-  els.brand.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && !guidePinned) hideGuide(); });
-  els.brand.addEventListener('click', () => { if (guidePinned) hideGuide(); else showGuide(true); });
-  els.brand.addEventListener('focus', () => showGuide(false));
-  els.brand.addEventListener('blur', () => { if (!guidePinned) hideGuide(); });
-  els.brand.addEventListener('keydown', (e) => { if (e.key === 'Enter') { if (els.guide.hidden) showGuide(true); else hideGuide(); } });
-  document.addEventListener('pointerdown', (e) => {
-    if (els.guide.hidden || els.brand.contains(e.target) || els.guide.contains(e.target)) return;
-    hideGuide();
-  }, true);
+  // 标题「瑞典语读报」（Tony 定的，2026-11-14：「点击抬头 瑞典语读报 回到主菜单」）：文章页上和「← 列表」一样回到列表
+  // （同一个 backToList，浏览器的「后退」照旧），列表页上回到最上面。它是 <button>，回车、空格也能按。
+  // 以前鼠标停在标题上出现的「怎么用」去掉了，用法都在说明框「?」里。
+  els.brand.addEventListener('click', () => {
+    els.brand.blur();
+    if (cur.view === 'article') backToList(false);
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 
   // ---------- 设置对话框 ----------
   const selVoice = $('#selVoice');
@@ -1443,7 +1477,6 @@
     ['#btnVoice', S.gender === 'm' ? 'Manlig röst' : 'Kvinnlig röst', '切换男声、女声'],
     ['#btnAfter', AFTER_INFO[S.after].sv, '读完以后：' + AFTER_INFO[S.after].tip],
     ['#btnNext', 'Nästa artikel', '列表里的下一篇'],
-    ['#btnTipClose', 'Jag förstår', '知道了，不再显示这条说明'],
     ['#btnTryVoice', 'Provlyssna', '试听这个声音'],
     ['#btnClearHistory', 'Rensa läshistoriken', '清除阅读记录'],
     ['#dlgSettings .dlg-actions button', 'Stäng', '关闭设置'],
@@ -1452,7 +1485,6 @@
   for (const [sel, sv, zh] of STATIC_TIPS) { const b = $(sel); if (b) tip(b, sv, zh); }
   updateButtons();
   renderChips();
-  els.tip.hidden = !S.tip;
   SV.speech.onVoices(() => {
     refreshVoice();
     if ($('#dlgSettings').open) fillVoiceSelect();
@@ -1475,6 +1507,8 @@
       id: cur.item && cur.item.id,
       title: cur.item && cur.item.title,
       program: cur.item && cur.item.program,
+      link: cur.item && cur.item.link,
+      byline: cur.item && cur.item.byline,
       day: cur.item && cur.item.day,
       easy: cur.item && cur.item.easy,
       loading,
