@@ -141,7 +141,16 @@
       female: ['sofie', 'hedvig', 'hillevi', 'alva', 'klara', 'astrid', 'elin', 'karin', 'ingrid', 'linnea', 'maja', 'emma', 'sara', 'kvinna', 'kvinnlig'],
       male: ['mattias', 'bengt', 'oskar', 'erik', 'anders', 'johan', 'lars', 'manlig'],
     },
-    // 翻译：微软翻译走 Worker 的 /translate（只翻瑞典语）；浏览器内置翻译、MyMemory 的源语言
-    tr: { from: 'sv', azurePath: '/translate', mymemory: 'sv' },
+    // 翻译：微软翻译走 Worker 的 /translate（只翻瑞典语）；浏览器内置翻译、MyMemory 的源语言。
+    // weak：小词（介词、连词、代词、助动词……）。在整句译文里给点的词画下划线时（js/wordspan.js），小词的标签要和它的译文
+    // 有共同的字才算，单独译出来的意思也不拿来比（常常不对）
+    tr: {
+      from: 'sv', azurePath: '/translate', mymemory: 'sv',
+      weak: 'och i på att det som en ett är av för med till den de dem har inte om var jag du han hon vi ni man sig sin sitt sina så då '
+        + 'men eller när där här från vid mot efter under över ut upp in kan ska skulle vill ville måste får fick hade blir blev bli varit '
+        + 'vara alla andra också bara nu än hos utan mellan genom sedan redan ju väl dock denna detta dessa deras hans hennes dess vår vårt '
+        + 'våra er ert era min mitt mina din ditt dina något några någon inget ingen inga vilken vilket vilka vad vem hur varför eftersom '
+        + 'därför även mycket mer mest många flera hela samma själv egen eget egna ha',
+    },
   });
 })();

@@ -410,6 +410,49 @@ try {
   } else {
     check('iPhone：文章里有两句带能挑的词', false, '这篇文章里没有');
   }
+  // 整句译文里点的词画下划线（js/wordspan.js）：瑞典语、英语，WebKit 里也一样。在这篇文章上换成固定的句子，
+  // 假的微软翻译照真的回答答（fakes.mjs 的 AZ_REAL）
+  azPlan = { real: true };
+  const wSent = async (text) => {
+    await closeW();
+    const i = await page.evaluate((t) => [...document.querySelectorAll('#article .w')].findIndex((w) => w.closest('.body') && w.textContent === t), text);
+    if (i < 0) return null;
+    await touch(page, '#article .w', i);
+    await page.waitForFunction(() => { const p = document.querySelector('#popup'); return !p.hidden && !p.querySelector('.mt.wait'); }, null, { timeout: 8000 }).catch(() => {});
+    if (!(await page.evaluate(() => !!document.querySelector('#popup .ctxs')))) {
+      const b = page.locator('#popup .acts button', { hasText: '本句译文' });
+      await (page.hasTouchInput ? b.tap() : b.click());
+    }
+    await page.waitForFunction(() => { const b = [...document.querySelectorAll('#popup .sent, #popup .ctxs')].find((x) => !x.hidden); return b && b.dataset.span && b.dataset.span !== 'wait'; }, null, { timeout: 8000 }).catch(() => {});
+    return page.evaluate(() => { const b = [...document.querySelectorAll('#popup .sent, #popup .ctxs')].find((x) => !x.hidden); const k = b && b.querySelector('.key'); const r = document.querySelector('#popup').getBoundingClientRect();
+      return { text: b ? b.textContent : '', key: k ? k.textContent : '', span: b ? b.dataset.span : '', color: k ? getComputedStyle(k).textDecorationColor : '',
+        on: r.left >= 0 && r.top >= 0 && r.right <= document.documentElement.clientWidth + 0.5 && r.bottom <= innerHeight + 0.5 }; });
+  };
+  const SV_P = 'Fartygen lämnade hamnen i Göteborg tidigt på morgonen. Regeringen vill diskutera säkerhetsfrågor med de nordiska grannländerna.';
+  const EN_P = 'The importance of maritime security and upholding international law at sea, as enshrined in UNCLOS, was agreed as essential to the security and prosperity of the Euro-Atlantic region.';
+  if (await page.evaluate((p) => SVApp.openTestArticle('Fartygen lämnade Göteborg', [p]), SV_P)) {
+    const a = await wSent('Fartygen');
+    const b = await wSent('säkerhetsfrågor');
+    check('iPhone（瑞典语）：整句译文里点的词画蓝色下划线：Fartygen →「舰队」、säkerhetsfrågor →「安全问题」，弹出框在屏幕内',
+      a && a.key === '舰队' && b && b.key === '安全问题' && b.color === 'rgb(21, 101, 192)' && b.on, JSON.stringify([a, b]));
+    await shot(page, 'iphone-underline-sv');
+  } else check('iPhone（瑞典语）：换成测试用的句子', false);
+  await closeW();
+  // 英语：Worker 的 /translate/en 也用假的（不让测试问到真的 Worker）
+  await page.route(WORKER_TRANSLATE + '/en', azRoute);
+  await page.goto(baseUrl + '?lang=en');
+  const enOk = await page.waitForFunction(() => window.SVApp && SVApp.state().view === 'list' && document.querySelectorAll('#list .card').length > 0, null, { timeout: 60000 }).then(() => true, () => false);
+  if (enOk && (await openArticle(page)) && (await page.evaluate((p) => SVApp.openTestArticle('Maritime security', [p]), EN_P))) {
+    const e = await wSent('enshrined');
+    check('iPhone（英语，Tony 的例子）：enshrined 单独译成「入祀」，整句译文里「规定」画下划线', e && e.key === '规定' && e.span === 'rest' && e.on, JSON.stringify(e));
+    await shot(page, 'iphone-underline-en');
+  } else check('iPhone（英语）：换成测试用的句子', false);
+  await closeW();
+  await page.goto(baseUrl);
+  await page.waitForFunction(() => window.SVApp && SVApp.state().view === 'list', null, { timeout: 40000 }).catch(() => {});
+  await openArticle(page);
+  freshW.splice(0, freshW.length, ...(await scanW()).filter((x) => !x.gl && x.text.length >= 4 && /^\p{L}+$/u.test(x.text)));
+  azPlan = {};
   azMode = 'quota';
   await touch(page, '#article .w', freshW[1].i);
   await page.waitForTimeout(900);

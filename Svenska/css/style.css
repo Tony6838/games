@@ -301,9 +301,10 @@ body.paused .article .w.current { text-decoration-color: var(--word-paused); }
 .popup .gl { margin: 4px 0 0; font-family: var(--zh-font); }
 .popup .gl div { margin: 2px 0; }
 .popup .gl i { font-style: normal; color: var(--muted); font-size: 13px; }
-/* 小词典有几个意思时（js/sense.js）：确定的那个意思，和整句译文里这个词的译文（.ctxs .key），画蓝色下划线；
+/* 小词典有几个意思时（js/sense.js）：确定的那个意思，画蓝色下划线；整句译文里点的这个词的译文（.ctxs .key 自动显示的整句、
+   .sent .key「本句译文」，js/wordspan.js 找到的）也画同样的下划线。
    和正文里正在读的词一样是一整条（不在 g、j、p、y 处断开），不占位置，字的颜色、粗细不变，弹出框不变大小。 */
-.popup .gl .sense.best, .popup .ctxs .key {
+.popup .gl .sense.best, .popup .ctxs .key, .popup .sent .key {
   text-decoration: underline;
   text-decoration-color: var(--sense);
   text-decoration-thickness: max(2px, .12em);

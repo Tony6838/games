@@ -1004,7 +1004,7 @@
     const f = L.tts.cloud.filter((v) => v.gender === 'f').map((v) => v.label).join('、');
     const m = L.tts.cloud.filter((v) => v.gender === 'm').map((v) => v.label).join('、');
     const texts = {
-      lookup: '<b>查词</b>：点一下词看中文（鼠标只是停在词上不弹），再点一下这个词或者点别处关上（微软翻译；用不了时用浏览器内置的翻译或 MyMemory）。喇叭读这个词，「从这里读」从这个词开始朗读，「本句译文」翻译这一整句。电脑上用鼠标选中几个词，也会翻译选中的部分。',
+      lookup: '<b>查词</b>：点一下词看中文（鼠标只是停在词上不弹），再点一下这个词或者点别处关上（微软翻译；用不了时用浏览器内置的翻译或 MyMemory）。喇叭读这个词，「从这里读」从这个词开始朗读，「本句译文」翻译这一整句，点的这个词在整句译文里的译文画一条蓝色下划线（找不准就不画）。电脑上用鼠标选中几个词，也会翻译选中的部分。',
       easy: `<b>${L.easyBadge}</b>：${L.easyNote || ''}`,
       voices: `<b>声音</b>：点「女 / 男」按钮切换女声、男声；在「设置」里可以选具体的声音和语速。默认用云端自然语音（微软的 ${f} 女声，${m} 男声），电脑、手机、任何浏览器上都一样，要联网；云端不通时自动改用设备自带的${L.zh}声音。在「设置」里也可以自己选用设备的声音。`,
       tips: `<b>按钮的${L.zhText}</b>：鼠标停在任何一个按钮上（手机上按住按钮半秒），显示这个按钮的${L.zhText}说法和中文说明，顺便学几个词；播放栏上只有图标的按钮，也这样看它是做什么的。手机上按住看提示，松手不算点了按钮。`,
@@ -1275,7 +1275,8 @@
 
   // ---------- 查词弹出框 ----------
   // 弹出框只在点了词（或者用鼠标选中几个词）时打开，鼠标停在词上不弹（Tony 定的，2026-11-14）。pinned 一直是 true（给测试看）
-  const pop = { open: false, pinned: false, wordEl: null, rect: null, token: 0, si: -1, wi: -1, text: '' };
+  // wordTr：弹出框里这个词的译文（还在路上的也算，Promise），在整句译文里找这个词时用
+  const pop = { open: false, pinned: false, wordEl: null, rect: null, token: 0, si: -1, wi: -1, text: '', wordTr: null };
 
   const ICON_SPEAK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
   const ICON_PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l12-7z" fill="currentColor"/></svg>';
@@ -1347,7 +1348,7 @@
   function openPopup({ wordEl, text, rect, si, wi }) {
     if (pop.wordEl) pop.wordEl.classList.remove('picked');
     const token = ++pop.token;
-    Object.assign(pop, { open: true, pinned: true, wordEl: wordEl || null, rect: rect || null, si, wi, text });
+    Object.assign(pop, { open: true, pinned: true, wordEl: wordEl || null, rect: rect || null, si, wi, text, wordTr: null });
     if (wordEl) wordEl.classList.add('picked');
     const p = els.popup;
     p.textContent = '';
@@ -1358,7 +1359,8 @@
     // 小词典里的意思，一个一个分开（「判决；（口语）他们」是两个）
     const senses = gl ? SV.sense.senses(gl) : [];
     const sentence = isWord && cur.model ? cur.model.sentences[si] : null;
-    // 有几个意思（Tony 定的）：自动显示这一句的译文；js/sense.js 确定时，给那个意思和整句译文里这个词的译文画下划线。
+    // 有几个意思（Tony 定的）：自动显示这一句的译文；js/sense.js 确定时，给那个意思和整句译文里这个词的译文画下划线；
+    // 别的情况（showSentence）按 js/wordspan.js 在整句译文里找这个词，找到了画下划线（Tony 定的，2026-11-15）。
     const auto = !!sentence && senses.length >= 2;
     p.classList.toggle('multi', auto);
     p.append(h('div', { class: 'pw' }, h('b', { lang: LANG }, text)));
@@ -1399,7 +1401,8 @@
       acts.append(bFrom);
       const sentBox = h('div', { class: 'sent', hidden: true });
       bSent = tip(h('button', { type: 'button' }, '本句译文'), 'Översätt meningen', '翻译这个词所在的整句');
-      // 和自动显示的整句译文是同一个翻译、同一个缓存：一句只花一次额度
+      // 和自动显示的整句译文是同一个翻译、同一个缓存（带标签的整句一个词一份：同一个词再点不再花额度）；
+      // 点的词的译文在整句里画下划线（showSentence）
       bSent.addEventListener('click', (e) => {
         e.stopPropagation();
         const s = cur.model && cur.model.sentences[si];
@@ -1419,11 +1422,13 @@
           // 微软翻译那一步和还在等的那一次共用一个请求（js/translate.js），不多花额度
           ctxs.hidden = false;
           ctxs.dataset.clicked = '1';
-          fillInto(ctxs, () => translateText(s.text), 'ctxs', 'ctxs err', eng, null, () => ctxs.dataset.why !== 'wait' && ctxs.dataset.why !== 'fail');
+          fillInto(ctxs, () => sentenceFor(s, s.words[wi]), 'ctxs', 'ctxs err', eng, null, () => ctxs.dataset.why !== 'wait' && ctxs.dataset.why !== 'fail',
+            (r) => showSentence(ctxs, r, s, s.words[wi], gl, senses));
           return;
         }
+        // 整句译文里，点的这个词的译文画下划线（js/wordspan.js；找不准就不画）
         sentBox.hidden = false;
-        fillInto(sentBox, () => translateText(s.text), 'sent', 'sent err', null);
+        fillInto(sentBox, () => sentenceFor(s, s.words[wi]), 'sent', 'sent err', null, null, null, (r) => showSentence(sentBox, r, s, s.words[wi], gl, senses));
       });
       acts.append(bSent);
       p.append(acts, sentBox);
@@ -1438,60 +1443,111 @@
     if (auto) fillSentence(ctxs, sentence, sentence.words[wi], senses, gl, eng);
     if (!needMt) return;
     const short = isWord || text.split(/\s+/).length <= 3;
+    // 这个词的译文：弹出框里显示；在整句译文里找这个词时也要（locateWord 等它，不再另外请求）
     fillInto(mt, () => (short
-      ? SV.tr.translate(text, 'word', { gesture: true, online: S.online !== false, onDownload })
+      ? (pop.wordTr = SV.tr.translate(text, 'word', { gesture: true, online: S.online !== false, onDownload }))
       : translateText(text)), 'mt', 'mt err', eng, bSent);
   }
 
-  // 有几个意思的词：意思已经都列出来了，这里自动放上这一句的译文。
-  // 能挑的词（js/sense.js）先请微软翻译把这个词包在 <b> 里翻译整句：确定时，给那个意思画下划线，整句译文里这个词的译文也画下划线；
-  // 不确定、或者微软翻译用不了（再用内置翻译、MyMemory 翻整句）：只放整句译文，不画。
+  // 有几个意思的词：意思已经都列出来了，这里自动放上这一句的译文（sentenceFor），再给点的词画下划线（showSentence）。
   // 结果回来时弹出框已经关了、或者换到别的词上了，就不管它。整句也翻不了：收起这一格，不报错（点「本句译文」能看到原因）。
   async function fillSentence(box, s, w, senses, gl, eng) {
     const token = pop.token;
-    const put = (zh, res, r) => {
-      senseApplied++;
-      box.textContent = '';
-      box.className = 'ctxs';
-      box.dataset.why = res ? res.why : 'plain';
-      if (res && res.index >= 0 && res.start >= 0 && res.end <= zh.length) {
-        box.append(zh.slice(0, res.start), h('span', { class: 'key', title: '这个词在这一句里的译文' }, zh.slice(res.start, res.end)), zh.slice(res.end));
-        const best = senses[res.index];
-        if (best && best.el) {
-          best.el.classList.add('best');
-          best.el.title = '符合这句的意思';
-          best.el.append(h('span', { class: 'sr' }, '（符合这句的意思）'));
-        }
-      } else {
-        box.append(zh);
-      }
-      if (eng && !eng.textContent.trim()) eng.textContent = engineLabel(r) || ' ';
-      placePopup();
-    };
-    if (SV.sense.pickable(gl, senses) && SV.tr.azureState() === 'ok') {
-      try {
-        const r = await SV.tr.tagged(s.text, w.start, w.end);
-        if (token !== pop.token) return;
-        const parsed = SV.sense.parseTagged(r.html);
-        if (parsed.text) {
-          SV.tr.rememberText(s.text, parsed.text);
-          put(parsed.text, SV.sense.pickTagged(senses, parsed), r);
-          return;
-        }
-      } catch (e) {
-        if (token !== pop.token) return; // 落到普通的整句翻译
-      }
-    }
     try {
-      const r = await translateText(s.text);
+      const r = await sentenceFor(s, w);
       if (token !== pop.token) return;
-      put(r.zh, null, r);
+      senseApplied++;
+      box.className = 'ctxs';
+      showSentence(box, r, s, w, gl, senses);
+      if (eng && !eng.textContent.trim()) eng.textContent = engineLabel(r) || ' ';
+      placePopup();
     } catch (e) {
       if (token !== pop.token || box.dataset.clicked) return; // 点了「本句译文」：那边自己显示结果或原因
       box.hidden = true;
       box.dataset.why = 'fail';
       placePopup();
     }
+  }
+
+  // 点的词所在的这一句的译文。微软翻译能用时，请它把这一句当 HTML 翻译、点的词包在 <b> 里（js/sense.js 的 tagSentence，
+  // js/translate.js 的 tagged：一个词一份，只存在 sessionStorage；按这一句选词义用的也是它），去掉标签的整句也当普通的整句译文存起来；
+  // 微软翻译用不了、出错时用普通的整句译文（缓存、内置翻译、MyMemory，和以前一样，没有标签）。
+  // 返回 { zh, engine, azure, parsed（带标签的译文解析出来的 { text, tag }，没有就是 null） }
+  async function sentenceFor(s, w) {
+    if (w && SV.tr.azureState() === 'ok') {
+      try {
+        const r = await SV.tr.tagged(s.text, w.start, w.end);
+        const parsed = SV.sense.parseTagged(r.html);
+        if (parsed.text) {
+          SV.tr.rememberText(s.text, parsed.text);
+          return { zh: parsed.text, engine: r.engine, azure: 'ok', parsed };
+        }
+      } catch (e) { /* 落到普通的整句译文 */ }
+    }
+    const r = await translateText(s.text);
+    return { zh: r.zh, engine: r.engine, azure: r.azure, parsed: null };
+  }
+
+  // 整句译文放进格子里（.ctxs：有几个意思的词自动显示的；.sent：「本句译文」），给点的词画下划线：
+  // - 有几个意思、能挑的词（js/sense.js）：确定时画那个意思和它在整句里的词（和以前一样）；拿不准（平手、标签太宽）时都不画。
+  // - 别的：按 js/wordspan.js 找这个词在整句译文里的位置，找到了才画（找不准就不画）。
+  // 整句先显示，下划线找到了再画（只多一条下划线，弹出框不变大小）。下划线只属于这一次点的词：带标签的译文一个词一份，
+  // 普通的整句译文的缓存里没有下划线。结果回来时弹出框已经关了、换了词，或者格子里换了别的译文，就不画。
+  // data-span（给测试看）：'sense' | 'tag' | 'cand' | 'rest' 画了；'unsure' | 'none' 没画；'wait' 还在找
+  function showSentence(box, r, s, w, gl, senses) {
+    const zh = r.zh;
+    const token = pop.token;
+    const pick = senses && senses.length >= 2 && r.parsed && SV.sense.pickable(gl, senses) ? SV.sense.pickTagged(senses, r.parsed) : null;
+    if (box.classList.contains('ctxs')) box.dataset.why = pick ? pick.why : 'plain';
+    if (pick && pick.index >= 0 && pick.start >= 0 && pick.end <= zh.length) {
+      putSentence(box, zh, pick, 'sense');
+      const best = senses[pick.index];
+      if (best && best.el && !best.el.classList.contains('best')) {
+        best.el.classList.add('best');
+        best.el.title = '符合这句的意思';
+        best.el.append(h('span', { class: 'sr' }, '（符合这句的意思）'));
+      }
+      return;
+    }
+    if (pick && (pick.why === 'tie' || pick.why === 'wide')) { putSentence(box, zh, null, 'unsure'); return; }
+    putSentence(box, zh, null, 'wait');
+    locateWord(s, w, zh, r.parsed ? r.parsed.tag : null, !!r.parsed).then((span) => {
+      if (token !== pop.token || box.svZh !== zh || box.dataset.span !== 'wait') return;
+      putSentence(box, zh, span.start >= 0 ? span : null, span.why);
+      placePopup();
+    }, () => {
+      if (token === pop.token && box.svZh === zh && box.dataset.span === 'wait') box.dataset.span = 'none';
+    });
+  }
+  function putSentence(box, zh, span, why) {
+    box.textContent = '';
+    box.svZh = zh;
+    box.dataset.span = why;
+    if (span && span.start >= 0 && span.end > span.start && span.end <= zh.length) {
+      box.append(zh.slice(0, span.start), h('span', { class: 'key', title: '这个词在这一句里的译文' }, zh.slice(span.start, span.end)), zh.slice(span.end));
+    } else {
+      box.append(zh);
+    }
+  }
+
+  // 小词（js/lang/*.js 的 tr.weak）
+  const isWeak = SV.wordspan.weakTest(L.tr && L.tr.weak);
+  // 点的词在整句译文 zh 里的位置（js/wordspan.js 的 plan、locate）。要用的东西：
+  // - 这个词自己的译文：小词典里的意思；不在小词典里（英语的词都不在）的，是弹出框里翻译引擎给它的译文（等它，不另外请求）；
+  //   小词典的原形是按词尾推测的，两样都要（推测的可能不对）。
+  // - 这一句里别的词的译文：小词典里的意思，或者 js/translate.js 的 wordsQuiet（单词的缓存；没有的一次请微软翻译翻一批，
+  //   不问 MyMemory）。小词不翻（它们单独译出来的常常不对，js/wordspan.js 也不拿来比）。
+  // tagged：zh 是微软翻译的带标签的整句（内置翻译、MyMemory 给的不是：js/wordspan.js 只按这个词的译文找）。
+  // 返回 { start, end, why }（start 是 -1：没找到）
+  async function locateWord(s, w, zh, tag, tagged) {
+    const p = SV.wordspan.plan(s.text, s.words, s.words.indexOf(w), SV.glossary.lookup, isWeak);
+    let own = '';
+    if (p.ownNeed) {
+      if (pop.wordTr) await pop.wordTr.catch(() => null);
+      own = (await SV.tr.wordsQuiet([p.word]))[p.word.toLowerCase()] || '';
+    }
+    const trOf = p.need.length ? await SV.tr.wordsQuiet(p.need) : {};
+    return SV.wordspan.locate(zh, tag, p.ctx(trOf, own), tagged);
   }
 
   // 在线翻译是不是因为被关掉才没法用
@@ -1502,10 +1558,14 @@
   // （微软翻译只是暂时连不上时，这个按钮不醒目：先说暂时连不上，打开 MyMemory 只是另一个办法）。
   // MyMemory 给单词的译文不可靠时，说一声，并把下面那个「本句译文」按钮（bSent，弹出框是文章里的一个词时才有）变成醒目的样子。
   // skip()：结果回来时如果它说「已经有了」（别的途径先放好了），就不放。run()：再翻一次（「打开在线翻译」以后）
-  function fillInto(box, run, okClass, errClass, eng, bSent, skip) {
+  // onOk(r)：译文放好以后再做的（整句译文里给点的词画下划线）
+  function fillInto(box, run, okClass, errClass, eng, bSent, skip, onOk) {
     const token = pop.token;
     box.className = errClass.replace(' err', '') + ' wait';
     box.textContent = '翻译中…';
+    // 上一次放的整句不算了：它还在找的下划线回来时不再画（showSentence 看 svZh 和 data-span）
+    box.svZh = null;
+    delete box.dataset.span;
     placePopup();
     Promise.resolve().then(() => run()).then((r) => {
       if (token !== pop.token || (skip && skip())) return;
@@ -1516,6 +1576,7 @@
         box.textContent = r.zh;
         box.className = okClass;
         if (eng) eng.textContent = engineLabel(r);
+        if (onOk) onOk(r);
       }
       placePopup();
     }, (err) => {
@@ -1529,7 +1590,7 @@
         b.addEventListener('click', (e) => {
           e.stopPropagation();
           turnOnline();
-          fillInto(box, run, okClass, errClass, eng);
+          fillInto(box, run, okClass, errClass, eng, null, null, onOk);
         });
         box.append(h('br'), b);
       }
@@ -2006,6 +2067,12 @@
   // 给自动测试看的状态（不影响使用）
   window.SVApp = {
     setAutoNextMax: (n) => { autoNextMax = n > 0 ? n : AUTO_NEXT_MAX; }, // 测试用：连着自动读几篇就停（平常是 AUTO_NEXT_MAX）
+    // 测试用：把现在打开的这篇换成给定的标题和段落（来源、时间等照旧），在固定的句子上查词、看整句译文里的下划线
+    openTestArticle: (title, paragraphs) => {
+      if (!cur.item || !cur.topic) return false;
+      openArticle(Object.assign({}, cur.item, { id: cur.item.id + '#test', title, blocks: paragraphs.map((text) => ({ type: 'p', text })) }), false);
+      return true;
+    },
     state: () => ({
       lang: L.code,
       langMenu: !!(langPicker && langPicker.open),

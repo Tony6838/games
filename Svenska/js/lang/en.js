@@ -303,7 +303,15 @@
       female: ['ava', 'emma', 'jenny', 'aria', 'michelle', 'samantha', 'zira', 'susan', 'karen', 'moira', 'tessa', 'serena', 'allison', 'victoria', 'fiona', 'kate', 'libby', 'sonia', 'hazel', 'catherine', 'nicky', 'joanna', 'salli', 'kimberly'],
       male: ['andrew', 'brian', 'guy', 'david', 'mark', 'daniel', 'alex', 'fred', 'tom', 'oliver', 'ryan', 'george', 'aaron', 'christopher', 'eric', 'roger', 'steffan', 'arthur', 'rishi'],
     },
-    tr: { from: 'en', azurePath: '/translate/en', mymemory: 'en' },
+    // weak：小词（见 js/lang/sv.js 的 tr.weak）
+    tr: {
+      from: 'en', azurePath: '/translate/en', mymemory: 'en',
+      weak: 'a an the of to in on at by for from with about as into onto over under after before between through during without within '
+        + 'against among and or but nor so yet if than that this these those which who whom whose what when where why how it its he him '
+        + 'his she her hers they them their theirs we us our ours you your yours i me my mine is are was were be been being am has have '
+        + 'had having do does did will would shall should can could may might must not no there here also very just then too up down '
+        + 'out off all any some each both either neither such own same other more most much many few only',
+    },
     text: {
       segmenter: 'en',
       // 词：字母、数字，中间可以有撇号、连字符（don't、well-known、Trump's），数字里可以有小数点、千分位（3.5、1,000）；

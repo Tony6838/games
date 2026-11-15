@@ -14,7 +14,9 @@
    同一段文字同时有两次要翻译（点词时自动翻这一句，接着又点了「本句译文」）：微软翻译那一步共用一个请求，不多花额度；
    微软翻译不行时，各自往下走（内置翻译、MyMemory）。
    单词的译文存在 localStorage（长期，记下是哪个翻译给的），句子的译文只存在 sessionStorage（关掉标签页就清掉），
-   因为那是 SR 文章的内容，按 SR 的条款不长期保存。 */
+   因为那是 SR 文章的内容，按 SR 的条款不长期保存。
+   在整句译文里给点的词画下划线（js/wordspan.js）还要这一句里别的词的译文：wordsQuiet，只用缓存、微软翻译（一次一批）、
+   已经下载好的内置翻译，不问 MyMemory。 */
 (function () {
   'use strict';
   const SV = window.SV;
@@ -97,8 +99,10 @@
     return 'ok';
   }
   function pause(why, ms) { azPauseUntil = Date.now() + ms; azPauseWhy = why; }
-  // 只发要翻译的文字（{ texts: [文字] }，查词选意思时加 textType: 'html'），不带 Cookie；语言在 Worker 里定死
+  // 只发要翻译的文字（{ texts: [文字] }，查词选意思时加 textType: 'html'），不带 Cookie；语言在 Worker 里定死。
+  // text 是数组时一次发几段（一句里别的词，见下面的 wordsQuiet），回答也是数组
   async function azureCall(text, textType) {
+    const texts = Array.isArray(text) ? text : [text];
     const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
     const timer = ctrl ? setTimeout(() => ctrl.abort(), AZ_TIMEOUT) : 0;
     let r;
@@ -107,7 +111,7 @@
       r = await fetch(azUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(textType === 'html' ? { texts: [text], textType: 'html' } : { texts: [text] }),
+        body: JSON.stringify(textType === 'html' ? { texts, textType: 'html' } : { texts }),
         cache: 'no-store',
         credentials: 'omit',
         signal: ctrl ? ctrl.signal : undefined,
@@ -120,7 +124,12 @@
       clearTimeout(timer);
     }
     if (r.ok) {
-      const t = j && Array.isArray(j.translations) ? j.translations[0] : null;
+      const all = j && Array.isArray(j.translations) ? j.translations : null;
+      if (Array.isArray(text)) {
+        if (all && all.length === texts.length && all.every((t) => typeof t === 'string')) return all;
+        throw err('server', '微软翻译的回答不对');
+      }
+      const t = all ? all[0] : null;
       if (typeof t === 'string' && t.trim()) return t;
       throw err('server', '微软翻译的回答不对');
     }
@@ -142,7 +151,7 @@
   // 同一段文字同时只发一个请求，大家等同一个结果（成功、失败都一样）
   const azInflight = new Map();
   function azure(text, textType) {
-    const id = (textType || 'plain') + '\n' + text;
+    const id = (textType || 'plain') + (Array.isArray(text) ? '[]\n' + text.join('\u0002') : '\n' + text);
     if (!azInflight.has(id)) azInflight.set(id, azureCall(text, textType).finally(() => azInflight.delete(id)));
     return azInflight.get(id);
   }
@@ -340,7 +349,8 @@
     return { zh, engine, azure: az };
   }
 
-  // 查词选意思（js/sense.js）：这一句的 HTML，查的词（第 start..end 个字）包在 <b> 里，只请微软翻译（别的翻译不放标签）。
+  // 查词选意思（js/sense.js）、在整句译文里给点的词画下划线（js/wordspan.js）：这一句的 HTML，查的词（第 start..end 个字）
+  // 包在 <b> 里，只请微软翻译（别的翻译不放标签）。
   // 返回 { html, engine: 'azure' | 'cache' }；微软翻译用不了时抛出带 code 的错误（azureState 的那些、'long'）。
   // 结果是 SR 文章的内容，只存在 sessionStorage。
   async function tagged(text, start, end) {
@@ -355,9 +365,64 @@
     return { html, engine: 'azure' };
   }
 
+  // 一句里别的词的译文（js/wordspan.js 拿来比：在整句译文里找点的词，见 js/app.js 的 locateWord）。先查单词的缓存；
+  // 没有的只问微软翻译（一次最多 10 个词、合计不超过 1000 个字符，和 Worker 的上限一样），存进单词的缓存（只写一次）；
+  // 微软翻译用不了时，用已经下载好的浏览器内置翻译（不开始下载）；不问 MyMemory（它的免费额度少，这只是为了画下划线）。
+  // 出错不抛出：没拿到译文的词就没有。返回 { 词（小写）: 译文 }
+  async function wordsQuiet(list) {
+    const out = Object.create(null); // 词是 constructor、toString 时也对
+    const need = [];
+    for (const w of list || []) {
+      const text = String(w || '').trim();
+      const key = text.toLowerCase();
+      if (!text || key in out || need.some((x) => x.toLowerCase() === key)) continue;
+      const hit = cacheGet('word', key, text);
+      if (hit) out[key] = hit;
+      else need.push(text);
+    }
+    if (!need.length) return out;
+    const got = [];
+    if (azureState() === 'ok') {
+      const parts = [];
+      let cur = [];
+      let n = 0;
+      for (const t of need) {
+        const len = Array.from(t).length;
+        if (len > AZ_MAX_CHARS) continue;
+        if (cur.length && (cur.length >= 10 || n + len > AZ_MAX_CHARS)) { parts.push(cur); cur = []; n = 0; }
+        cur.push(t);
+        n += len;
+      }
+      if (cur.length) parts.push(cur);
+      for (const p of parts) {
+        if (azureState() !== 'ok') break;
+        try {
+          // 只有一个词时和查词是同一个请求（查词的译文还在路上时不再发一次）
+          const zh = p.length === 1 ? [await azure(p[0])] : await azure(p, 'plain');
+          p.forEach((t, i) => { if (zh[i] && zh[i].trim()) got.push([t, zh[i].trim(), 'azure']); });
+        } catch (e) { break; }
+      }
+    } else if (builtin) {
+      for (const t of need) {
+        try {
+          const zh = await builtin.translate(t);
+          if (zh && zh.trim()) got.push([t, zh.trim(), 'builtin']);
+        } catch (e) { break; }
+      }
+    }
+    if (got.length) {
+      for (const [t, zh, e] of got) { out[t.toLowerCase()] = zh; wordCache[t.toLowerCase()] = { z: zh, e }; }
+      const keys = Object.keys(wordCache);
+      if (keys.length > 2000) for (const k of keys.slice(0, keys.length - 2000)) delete wordCache[k];
+      SV.store.set(WORD_KEY, wordCache);
+    }
+    return out;
+  }
+
   SV.tr = {
     translate,
     tagged,
+    wordsQuiet,
     builtinAvailability,
     hasBuiltinApi,
     mmUsage,

@@ -26,6 +26,8 @@
 //      （深色模式另一种蓝），弹出框不跳不变大小、不盖住词；拿不准不画；结果回来时弹出框已经换了、关了，真的没放进去。
 //      6b：在线翻译（MyMemory）关着、内置翻译要下载：微软翻译、内置翻译照样用，MyMemory 不用；点词自动翻的一句和「本句译文」共用微软翻译的请求。
 //      6c：Worker 的设置不对（403、404、405、500、Azure 的密钥不对）：这次打开的页面里不再问。
+//      6d：整句译文里点的词画下划线（js/wordspan.js），瑞典语、英语各一遍：Tony 的例子（enshrined →「规定」）、合成词和变形
+//      （säkerhetsfrågor、Fartygen）、同一句里换个词下划线跟着换、缓存、找不准不画、小词、深色、手机、微软翻译连不上时。
 //   7. 手机 390×844：额度用完时用 MyMemory 并说明；鼠标停在词上不弹、不翻译；手机宽度下的两种样子、很长的整句；MyMemory 给单词的字幕不显示；
 //      翻译全都失败时不画也不报错；微软翻译暂时连不上时说清楚；太忙时一分钟里不再问。
 //   9. 国旗：瑞典语 ↔ 英语、英语读报（来源、许可、分句、关键词、换语言接着读）。
@@ -596,9 +598,11 @@ function wordPicker(pool) {
   const usedText = new Set(['kommunen', 'grattis']); // 这两个词在第 6 轮开始时已经放进单词的缓存
   const usedSi = new Set();
   return {
-    // 小词典里没有的词（每次一个新的，免得用到单词的缓存）；newSentence：还要在一个没用过的句子里（句子的译文还没缓存）
+    // 小词典里没有的词（每次一个新的，免得用到单词的缓存）；newSentence：还要在一个没用过的句子里（句子的译文还没缓存）。
+    // 在整句译文里找点的词时，这一句里别的词也请微软翻译翻过、放进了单词的缓存（js/translate.js 的 wordsQuiet）：这些也不用
     fresh(newSentence = false) {
-      const w = pool.find((x) => !x.gl && x.text.length >= 4 && /^\p{L}+$/u.test(x.text) && !usedText.has(x.text.toLowerCase()) && (!newSentence || !usedSi.has(x.si)));
+      const asked = new Set(azRequests.filter((r) => r && !r.html).flat().map((t) => String(t).toLowerCase()));
+      const w = pool.find((x) => !x.gl && x.text.length >= 4 && /^\p{L}+$/u.test(x.text) && !usedText.has(x.text.toLowerCase()) && !asked.has(x.text.toLowerCase()) && (!newSentence || !usedSi.has(x.si)));
       if (w) { usedText.add(w.text.toLowerCase()); if (newSentence) usedSi.add(w.si); }
       return w;
     },
@@ -1210,16 +1214,23 @@ async function translationChecks() {
   await sleep(900);
   check('翻译：闪一下就好（过一会儿底色还原）', !(await evalJs(`document.querySelector('#popup .ctxs').classList.contains('flash')`)));
   await closePop();
-  // 同一句里别的只有一个意思的词：「本句译文」用刚才拿到的整句译文，不再花额度
+  // 同一句里别的只有一个意思的词：「本句译文」请微软翻译把这个词包在 <b> 里翻这一句（一次），整句里它的译文画下划线
+  // （找不准就不画）；再点一次「本句译文」用缓存，不再请求
   const sameSi = pool.find((x) => x.si === wU.si && x.gl && x.n === 1);
   if (sameSi) {
     n0 = azRequests.length;
     await clickW(sameSi);
     await sleep(300);
     await clickButtonText('#popup .acts button', '本句译文');
-    await sleep(300);
+    await waitFor(`(() => { const b = document.querySelector('#popup .sent'); return b && !b.hidden && b.dataset.span && b.dataset.span !== 'wait'; })()`, 4000, 100);
     ps = await popState();
-    check('翻译：同一句里别的词点「本句译文」，用已经拿到的整句译文（不再发请求）', ps && ps.sentBoxText === '这句' + keyU + '测试译文。' && azRequests.length === n0, brief(ps));
+    const htmlReqs = azRequests.slice(n0).filter((r) => r && r.html);
+    check('翻译：同一句里别的词点「本句译文」：请微软翻译把这个词包在 <b> 里翻这一句（一次），整句照样显示',
+      ps && ps.sentBoxText === '这句' + keyU + '测试译文。' && htmlReqs.length === 1 && htmlReqs[0][0].includes('<b>' + sameSi.text + '</b>'), `${brief(ps)} ${JSON.stringify(htmlReqs)}`);
+    n0 = azRequests.length;
+    await clickButtonText('#popup .acts button', '本句译文');
+    await sleep(300);
+    check('翻译：再点「本句译文」：用缓存，不再请求微软翻译', azRequests.length === n0, `${azRequests.length - n0} 次`);
     await closePop();
   }
 
@@ -1247,14 +1258,17 @@ async function translationChecks() {
   // 太宽（'wide'）；如果别的意思的词正好也在里面（没有 ⊂ 没有人），就是平手（'tie'）：都是拿不准
   check('翻译：标签比意思的词多三个字（太宽）：不画，整句照样显示', ps && !ps.best.length && ['wide', 'tie'].includes(ps.why) && ps.ctxs && !ps.key, brief(ps));
   await closePop();
-  // 有几个意思、但不能挑的词：只要普通的整句译文，自动显示，不画
+  // 有几个意思、但不能挑的词：整句译文自动显示，意思不画；整句也是带标签的（在整句里找这个词用），
+  // 微软没放标签、这个词的意思在整句里也找不到：整句里也不画
   const wP = pick.unpickable();
-  azPlan = { add: '普通' };
+  azPlan = { add: '普通', tag: null };
   n0 = azRequests.length;
   await clickW(wP);
   await popSettled();
+  await waitFor(`(() => { const b = document.querySelector('#popup .ctxs'); return b && b.dataset.span && b.dataset.span !== 'wait'; })()`, 4000, 100);
   ps = await popState();
-  check('翻译：有几个意思但不能挑的词（有单字或括号说明的意思）：发普通的整句，自动显示，不画', ps && ps.why === 'plain' && ps.ctxs && !ps.best.length && ps.sentence === '这句普通测试译文。' && azRequests.length === n0 + 1 && !azRequests[n0].html, `${wP.text} ${brief(ps)}`);
+  const htmlP = azRequests.slice(n0).filter((r) => r && r.html);
+  check('翻译：有几个意思但不能挑的词（有单字或括号说明的意思）：自动显示整句（带标签的请求一次），意思和整句都不画', ps && ps.why === 'plain' && ps.ctxs && !ps.best.length && !ps.key && ps.sentence === '这句普通测试译文。' && htmlP.length === 1 && htmlP[0][0].includes('<b>' + wP.text + '</b>'), `${wP.text} ${brief(ps)}`);
   await closePop();
   azPlan = {};
   // 结果回来时弹出框已经换到别的词：真的没放进去（senseApplied 不变；去掉 fillSentence 里对 pop.token 的检查，这一项就过不了）
@@ -1559,6 +1573,115 @@ async function translationChecks() {
   ps = await popState();
   check('手机翻译：太忙以后一分钟里不再问微软翻译', ps && azRequests.length === n0 && /^【译】/.test(ps.mt), brief(ps));
   await closePop();
+}
+
+// ================= 6d. 整句译文里点的词画下划线（js/wordspan.js；Tony 定的，2026-11-15）：英语、瑞典语一样 =================
+// 在一篇真的文章上换成固定的句子（SVApp.openTestArticle），假的 /translate 照真的微软翻译的回答答（fakes.mjs 的 AZ_REAL）：
+// 英语是 Tony 截图里的那一句（enshrined 的标签是空的、单独译成「入祀」，整句里是「规定」），瑞典语是两句编的（合成词、变形）
+const EN_P = 'The importance of maritime security and upholding international law at sea, as enshrined in UNCLOS, was agreed as essential to the security and prosperity of the Euro-Atlantic region.';
+const SV_P = 'Fartygen lämnade hamnen i Göteborg tidigt på morgonen. Regeringen vill diskutera säkerhetsfrågor med de nordiska grannländerna.';
+const CLEAR_TR_ALL = CLEAR_TR + ` try { localStorage.removeItem('en.trw.v1'); sessionStorage.removeItem('en.trs.v1'); } catch (e) {}`;
+// 弹出框里显示着的整句译文（.sent「本句译文」或者 .ctxs 自动显示的）：文字、下划线、data-span（js/app.js 的 showSentence）
+const sentState = () => evalJs(`(() => { const p = document.querySelector('#popup'); if (p.hidden) return null; const b = [...p.querySelectorAll('.sent, .ctxs')].find((x) => !x.hidden);
+  const k = b && b.querySelector('.key'); const r = p.getBoundingClientRect(); const de = document.documentElement; const c = k ? getComputedStyle(k) : null;
+  return { word: p.querySelector('.pw b').textContent, mt: p.querySelector('.mt') ? p.querySelector('.mt').textContent : '', box: b ? b.className : '', text: b ? b.textContent : '',
+    key: k ? k.textContent : '', keys: b ? b.querySelectorAll('.key').length : 0, span: b ? b.dataset.span || '' : '', title: k ? k.title : '', line: c ? c.textDecorationLine : '', color: c ? c.textDecorationColor : '',
+    onScreen: r.left >= 0 && r.top >= 0 && r.right <= de.clientWidth + 0.5 && r.bottom <= innerHeight + 0.5 }; })()`);
+// 点正文里第 nth 个是 text 的词，等弹出框；没有自动显示的整句时点「本句译文」；等下划线找完（data-span 不是 'wait'）
+async function sentenceFor(text, nth = 0) {
+  const i = await evalJs(`(() => { const all = [...document.querySelectorAll('#article .w')]; const body = all.filter((w) => w.closest('.body') && w.textContent === ${JSON.stringify(text)}); return body[${nth}] ? all.indexOf(body[${nth}]) : -1; })()`);
+  if (i < 0) return null;
+  await closePop();
+  await sleep(150);
+  await clickW({ i, text });
+  await popSettled();
+  if (!(await evalJs(`!!document.querySelector('#popup .ctxs')`))) await clickButtonText('#popup .acts button', '本句译文');
+  await waitFor(`(() => { const p = document.querySelector('#popup'); const b = [...p.querySelectorAll('.sent, .ctxs')].find((x) => !x.hidden); return b && b.dataset.span && b.dataset.span !== 'wait'; })()`, 6000, 100);
+  return sentState();
+}
+const sentBrief = (x) => (x ? JSON.stringify({ word: x.word, mt: x.mt, text: x.text, key: x.key, span: x.span }) : '没有弹出框');
+async function underlineChecks() {
+  console.log('\n== 6d. 整句译文里点的词画下划线（js/wordspan.js）：瑞典语、英语一样（假的微软翻译照真的回答答）');
+  azMode = 'ok'; azPlan = { real: true }; azDelay = 0; mmMode = 'ok';
+  for (const lang of ['sv', 'en']) {
+    const L = lang === 'sv' ? '瑞典语' : '英语';
+    const opened = await openPage({ width: 1280, height: 800, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true, query: lang === 'en' ? '?lang=en' : '', initJs: CLEAR_TR_ALL });
+    const art = opened && (await openFirstCard(0)) && (await evalJs(`SVApp.openTestArticle(${JSON.stringify(lang === 'sv' ? 'Fartygen lämnade Göteborg' : 'Maritime security')}, [${JSON.stringify(lang === 'sv' ? SV_P : EN_P)}])`));
+    check(`下划线（${L}）：页面打开，换成测试用的句子`, !!art);
+    if (!art) continue;
+    if (lang === 'sv') {
+      let n0 = azRequests.length;
+      let x = await sentenceFor('Fartygen');
+      const html = azRequests.slice(n0).filter((r) => r && r.html);
+      check('瑞典语：Fartygen（单独译成「舰船」）点「本句译文」：微软翻译把它包在 <b> 里翻这一句（一次），整句译文里「舰队」画下划线',
+        x && x.mt === '舰船' && x.box === 'sent' && x.text === '舰队清晨离开哥德堡港。' && x.key === '舰队' && x.span === 'tag' && x.keys === 1 && html.length === 1 && html[0][0] === '<b>Fartygen</b> lämnade hamnen i Göteborg tidigt på morgonen.', `${sentBrief(x)} ${JSON.stringify(html)}`);
+      check('瑞典语：下划线和选词义的一样（蓝色、一整条），title 说明它是什么', x && /underline/.test(x.line) && x.color === 'rgb(21, 101, 192)' && x.title === '这个词在这一句里的译文' && x.onScreen, JSON.stringify(x && { line: x.line, color: x.color, title: x.title }));
+      await shot('underline-sv-fartygen');
+      x = await sentenceFor('säkerhetsfrågor');
+      check('瑞典语：合成词 säkerhetsfrågor →「安全问题」画下划线', x && x.text === '政府希望与北欧邻国讨论安全问题。' && x.key === '安全问题', sentBrief(x));
+      await shot('underline-sv-sakerhetsfragor');
+      await setDark(true);
+      await sleep(150);
+      x = await sentState();
+      check('瑞典语：深色模式下是浅蓝色', x && x.color === 'rgb(100, 181, 246)', x && x.color);
+      await shot('underline-sv-sakerhetsfragor-dark');
+      await setDark(false);
+      // 同一句里别的词：带标签的整句一个词一份，下划线是这一次点的词的（不是上一次的）
+      n0 = azRequests.length;
+      x = await sentenceFor('hamnen');
+      check('瑞典语：同一句里再点 hamnen：画「港」，不是上一次的「舰队」', x && x.key === '港' && x.keys === 1 && azRequests.slice(n0).filter((r) => r && r.html).length === 1, sentBrief(x));
+      n0 = azRequests.length;
+      x = await sentenceFor('Fartygen');
+      check('瑞典语：再点 Fartygen：用缓存（不再请求），画「舰队」', x && x.key === '舰队' && azRequests.length === n0, `${sentBrief(x)} ${azRequests.length - n0} 次`);
+      // tidigt：标签是空的、剩下两处没有着落（「清晨」「离开」）：不画；小词 med：标签「与」不是它的意思里的字，不画
+      x = await sentenceFor('tidigt');
+      check('瑞典语：tidigt（小词典「早」，标签是空的）：整句照样显示，找不准就不画', x && x.text === '舰队清晨离开哥德堡港。' && !x.key && x.span === 'none', sentBrief(x));
+      x = await sentenceFor('med');
+      check('瑞典语：小词 med 的标签「与」不是它的意思里的字：不画', x && !x.key && x.span === 'none', sentBrief(x));
+      // 有几个意思的词（morgonen：早上；明天）：整句自动显示，微软的标签对不上意思也找不到：都不画
+      x = await sentenceFor('morgonen');
+      check('瑞典语：有几个意思的词（morgonen）：整句自动显示在上面，找不准不画', x && x.box.includes('ctxs') && x.text === '舰队清晨离开哥德堡港。' && !x.key, sentBrief(x));
+      await closePop();
+    } else {
+      const n0 = azRequests.length;
+      let x = await sentenceFor('enshrined');
+      check('英语（Tony 的例子）：enshrined 单独译成「入祀」（整句里没有），点「本句译文」：整句译文里「规定」画下划线',
+        x && x.mt === '入祀' && x.text === '联合国海洋法公约中规定的海上安全和维护国际法的重要性，被认定为欧亚大西洋地区安全与繁荣的关键。' && x.key === '规定' && x.span === 'rest' && x.keys === 1 && x.onScreen, sentBrief(x));
+      const urls = azRequests.slice(n0).filter(Boolean);
+      check('英语：都走 Worker 的 /translate/en；这一句里别的词一次请求一批（不问 MyMemory）', urls.length >= 3 && urls.every((r) => /\/translate\/en$/.test(r.url)) && urls.some((r) => !r.html && r.length > 1), JSON.stringify(urls.map((r) => r.length + (r.html ? 'h' : ''))));
+      await shot('underline-en-enshrined');
+      await setDark(true);
+      await sleep(150);
+      await shot('underline-en-enshrined-dark');
+      await setDark(false);
+      x = await sentenceFor('maritime');
+      check('英语：maritime（单独译成「海事」）→ 标签在「海上」上，画「海上」', x && x.key === '海上' && x.span === 'tag', sentBrief(x));
+      x = await sentenceFor('the', 0);
+      check('英语：小词 the 的标签放在「欧」上：不画', x && !x.key && x.span === 'none', sentBrief(x));
+      await closePop();
+    }
+  }
+  // 手机上：下划线在屏幕内、弹出框不出屏（瑞典语）
+  const phone = await openPage({ width: 390, height: 844, mobile: true, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true, ua: ANDROID_UA, initJs: CLEAR_TR_ALL });
+  const artP = phone && (await openFirstCard(0)) && (await evalJs(`SVApp.openTestArticle('Fartygen lämnade Göteborg', [${JSON.stringify(SV_P)}])`));
+  if (artP) {
+    const x = await sentenceFor('säkerhetsfrågor');
+    check('手机：瑞典语的整句译文里「安全问题」画下划线，弹出框在屏幕内', x && x.key === '安全问题' && x.onScreen, sentBrief(x));
+    await shot('underline-phone-sv');
+    await closePop();
+  } else check('手机：页面打开，换成测试用的句子', false);
+  // 微软翻译用不了：整句用别的翻译（这里是 MyMemory 代答，没有标签），只按这个词的译文找，找不到就不画
+  azMode = 'down';
+  const opened = await openPage({ width: 1280, height: 800, mobile: false, fakeSpeech: true, noBuiltin: true, mockMM: true, cloud: true, query: '?lang=en', initJs: CLEAR_TR_ALL });
+  const artD = opened && (await openFirstCard(0)) && (await evalJs(`SVApp.openTestArticle('Maritime security', [${JSON.stringify(EN_P)}])`));
+  if (artD) {
+    const mm0 = mmRequests.length;
+    const x = await sentenceFor('enshrined');
+    check('微软翻译连不上：「本句译文」用 MyMemory（没有标签），找不到就不画、不报错', x && /【译】/.test(x.text) && !x.key && x.span === 'none', `${sentBrief(x)} MyMemory ${mmRequests.length - mm0} 次`);
+    await closePop();
+  } else check('微软翻译连不上：页面打开', false);
+  azMode = 'ok';
+  azPlan = {};
 }
 
 const summary = { url: baseUrl, topics: [] };
@@ -2961,6 +3084,9 @@ try {
 
   // ================= 6、7. 翻译：微软翻译、按这一句选词义（函数在文件后面） =================
   await translationChecks();
+
+  // ================= 6d. 整句译文里点的词画下划线：瑞典语、英语（函数在文件前面） =================
+  await underlineChecks();
 
   // ================= 9. 国旗：瑞典语 ↔ 英语；英语版（函数在文件后面） =================
   await languageChecks();
