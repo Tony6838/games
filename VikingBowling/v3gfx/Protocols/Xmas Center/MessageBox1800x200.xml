@@ -1,0 +1,164 @@
+<!--
+
+Message Box 1800x200
+-->
+
+<!-- Top and Highlights -->
+<rectangle_fill>
+	<rect>
+		<x>5</x>
+		<y>0</y>
+		<w>1790</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>208</red>
+	<green>208</green>
+	<blue>208</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>3</x>
+		<y>1</y>
+		<w>1794</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>2</y>
+		<w>1796</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>3</y>
+		<w>1798</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>4</y>
+		<w>1798</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+
+<!-- Body -->
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>6</y>
+		<w>1800</w>
+		<h>193</h>
+	</rect>
+	<color>
+	<trans>255</trans>	
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Filled -->
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>10</y>
+		<w>1796</w>
+		<h>180</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>255</red>
+	<green>255</green>
+	<blue>255</blue>
+	</color>	
+</rectangle_fill>
+
+
+<!-- Bottom and Shadows-->
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>198</y>
+		<w>1798</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>199</y>
+		<w>1796</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>80</red>
+	<green>80</green>
+	<blue>80</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>4</x>
+		<y>200</y>
+		<w>1792</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>55</trans>
+	<red>40</red>
+	<green>40</green>
+	<blue>40</blue>
+	</color>	
+</rectangle_fill>
+
+
+
+

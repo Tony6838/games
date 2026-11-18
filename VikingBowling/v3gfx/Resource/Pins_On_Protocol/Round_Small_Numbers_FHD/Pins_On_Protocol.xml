@@ -1,0 +1,940 @@
+
+<!--
+	===========================================================================================================
+		Käglor på protokoll - Round Small with Numbers	
+		Filnamn:	Round_Small_Numbers.xml
+				
+	===========================================================================================================	
+-->
+<picture>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Empty800x800.png</file>
+	<rect>
+		<!-- <x>560|560|560|760|960|110|110|310|410|560</x> -->
+		<x>735|735|735|960|960|300|480|652|735</x>
+		<y>315</y>
+		<w>450</w>
+		<h>450</h>
+	</rect>
+<layer_after_1>
+
+<!-- Kägla 7..10 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file>
+	<rect>
+		<x>0</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>200</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>400</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>600</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>	
+<!-- Kägla 4..6 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>100</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>300</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>500</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>	
+<!-- Kägla 2..3 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>200</x>
+		<y>450</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>400</x>
+		<y>450</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>
+<!-- Kägla 1 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Gray.png</file> 
+	<rect>
+		<x>300</x>
+		<y>600</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+</picture>
+
+<!-- Kvarstående käglor -->
+<!-- Kägla 7..10 -->
+<picture>
+	<id>#ANY_PIN_NUM_7#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file>
+	<rect>
+		<x>0</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+	<layer_after_1>
+		<true_type_text>
+			<text>7</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>
+</picture>
+<picture>
+	<id>#ANY_RED_PIN_NUM_7#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file>
+	<rect>
+		<x>0</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+	<layer_after_1>
+		<true_type_text>
+			<text>7</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>
+</picture>
+
+<picture>
+	<id>#ANY_PIN_NUM_8#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>200</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+	<layer_after_1>
+		<true_type_text>
+			<text>8</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_8#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>200</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+	<layer_after_1>
+		<true_type_text>
+			<text>8</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+
+<picture>
+	<id>#ANY_PIN_NUM_9#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>400</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>9</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>		
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_9#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>400</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>9</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>		
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+<picture>
+	<id>#ANY_PIN_NUM_10#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>600</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>10</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_10#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>600</x>
+		<y>150</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>10</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+<!-- Kägla 4..6 -->
+<picture>
+	<id>#ANY_PIN_NUM_4#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>100</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+	<layer_after_1>
+		<true_type_text>
+			<text>4</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_4#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>100</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>	
+	<layer_after_1>
+		<true_type_text>
+			<text>4</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+
+<picture>
+	<id>#ANY_PIN_NUM_5#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>300</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>5</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_5#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>300</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>5</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+<picture>
+	<id>#ANY_PIN_NUM_6#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>500</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>6</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_6#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>500</x>
+		<y>300</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>6</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+<!-- Kägla 2..3 -->
+<picture>
+	<id>#ANY_PIN_NUM_2#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>200</x>
+		<y>450</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>2</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>		
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_2#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>200</x>
+		<y>450</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>2</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>		
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+<picture>
+	<id>#ANY_PIN_NUM_3#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>400</x>
+		<y>450</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>3</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+<picture>
+	<id>#ANY_RED_PIN_NUM_3#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>400</x>
+		<y>450</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>3</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>40</x>
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+<!-- Kägla 1 -->
+<picture>
+	<id>#ANY_PIN_NUM_1#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_White.png</file> 
+	<rect>
+		<x>300</x>
+		<y>600</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>1</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>30</x>	<!-- fix för att centrera 1 visuellt -->
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+<picture>
+	<id>#ANY_RED_PIN_NUM_1#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Medium_Numbers_FHD\Round_Red.png</file> 
+	<rect>
+		<x>300</x>
+		<y>600</y>
+		<w>175</w>
+		<h>175</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>
+			<text>1</text>
+			<font>Arial</font>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<rect>
+				<x>30</x>	<!-- fix för att centrera 1 visuellt -->
+				<y>40</y>
+				<w>120</w>
+				<h>120</h>	
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>255</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<halo_factor>0</halo_factor>
+			<pen_width>0</pen_width>
+			<aspect>0.75</aspect> 
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+</layer_after_1>
+</picture>

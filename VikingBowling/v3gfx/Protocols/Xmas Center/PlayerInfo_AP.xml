@@ -1,0 +1,146 @@
+<!--
+
+-->
+<picture>
+	<file>Empty1920x80.png</file>
+	<!-- Använd ID om något skall visas samt styra eventuell bredd. (vi kan göra flera olika varianter med olika bredder.) -->
+	
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>80</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>	
+		
+		<layer_after_1>	
+			<rectangle_fill>
+				<rect>
+					<x>0</x>
+					<y>0</y>
+					<w>1920</w>
+					<h>80</h>
+				</rect>
+				<color>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+				</color>	
+			</rectangle_fill>
+			
+	<!-- Spelarnamnet för aktiv spelare -->
+		<true_type_text>
+			<id>#NAME#</id>		
+			<rect>
+				<x>20</x>
+				<y>15</y>
+				<w>500</w>
+				<h>60</h>
+			</rect>
+			
+			<font>arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_pen>
+				<trans>0</trans>
+				<red>225</red>
+				<green>225</green>
+				<blue>225</blue>
+			</color_pen>		
+			<fontstyle>bold</fontstyle>
+			<align>left</align>
+			<aspect>0.85</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>0</shadow_factor>
+			<halo_pen>0</halo_pen>
+			<is_text_rec>1</is_text_rec>		
+		</true_type_text>		
+
+	<!-- HCP Beskrivning -->		
+		<true_type_text>	
+			<id>#HCPD#</id>
+			<rect>
+				<x>1050</x>
+				<y>15</y>
+				<w>70</w>
+				<h>60</h>
+			</rect>
+			<aspect>0.65</aspect>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>
+	
+	<!-- HCP värde -->		
+		<true_type_text>
+			<id>#HCP#</id>
+			<rect>
+				<x>1150</x>
+				<y>15</y>
+				<w>50</w>
+				<h>60</h>
+			</rect>
+			<aspect>0.65</aspect>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>
+		
+	<!-- SER Beskrivning -->		
+		<true_type_text>
+			<id>#SCRD#</id>
+			<text>SER</text>
+			<rect>
+				<x>1290</x>
+				<y>15</y>
+				<w>85</w>
+				<h>60</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>
+
+		<!-- SER värde -->		
+		<true_type_text>
+			<id>#SCR#</id>
+			<text>44</text>
+			<rect>
+				<x>1390</x>
+				<y>15</y>
+				<w>200</w>
+				<h>60</h>
+			</rect>
+			<aspect>0.85</aspect>
+			<align>left</align>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>	
+
+		<true_type_text>	<!-- Total Beskrivning -->
+			<id>#TOTD#</id>
+			<text>TOT</text>
+			<rect>
+				<x>1610</x>
+				<y>15</y>
+				<w>85</w>
+				<h>60</h>
+			</rect>
+			<align>left</align>
+			<aspect>0.75</aspect>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>		
+		<true_type_text>	<!-- Total värde -->
+			<id>#TOT#</id>
+			<text>44</text>			
+			<rect>
+				<x>1710</x>
+				<y>15</y>
+				<w>200</w>
+				<h>60</h>
+			</rect>
+			<aspect>0.85</aspect>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>
+</layer_after_2>	
+</picture>	

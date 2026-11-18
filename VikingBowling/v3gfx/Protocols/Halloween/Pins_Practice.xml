@@ -1,0 +1,214 @@
+
+<!--
+	===========================================================================================================
+		Kvarstående käglor efter 1:a slag - Brunswick Pins
+	===========================================================================================================	
+-->
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla10 -->  
+	<rect>
+		<x>1364</x>
+		<y>501</y>
+		<w>62</w>
+		<h>28</h>				
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla9 -->  
+	<rect>
+		<x>1010</x>
+		<y>501</y>
+		<w>62</w>
+		<h>28</h>			
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla8 -->  
+	<rect>
+		<x>657</x>
+		<y>501</y>
+		<w>62</w>
+		<h>28</h>					
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla7 -->  
+	<rect>
+		<x>304</x>
+		<y>501</y>
+		<w>62</w>
+		<h>28</h>						
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla6 -->  
+	<rect>
+		<x>1251</x>
+		<y>640</y>
+		<w>72</w>
+		<h>32</h>					
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla5 -->  
+	<rect>
+		<x>861</x>
+		<y>640</y>
+		<w>72</w>
+		<h>32</h>						
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla4 -->  
+	<rect>
+		<x>469</x>
+		<y>640</y>
+		<w>72</w>
+		<h>32</h>					
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla3 -->  
+	<rect>
+		<x>1084</x>
+		<y>790</y>
+		<w>80</w>
+		<h>34</h>						
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla2 -->  
+	<rect>
+		<x>653</x>
+		<y>790</y>
+		<w>80</w>
+		<h>34</h>					
+	</rect>	
+</picture>
+<picture> 
+	<file>Dot200Black.png</file>			<!-- Kägla1 -->  
+	<rect>
+		<x>900</x>
+		<y>950</y>
+		<w>86</w>
+		<h>36</h>					
+	</rect>	
+</picture>
+
+			
+<picture> 
+ 	
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla10 --> 
+	<trans>1</trans>
+	<rect>
+		<x>1326</x>
+		<y>118</y>
+		<w>137</w>
+		<h>550</h>				
+	</rect>	
+</picture>
+
+<picture> 
+ 	
+	<file>ScoreKingNoReflex.png</file>			<!-- Kägla9 -->  
+	<trans>1</trans>
+	<rect>
+		<x>972</x>
+		<y>118</y>
+		<w>137</w>
+		<h>550</h>				
+	</rect>	
+</picture>
+
+<picture> 
+ 	
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla8 -->  
+	<trans>1</trans>
+	<rect>
+		<x>619</x>
+		<y>118</y>
+		<w>137</w>
+		<h>550</h>					
+	</rect>	
+</picture>
+
+<picture> 
+ 	
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla7 -->  
+	<trans>1</trans>
+	<rect>
+		<x>266</x>
+		<y>118</y>
+		<w>137</w>
+		<h>550</h>					
+	</rect>	
+</picture>
+
+<picture> 
+ 	
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla6 -->  
+	<trans>1</trans>
+	<rect>
+		<x>1206</x>
+		<y>186</y>
+		<w>160</w>
+		<h>650</h>					
+	</rect>	
+</picture>
+
+<picture> 
+ 	
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla5 -->  
+	<trans>1</trans>
+	<rect>
+		<x>816</x>
+		<y>186</y>
+		<w>160</w>
+		<h>650</h>									
+	</rect>	
+</picture>
+
+<picture> 
+ 	
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla4 -->  
+	<trans>1</trans>
+	<rect>
+		<x>424</x>
+		<y>186</y>
+		<w>160</w>
+		<h>650</h>								
+	</rect>	
+</picture>
+
+<picture> 
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla3 -->  
+	<trans>1</trans>
+	<rect>
+		<x>1030</x>
+		<y>263</y>
+		<w>185</w>
+		<h>750</h>				
+	</rect>	
+</picture>
+
+<picture> 
+	<file>ScoreKingNoReflex.png</file> 			<!-- Kägla2 -->  
+	<trans>1</trans>
+	<rect>
+		<x>600</x>
+		<y>263</y>
+		<w>185</w>
+		<h>750</h>				
+	</rect>	
+</picture>
+
+<picture> 
+	<file>ScoreKingNoReflex.png</file>			<!-- Kägla1 -->
+	<trans>1</trans>
+	<rect>
+		<x>837</x>
+		<y>350</y>
+		<w>210</w>
+		<h>850</h>					
+	</rect>	
+</picture>

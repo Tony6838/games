@@ -34,8 +34,11 @@
 | `MaJiang/` | 上海麻将：游戏、测试工具、AI 说明和测试报告，见其中的 `README.md` |
 | `Tractor/` | 拖拉机：同上 |
 | `Svenska/` | 瑞典语读报：网页、测试工具和说明（新闻来源、翻译、朗读），见其中的 `README.md` |
+| `VikingBowling/` | Viking Bowling：3D 保龄球（瑞典语、英语、丹麦语、挪威语、芬兰语），用 VBS Bowling AB 的保龄球计分系统 Viking 4.4 的计分规则、比赛形式和球道电视；见其中的 `README.md` |
 | `index.html` | 在线首页 |
 
 ## 许可
 
 MIT 许可，见 `LICENSE`。可以自由使用、修改和传播。
+
+例外：`VikingBowling/` 不在 MIT 许可之内，版权归 VBS Bowling AB 所有，保留一切权利，见 `VikingBowling/LICENSE`。

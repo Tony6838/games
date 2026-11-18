@@ -1,0 +1,198 @@
+<!--
+	===========================================================================================================
+		Copyright 2019 VBS Bowling AB
+		Datum:		20190208
+	===========================================================================================================	
+-->
+<protocol>
+	<x_generate>1920</x_generate>
+	<y_generate>1080</y_generate>
+	<y_start>276;276;276;276;276;276;270;260</y_start>  	<!-- så här högt upp börjar protokoll -->
+	<use_current_player>1</use_current_player>
+	
+	<!-- Bakgrund Start -->
+	<layer_before_1>
+		<!--
+		<picture>
+			<file>background.png</file>
+			<color_factor>1.0</color_factor>
+			<image_tranparancy>1.0</image_tranparancy>
+			<rect>
+				<x>0</x>
+				<y>0</y>
+				<w>1920</w>
+				<h>1080</h>
+			</rect>	
+		</picture>
+		-->
+		
+		<import>CommonInfo_Practice.xml</import>		
+		
+		<picture> <!-- Ny tag på en bild i protokollkatalogen som vi vill visa -->
+			<file>Empty1920x1080.png</file> <!-- Bild lokaliserad brevid xml fil -->
+			<color_factor>1.0</color_factor>
+			<image_transparancy>1.0</image_transparancy>
+			<rect>
+				<x>100</x>
+				<y>200</y>
+				<w>1820</w>
+				<h>880</h>
+			</rect>	
+
+			<layer_after_1> 
+				<picture>
+				<file>Laminate.png</file>
+					<rect>			
+						<x>-50</x>
+						<y>400</y>
+						<w>2000</w>
+						<h>700</h>	
+					</rect>	
+				</picture>	
+				<import>pins_practice.xml</import>
+			</layer_after_1>			
+		</picture>		
+	</layer_before_1>	
+	<!-- Bakgrund Slut -->
+
+	
+	<active_player>  
+		<y_pre_addon>1</y_pre_addon> <!-- marginal till ovanstående spelare om inte detta är första spelaren. -->
+		<y_post_addon>1</y_post_addon> <!-- marginal till underliggande spelare (värdena gäller 1-8 spelare)-->
+		<xpos>0</xpos> <!-- marginal till vänster kant av bild-->
+		<y_scale>0.6;0.6;0.6;0.6;0.6;0.55;0.5;0.48</y_scale> <!-- hur mycket skall vi förstora/minska grid.png för de olika spelarantalen-->
+		<file>Empty1920x240.png</file>	
+		
+		<layer_after_1>
+
+		<import>SingleFrame_AP.xml</import>
+			
+		<picture>
+				<file>Empty1920x240.png</file>
+				<rect>
+					<x>470</x>
+					<y>0</y>
+					<w>1205</w>
+					<h>240</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>1</trans>	
+				
+				<layer_after_1>	
+					<import>Frame_1920x238.xml</import>	
+					<picture>
+						<file>Empty1920x240.png</file>
+						<rect>
+							<x>2</x>
+							<y>14</y>
+							<w>1916</w>
+							<h>217</h>
+						</rect>	
+						<color_factor>1.0</color_factor>
+						<trans>1</trans>	
+						
+						<layer_before_1>
+						<rectangle_fill>
+							<rect>
+								<x>0</x>
+								<y>0</y>
+								<w>1920</w>
+								<h>240</h>
+							</rect>
+							<color>
+								<trans>255</trans>
+								<red>255</red>
+								<green>255</green>
+								<blue>255</blue>
+							</color>
+						</rectangle_fill>						
+						</layer_before_1>
+						
+						<layer_after_1>	
+							<import>PlayerInfo_Practice.xml</import>
+						</layer_after_1>							
+					</picture>				
+				</layer_after_1>				
+			</picture>			
+		</layer_after_1>
+		
+	</active_player>
+	
+	<inactive_player>
+		<y_pre_addon>1</y_pre_addon> <!-- marginal till ovanstående spelare om inte detta är första spelaren. -->
+		<y_post_addon>1</y_post_addon> <!-- marginal till underliggande spelare (värdena gäller 1-8 spelare)-->
+		<xpos>0</xpos> <!-- marginal till vänster kant av bild-->
+		<y_scale>0.5;0.5;0.5;0.5;0.5;0.5;0.45;0.4</y_scale> <!-- hur mycket skall vi förstora/minska grid.png för de olika spelarantalen-->
+		<file>Empty1920x240.png</file>	
+
+		<layer_after_1>
+		
+		<import>SingleFrame_IP.xml</import>
+		
+			<picture>
+				<file>Empty1920x240.png</file>
+				<rect>
+					<x>470</x>
+					<y>0</y>
+					<w>1185</w>
+					<h>240</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>1</trans>	
+				
+				<layer_after_1>	
+					<import>Frame_1920x238.xml</import>	
+					<picture>
+						<file>Empty1920x240.png</file>
+						<rect>
+							<x>2</x>
+							<y>14</y>
+							<w>1916</w>
+							<h>217</h>
+						</rect>	
+						<color_factor>1.0</color_factor>
+						<trans>1</trans>	
+						
+						<layer_before_1>
+						<rectangle_fill>
+							<rect>
+								<x>0</x>
+								<y>0</y>
+								<w>1920</w>
+								<h>240</h>
+							</rect>
+							<color>
+								<trans>105</trans>
+								<red>255</red>
+								<green>255</green>
+								<blue>255</blue>
+							</color>
+						</rectangle_fill>						
+						</layer_before_1>
+						
+						<layer_after_1>	
+							<import>PlayerInfo_Practice.xml</import>
+						</layer_after_1>							
+					</picture>				
+				</layer_after_1>				
+			</picture>			
+		</layer_after_1>
+	</inactive_player>
+
+<bottom_panel_20>
+	<y_generate>450;330;300;300;300;200;150</y_generate>
+	<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+	<picture>
+		<file>Empty1920x450.png</file>
+		<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>450;330;300;300;300;200;150</h>
+		</rect>
+		<import>common_stop_practice.xml</import>	
+	</picture>
+</bottom_panel_20>
+	
+</protocol>

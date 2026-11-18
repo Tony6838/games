@@ -1,0 +1,367 @@
+<!--
+	===========================================================================================================
+		Viking - Svenskt Banpoängspel 4man 4banor
+		Filen testas med protkollet Viking.
+		
+		Filnamn:	banpoäng8man8banor.xml
+		Datum:		20200423
+						
+		Text1:		Total Diff mellan lagen
+		Text2:		Diff för Banpar 1-2
+		Text3:		Diff för Banpar 3-4
+		Text4:		Diff för Banpar 5-6
+		Text5:		Diff för Banpar 7-8
+		Text6:		Lagpoäng för hemmalaget
+		Text7:		Lagpoäng för bortalaget
+		Text8:		Pari (värde)
+		Text9:		Namn på hemmalag
+		Text10:		Namn på bortalag
+		Text11:		Pari (text)
+								
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+<layer_before_11>
+<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\Filter\GrayGradient.png</file>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>640</w>
+			<h>480</h>
+		</rect>
+		<color_factor>1</color_factor>
+	</picture>
+</layer_before_11>
+
+<layer_after_11>
+	<true_type_text>	
+		<id>#VBST_JOB_text6#</id>
+		<text>Lagpoäng Hemma</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>100</x>
+			<y>10;10;5;2</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<text>Lagnamn Hemma</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>10;10;5;2</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Lagpoäng Borta</text>
+		<align>center</align>	
+		<rect>
+			<x>100</x>
+			<y>40;40;35;20</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text10#</id>
+		<text>Lagnamn Borta</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>40;40;35;20</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	
+	<!-- Total diff mellan lagen -->
+	<picture>
+		<id>#VBST_JOB_text1#</id>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>400</x>
+			<y>5;5;5;2;2;2;2;1</y>
+			<w>70</w>
+			<h>60;60;50;40</h>
+		</rect>
+	</picture>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Lag Diff</text>
+		<align>center</align>
+		<is_text_rec>0</is_text_rec>	
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<rect>
+			<x>410</x>
+			<y>15;15;15;12;12;12;12;11</y>
+			<w>50</w>
+			<h>40;40;30;20</h>
+		</rect>
+		<shadow_factor>1</shadow_factor>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<text>Pari</text>
+		<align>center</align>
+		<is_text_rec>0</is_text_rec>	
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<rect>
+			<x>475</x>
+			<y>15;15;10;5</y>
+			<w>50</w>
+			<h>15;15;15;10</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<text>Pari värde</text>
+		<align>center</align>
+		<is_text_rec>0</is_text_rec>	
+		<rect>
+			<x>475</x>
+			<y>35;35;30;20</y>
+			<w>50</w>
+			<h>20;20;20;15</h>
+		</rect>
+	</true_type_text>
+</layer_after_11>
+
+
+<!-- VBS-T banparsdiffar nedanför protokollen -->
+<bottom_panel_11>
+	<id>DD</id>
+	<y_generate>90;90;90;90;60</y_generate>
+
+	<!-- Team Logos -->
+	<picture>
+	<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+	<rect>
+		<x>15</x>
+		<y>0</y>
+		<w>90;90;90;90;60</w>
+		<h>88;88;88;88;58</h>
+	</rect>
+	</picture>
+	
+	<picture>
+	<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+	<rect>
+		<x>535;535;535;535;565</x>
+		<y>0</y>
+		<w>90;90;90;90;60</w>
+		<h>88;88;88;88;58</h>
+	</rect>
+	</picture>
+	
+	<picture>
+	<file>#teamLogo_1#</file>
+	<rect>
+		<x>20;20;20;20;18</x>
+		<y>7;7;7;7;5</y>
+		<w>81;81;81;81;54</w>
+		<h>75;75;75;75;49</h>
+	</rect>
+	</picture>
+
+	<picture>
+	<file>#teamLogo_2#</file>
+	<rect>
+		<x>540;540;540;540;568</x>
+		<y>7;7;7;7;5</y>
+		<w>81;81;81;81;54</w>
+		<h>75;75;75;75;49</h>
+	</rect>
+	</picture>	
+	
+	<picture>
+	<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameEmpty.png</file>
+	<rect>
+		<x>15</x>
+		<y>0</y>
+		<w>90;90;90;90;60</w>
+		<h>88;88;88;88;58</h>
+	</rect>
+	</picture>
+	
+	<picture>
+	<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameEmpty.png</file>
+	<rect>
+		<x>535;535;535;535;565</x>
+		<y>0</y>
+		<w>90;90;90;90;60</w>
+		<h>88;88;88;88;58</h>
+	</rect>
+	</picture>
+	
+	
+	<!-- Diffar för resp banpar -->
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>145</x>
+			<y>0</y>
+			<w>80</w>
+			<h>60;60;60;60;55</h>
+		</rect>
+	</picture>	
+	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>235</x>
+			<y>0</y>
+			<w>80</w>
+			<h>60;60;60;60;55</h>
+		</rect>
+	</picture>	
+
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>325</x>
+			<y>0</y>
+			<w>80</w>
+			<h>60;60;60;60;55</h>
+		</rect>
+	</picture>	
+	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>415</x>
+			<y>0</y>
+			<w>80</w>
+			<h>60;60;60;60;55</h>
+		</rect>
+	</picture>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id>
+		<rect>
+			<x>155</x>
+			<y>10</y>
+			<w>60</w>
+			<h>40;40;40;40;35</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<rect>
+			<x>245</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<rect>
+			<x>335</x>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<rect>
+			<x>425</x>
+		</rect>
+	</true_type_text>	
+	
+	<!--  Kvarstående tid för matchen-->	
+	<true_type_text>
+		<text>Tid kvar:</text>
+		<rect>
+			<x>140</x>
+			<y>65</y>		
+			<w>200</w>
+			<h>25</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<align>right</align>
+		<aspect>0.75</aspect>
+		<is_text_rec>1</is_text_rec>		
+	</true_type_text>
+
+	<true_type_text>
+		<id>#PLAY_TIME#</id>
+		<text></text>
+		<rect>
+			<x>350</x>
+		</rect>
+		<aspect>0.75</aspect>
+		<align>left</align>
+		<is_text_rec>1</is_text_rec>		
+	</true_type_text>
+	
+</bottom_panel_11>	
+
+
+	

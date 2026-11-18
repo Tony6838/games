@@ -1,0 +1,175 @@
+<!--
+	===========================================================================================================
+		8 Lag Banpoäng och lagsummor
+								
+		Text1:		Lag1 BanPoäng
+		Text3:		Lag1 totala slagning
+		Text5:		Lag2 BanPoäng
+		Text7:		Lag2 totala slagning
+		Text9:		Lag3 BanPoäng
+		Text11:		Lag3 totala slagning
+		Text13:		Lag4 BanPoäng
+		Text15:		Lag4 totala slagning
+		Text17:		Lag5 BanPoäng
+		Text19:		Lag5 totala slagning
+		Text21:		Lag6 BanPoäng
+		Text23:		Lag6 totala slagning
+		Text25:		Lag7 BanPoäng
+		Text27:		Lag7 totala slagning
+		Text29:		Lag8 BanPoäng
+		Text31:		Lag8 totala slagning
+		
+		Text33:		Pari (värde)
+		
+		Text35:		Namn för Lag1
+		Text37:		Namn för Lag2
+		Text39:		Namn för Lag3
+		Text41:		Namn för Lag4
+		Text43:		Namn för Lag5
+		Text45:		Namn för Lag6
+		Text47:		Namn för Lag7
+		Text49:		Namn för Lag8
+		
+		Copyright 2022 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>100</y_generate>
+
+	
+<!-- -->
+	<true_type_text>	
+		<id>#VBST_JOB_text35#</id>
+		<text>Lagnamn1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>25</x>
+			<y>0</y>
+			<w>170</w>
+			<h>25</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text37#</id>
+		<text>Lagnamn2</text>
+		<rect>
+			<x>235</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text39#</id>
+		<text>Lagnamn3</text>
+		<rect>
+			<x>445</x>
+		</rect>
+	</true_type_text>
+	
+
+
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>60</x>
+			<y>30</y>
+			<w>100</w>
+			<h>60</h>
+		</rect>
+	</picture>	
+	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>270</x>
+			<y>30</y>
+			<w>100</w>
+			<h>60</h>
+		</rect>
+	</picture>	
+
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>480</x>
+			<y>30</y>
+			<w>100</w>
+			<h>60</h>
+		</rect>
+	</picture>	
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<rect>
+			<x>70</x>
+			<y>40</y>
+			<w>80</w>
+			<h>40</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<rect>
+			<x>280</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<rect>
+			<x>490</x>
+		</rect>
+	</true_type_text>
+	
+</bottom_panel_11>	
+
+
+	 

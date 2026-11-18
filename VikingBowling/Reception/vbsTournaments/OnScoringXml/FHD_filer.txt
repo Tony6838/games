@@ -1,0 +1,53 @@
+1 Lag Ser Tot_FHD.xml
+2 Lag BanP Diff Pari TotPari_FHD.xml
+2 Lag BanP Diff Pari_FHD.xml
+2 Lag BanP Ser Tot_FHD.xml
+2 Lag BanP Tot Diff Pari_FHD.xml
+2 Lag BanP TotDiff_FHD.xml
+2 Lag BanP Tot_FHD.xml
+2 Lag BanP_FHD.xml
+2 Lag Ser Tot Diff Pari_FHD.xml
+2 Lag Tot Diff Pari_FHD.xml
+2 Lag Tot TotDiff_FHD.xml
+2 Lag Tot_FHD.xml
+3 Lag BanP Ser Tot_FHD.xml
+3 Lag Ser Tot_FHD.xml
+3 Lag Tot_FHD.xml
+4 Lag BanP Tot_FHD.xml
+4 Lag BanP_FHD.xml
+4 Lag Tot_FHD.xml
+4manna 4banor AM 2mannalag_FHD.xml
+5 Lag Tot_FHD.xml
+6 Lag BanP Tot_FHD.xml
+6 Lag BanP Tot_pair_FHD.xml
+6 Lag BanP_FHD.xml
+6 Lag Tot_FHD.xml
+6-manna AM BanP 3serier_FHD.xml
+8 Lag BanP Tot_FHD.xml
+8 Lag Banp_FHD.xml
+Balderligan_FHD.xml
+banpoäng4man4banor_FHD.xml
+banpoäng8man4banor_FHD.xml
+banpoäng8man6banor_FHD.xml
+banpoäng8man8banor_FHD.xml
+Bifrostligan_FHD.xml
+Cup Tävling_FHD.xml
+DK Liga 4b - 2025_FHD.xml
+Fyråttaligan_FHD.xml
+Hallandsligan4manna_FHD.xml
+Hudiksvall3Man3Banor_FHD.xml
+Idunligan_FHD.xml
+Korp2Man_FHD.xml
+Korp3Man3Banor_FHD.xml
+KorpenBanpoängFalkenberg_FHD.xml
+Kronosligan_FHD.xml
+Lag 2m EU 3s BP Motala_FHD.xml
+Lag 2m EU 4s BP BA E_FHD.xml
+Nya Arenaligan_FHD.xml
+Riksserien_FHD.xml
+Seriematch2Lag BP_FHD.xml
+SkånesPensionärsliga8b_FHD.xml
+Titanligan_FHD.xml
+Valhallaligan_FHD.xml
+Västergötland_FHD.xml
+VBSKorp Lag 3m 3s 3b 18p_FHD.xml

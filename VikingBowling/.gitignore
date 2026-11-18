@@ -1,0 +1,5 @@
+# downloaded packages - the game itself loads the copies in lib/ (npm install && node tools/vendor.mjs)
+node_modules/
+
+# screenshots are kept locally and not published (README.md, "Screenshots")
+screenshots/

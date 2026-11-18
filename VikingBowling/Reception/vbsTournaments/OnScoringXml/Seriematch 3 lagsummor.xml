@@ -1,0 +1,214 @@
+<!--
+	===========================================================================================================
+		Seriematch
+		Filen testas med protkollet Viking.
+						
+		Text1:		Lag1 totala serieslagning
+		Text3:		Lag2 totala serieslagning
+		Text5:		Lag3 totala serieslagning
+		Text7:		Lag1 totala slagning
+		Text9:		Lag2 totala slagning
+		Text11:		Lag3 totala slagning
+		Text13:		Namn för Lag1
+		Text15:		Namn för Lag2
+		Text17:		Namn för Lag3
+		
+		Copyright 2014 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T banparsdiffar nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>110</y_generate>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text13#</id>
+		<text>Lagnamn1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>100</x>
+			<y>5</y>
+			<w>150</w>
+			<h>30</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text15#</id>
+		<text>Lagnamn2</text>
+		<align>left</align>	
+		<rect>
+			<x>100</x>
+			<y>40</y>
+			<w>150</w>
+			<h>30</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text17#</id>
+		<text>Lagnamn3</text>
+		<align>left</align>	
+		<rect>
+			<x>100</x>
+			<y>75</y>
+			<w>150</w>
+			<h>30</h>
+		</rect>
+	</true_type_text>
+	
+	<!--- Vita rutor för aktuell serie --->
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>285</x>
+			<y>5</y>
+			<w>120</w>
+			<h>30</h>
+		</rect>
+	</picture>	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>285</x>
+			<y>40</y>
+			<w>120</w>
+			<h>30</h>
+		</rect>
+	</picture>		
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>285</x>
+			<y>75</y>
+			<w>120</w>
+			<h>30</h>
+		</rect>
+	</picture>		
+
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>425</x>
+			<y>5</y>
+			<w>120</w>
+			<h>30</h>
+		</rect>
+	</picture>	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>425</x>
+			<y>40</y>
+			<w>120</w>
+			<h>30</h>
+		</rect>
+	</picture>		
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>425</x>
+			<y>75</y>
+			<w>120</w>
+			<h>30</h>
+		</rect>
+	</picture>
+	
+	<!-- Summeringar, aktuell serie resp totalt -->
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id> <!-- [text9] text=   from the vbst ontop file -->
+		<rect>
+			<x>289</x>
+			<y>7</y>
+			<w>112</w>
+			<h>26</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2;2;2;2;2;2;1;1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<rect>
+			<y>42</y>
+			<x>289</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<rect>
+			<y>77</y>
+			<x>289</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<rect>
+			<y>7</y>
+			<x>429</x>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+	<id>#VBST_JOB_text9#</id>
+		<rect>
+			<y>42</y>
+			<x>429</x>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+	<id>#VBST_JOB_text11#</id>
+		<rect>
+			<y>77</y>
+			<x>429</x>
+		</rect>
+	</true_type_text>
+
+	
+</bottom_panel_11>	
+
+
+	

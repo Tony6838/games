@@ -1,0 +1,31 @@
+<!--
+	===========================================================================================================
+		6 Lag Banpoäng
+								
+		Text1:		Lag1 BanPoäng
+		Text3:		Lag1 totala slagning
+		Text5:		Lag2 BanPoäng
+		Text7:		Lag2 totala slagning
+		Text9:		Lag3 BanPoäng
+		Text11:		Lag3 totala slagning
+		Text13:		Lag4 BanPoäng
+		Text15:		Lag4 totala slagning
+		Text17:		Lag5 BanPoäng
+		Text19:		Lag5 totala slagning
+		Text21:		Lag6 BanPoäng
+		Text23:		Lag6 totala slagning
+		
+		Text25:		Pari (värde)
+		
+		Text27:		Namn för Lag1
+		Text29:		Namn för Lag2
+		Text31:		Namn för Lag3
+		Text33:		Namn för Lag4
+		Text35:		Namn för Lag5
+		Text37:		Namn för Lag6
+		
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+	<import>onScoringXml\6 Lag BanP.xml</import>

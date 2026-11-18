@@ -1,0 +1,51 @@
+<!--
+	===========================================================================================================
+		Skåne Tour
+		FHD-version (1920 bred) av "SkåneTour.xml". Receptionen väljer den i stället för standardmallen när
+		tävlingsprotokollet är full HD (CShiftSettings::AdjustOnScoringFileName). Samma uppgifter som
+		standardmallen, i dagens utseende: lagnamn i mörka kopparramar, värden i vita kopparramar.
+
+		Ingen text från VBS-T, bara rubriken.
+
+		Copyright 2026 VBS Bowling AB
+	===========================================================================================================
+-->
+
+<layer_after_11>
+	<true_type_text>
+		<text>Skånetouren</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>200</x>
+			<y>15</y>
+			<w>1000</w>
+			<h>70</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.7</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+</layer_after_11>

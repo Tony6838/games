@@ -1,0 +1,347 @@
+<!--
+	===========================================================================================================
+		8 Lag Banpoäng och lagsummor
+								
+		Text1:		Lag1 BanPoäng
+		Text3:		Lag1 totala slagning
+		Text5:		Lag2 BanPoäng
+		Text7:		Lag2 totala slagning
+		Text9:		Lag3 BanPoäng
+		Text11:		Lag3 totala slagning
+		Text13:		Lag4 BanPoäng
+		Text15:		Lag4 totala slagning
+		Text17:		Lag5 BanPoäng
+		Text19:		Lag5 totala slagning
+		Text21:		Lag6 BanPoäng
+		Text23:		Lag6 totala slagning
+		Text25:		Lag7 BanPoäng
+		Text27:		Lag7 totala slagning
+		Text29:		Lag8 BanPoäng
+		Text31:		Lag8 totala slagning
+		
+		Text33:		Pari (värde)
+		
+		Text35:		Namn för Lag1
+		Text37:		Namn för Lag2
+		Text39:		Namn för Lag3
+		Text41:		Namn för Lag4
+		Text43:		Namn för Lag5
+		Text45:		Namn för Lag6
+		Text47:		Namn för Lag7
+		Text49:		Namn för Lag8
+		
+		Copyright 2012 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+
+<!-- VBS-T banparsdiffar nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>295</y_generate>
+
+<!-- Rubriker -->
+	<true_type_text>	
+		<text>BP</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>50</x>
+			<y>0</y>
+			<w>40</w>
+			<h>20</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<text>Lagnamn</text>
+		<align>left</align>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<text>Poäng</text>
+		<align>left</align>	
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 1 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Banpoäng</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>50</x>
+			<y>27</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text35#</id>
+		<text>Lagnamn Lag1</text>
+		<align>left</align>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<text>Lagnamn Lag1</text>
+		<align>left</align>	
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 2 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<text>Banpoäng</text>
+		<rect>
+			<x>50</x>
+			<y>+=30</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text37#</id>
+		<text>Lagnamn Lag2</text>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+
+	<!-- Lag 3 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<text>Banpoäng</text>
+		<rect>
+			<x>50</x>
+			<y>+=30</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text39#</id>
+		<text>Lagnamn Lag3</text>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+
+	<!-- Lag 4 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text13#</id>
+		<text>Banpoäng</text>
+		<rect>
+			<x>50</x>
+			<y>+=30</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text41#</id>
+		<text>Lagnamn Lag4</text>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text15#</id>
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+
+	<!-- Lag 5 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text17#</id>
+		<text>Banpoäng</text>
+		<rect>
+			<x>50</x>
+			<y>+=30</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text43#</id>
+		<text>Lagnamn Lag5</text>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text19#</id>
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 6 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text21#</id>
+		<text>Banpoäng</text>
+		<rect>
+			<x>50</x>
+			<y>+=30</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text45#</id>
+		<text>Lagnamn Lag6</text>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text23#</id>
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 7 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text25#</id>
+		<text>Banpoäng</text>
+		<rect>
+			<x>50</x>
+			<y>+=30</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text47#</id>
+		<text>Lagnamn Lag7</text>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text27#</id>
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>
+
+	<!-- Lag 8 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text29#</id>
+		<text>Banpoäng</text>
+		<rect>
+			<x>50</x>
+			<y>+=30</y>
+			<w>40</w>
+			<h>25</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text49#</id>
+		<text>Lagnamn Lag8</text>	
+		<rect>
+			<x>100</x>
+			<w>300</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text31#</id>
+		<rect>
+			<x>500</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>	
+</bottom_panel_11>	
+
+
+	

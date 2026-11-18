@@ -1,0 +1,663 @@
+<!--
+	===========================================================================================================
+		Viking2001 Refresh
+		Copyright 2023 VBS Bowling AB		
+	===========================================================================================================	
+-->	
+<picture>
+	<id>#PRACTICE1#</id>
+	<file>PracticeHeader.png</file>
+	<rect>
+		<x>362</x>
+		<y>50;50;50;50;50;35</y>
+		<w>1205</w>
+		<h>110</h>
+	</rect>
+
+	<layer_after_1>
+		<true_type_text>	<!-- Beskrivning för Inspelningstid/provrutor -->
+			<id>#PRACTICE1#</id>
+			<text>IDS_PRACTICE_DESC</text>
+			<font>Arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<rect>
+				<x>26</x>
+				<y>16</y>
+				<w>600</w>
+				<h>68</h>
+			</rect>
+			<fontstyle>bold</fontstyle>
+			<align>left</align>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>2</pen_width>
+			<aspect>0.85</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>
+
+		<true_type_text>
+			<id>#PRACTICE2#</id>
+			<text>Tid Kvar</text>
+			<rect>
+				<x>616</x>
+				<w>543</w>	
+			</rect>
+			<align>right</align>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>	
+	</layer_after_1>
+</picture>	
+
+<!-- Stopp!! Er inspelningstid är nu slut!! -->
+<picture> 
+	<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+	<file>C:\Viking2001\v3gfx\resource\objects\STOPHappyPin.png</file>
+	<rect>
+		<x>227</x>
+		<y>415</y>
+		<w>280</w>
+		<h>250</h>
+	</rect>
+</picture>
+<picture>
+	<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+	<file>PracticeMessage.png</file>
+	<rect>
+		<x>528</x>
+		<y>435</y>
+		<w>1165</w>
+		<h>210</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>	<!-- Meddelanden -->
+			<id>#IDS_MASKPIC_STOP_PRACTICE_MESSAGE#</id>
+			<text>Slut på inspelningen!</text>
+			<rect>
+				<x>26</x>
+				<y>26</y>
+				<w>1148</w>
+				<h>148</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>			
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>2</pen_width>
+			<aspect>0.95</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>	
+		
+	</layer_after_1>	
+</picture>
+
+<!-- NoTap reset -->
+<picture>
+	<id>#ID_MASKPIC_STOP_NOTAP#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_after_1>
+		<picture>
+			<id>#ID_MASKPIC_STOP_NOTAP#</id>
+			<file>C:\Viking2001\v3gfx\resource\objects\STOP.png</file>
+			<rect>
+				<x>900</x>
+				<y>75</y>
+				<w>280</w>
+				<h>250</h>
+			</rect>
+		</picture>	
+		<true_type_text>
+			<id>#IDS_MASKPIC_STOP_NOTAP_MESSAGE#</id>
+			<text>Omresning pågår, spela ej!</text>
+			<rect>
+				<x>25</x>
+				<y>120</y>
+				<w>850</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>	
+	</layer_after_1>	
+</picture>
+
+
+<!-- 10th frame reset -->
+<picture>
+	<id>#ID_MASKPIC_STOP#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_before_1>
+		<rectangle_fill>
+			<rect>
+				<x>6</x>
+				<y>6</y>
+				<w>1183</w>
+				<h>388</h>
+			</rect>
+			<color>
+			<trans>255</trans>
+			<red>255</red>
+			<green>20</green>
+			<blue>20</blue>
+			</color>	
+		</rectangle_fill>
+	</layer_before_1>
+	<layer_after_1>
+		<picture>
+			<id>#ID_MASKPIC_STOP#</id>
+			<file>C:\Viking2001\v3gfx\resource\objects\STOP.png</file>
+			<rect>
+				<x>900</x>
+				<y>75</y>
+				<w>280</w>
+				<h>250</h>
+			</rect>
+		</picture>	
+		<true_type_text>
+			<id>#IDS_MASKPIC_STOP_MESSAGE#</id>
+			<text>Omresning pågår, spela ej!</text>
+			<rect>
+				<x>25</x>
+				<y>120</y>
+				<w>850</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<align>center</align>			
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+
+
+<!-- Serviceknappen tryckt -->
+<picture>
+	<id>#ID_MASKPIC_SERVICE#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_after_1>
+<picture>
+	<id>#ID_MASKPIC_SERVICE#</id>
+	<file>C:\Viking2001\v3gfx\resource\objects\STOP.png</file>
+	<rect>
+		<x>900</x>
+		<y>75</y>
+		<w>280</w>
+		<h>250</h>
+	</rect>
+</picture>	
+		<true_type_text>
+			<id>#IDS_MASKPIC_SERVICE_MESSAGE#</id>
+			<text>Mekanikern är på väg!</text>
+			<rect>
+				<x>25</x>
+				<y>40</y>
+				<w>850</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<align>center</align>			
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>	
+		<true_type_text>	<!-- Meddelanden -->
+			<id>#IDS_MASKPIC_SERVICE_ESC#</id>
+			<text>Tryck på ESC</text>
+			<rect>
+				<y>260</y>
+				<h>120</h>
+			</rect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+
+<!-- Ur sekvens -->
+<picture>
+	<id>#ID_MASKPIC_OUT_OF_SEQUENCE#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_after_1>
+<picture>
+	<id>#ID_MASKPIC_OUT_OF_SEQUENCE#</id>
+	<file>C:\Viking2001\v3gfx\resource\objects\STOP.png</file>
+	<rect>
+		<x>900</x>
+		<y>75</y>
+		<w>280</w>
+		<h>250</h>
+	</rect>
+</picture>	
+		<true_type_text>
+			<id>#IDS_MASKPIC_OUT_OF_SEQUENCE_MSG#</id>
+			<text>Mekanikern är på väg!</text>
+			<rect>
+				<x>25</x>
+				<y>40</y>
+				<w>850</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<align>center</align>			
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>	
+		<true_type_text>	<!-- Meddelanden -->
+			<id>#IDS_MASKPIC_SERVICE_ESC#</id>
+			<text>Tryck på ESC</text>
+			<rect>
+				<y>260</y>
+				<h>120</h>
+			</rect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+
+<!-- Press SPACE -->
+<picture>
+	<id>#ID_MASKPIC_WAITSPACE#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_before_1>
+		<rectangle_fill>
+			<rect>
+				<x>6</x>
+				<y>6</y>
+				<w>1183</w>
+				<h>388</h>
+			</rect>
+			<color>
+			<trans>55</trans>
+			<red>255</red>
+			<green>20</green>
+			<blue>20</blue>
+			</color>	
+		</rectangle_fill>
+	</layer_before_1>
+	<layer_after_1>
+		<true_type_text>
+			<id>#IDS_MASKPIC_WAITSPACE_MESSAGE#</id>
+			<text>Tryck på knappen!</text>
+			<rect>
+				<x>25</x>
+				<y>120</y>
+				<w>1140</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<align>center</align>			
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+
+
+<!-- Spela klot för ny serie -->
+<picture>
+	<id>#ID_MASKPIC_BALL#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_before_1>
+		<rectangle_fill>
+			<rect>
+				<x>6</x>
+				<y>6</y>
+				<w>1183</w>
+				<h>388</h>
+			</rect>
+			<color>
+			<trans>155</trans>
+			<red>255</red>
+			<green>120</green>
+			<blue>20</blue>
+			</color>	
+		</rectangle_fill>
+	</layer_before_1>	
+	<layer_after_1>
+		<picture>
+			<id>#ID_MASKPIC_BALL#</id>
+			<file>C:\Viking2001\v3gfx\resource\objects\SleepingPin.png</file>
+			<rect>
+				<x>900</x>
+				<y>75</y>
+				<w>280</w>
+				<h>250</h>
+			</rect>
+		</picture>	
+		<true_type_text>
+			<id>#IDS_MASKPIC_BALL_MESSAGE#</id>
+			<text>Fortsätt och spela bara!</text>
+			<rect>
+				<x>25</x>
+				<y>120</y>
+				<w>850</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>	
+	</layer_after_1>	
+</picture>
+
+<!-- Belgium Odd, Tryck 1 för ny serie  -->
+<picture>
+	<id>#ID_MASKPIC_BELGIUM_ODD#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_before_1>
+		<rectangle_fill>
+			<rect>
+				<x>6</x>
+				<y>6</y>
+				<w>1183</w>
+				<h>388</h>
+			</rect>
+			<color>
+			<trans>55</trans>
+			<red>255</red>
+			<green>20</green>
+			<blue>20</blue>
+			</color>	
+		</rectangle_fill>
+	</layer_before_1>
+	<layer_after_1>
+		<true_type_text>
+			<id>#IDS_MASKPIC_BELGIUM_ODD_MSG</id>
+			<text>Tryck på rätt knapp!</text>
+			<rect>
+				<x>25</x>
+				<y>120</y>
+				<w>1140</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<align>center</align>			
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>		
+	</layer_after_1>	
+</picture>
+
+<!-- Belgium Even, Tryck 9 för ny serie -->
+<picture>
+	<id>#ID_MASKPIC_BELGIUM_EVEN#</id>
+	<file>Messages.png</file>
+	<rect>
+		<x>358</x>
+		<y>235</y>
+		<w>1205</w>
+		<h>410</h>
+	</rect>
+	<layer_before_1>
+		<rectangle_fill>
+			<rect>
+				<x>6</x>
+				<y>6</y>
+				<w>1183</w>
+				<h>388</h>
+			</rect>
+			<color>
+			<trans>55</trans>
+			<red>255</red>
+			<green>20</green>
+			<blue>20</blue>
+			</color>	
+		</rectangle_fill>
+	</layer_before_1>
+	<layer_after_1>
+		<true_type_text>
+			<id>#IDS_MASKPIC_BELGIUM_EVEN_MSG</id>
+			<text>Tryck på rätt knapp!</text>
+			<rect>
+				<x>25</x>
+				<y>120</y>
+				<w>1140</w>
+				<h>160</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<is_text_rec>1</is_text_rec>
+			<align>center</align>			
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+		</true_type_text>		
+	</layer_after_1>	
+</picture>

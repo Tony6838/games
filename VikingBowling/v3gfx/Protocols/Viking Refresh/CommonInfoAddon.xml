@@ -1,0 +1,11 @@
+<picture>
+	<id>#IS_REDPIN#</id>
+	<file>c:\Viking2001\V3Gfx\Resource\Objects\RedPin.png</file>
+	<rect>
+		<x>1610</x>
+		<y>135;25;15</y>
+		<w>200</w>
+		<h>45;45;35</h>
+	</rect>
+</picture>
+

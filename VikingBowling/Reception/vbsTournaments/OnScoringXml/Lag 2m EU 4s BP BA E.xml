@@ -1,0 +1,96 @@
+<!--
+	===========================================================================================================
+		Lag 2m EU 4s BP BA Eskilstuna
+		Filen testas med protkollet Viking.
+		
+		Filnamn:	Lag 2m EU 4s BP BA Eskilstuna.xml
+		Datum:		20140902
+						
+		Text1:		Banpoäng för hemmalaget
+		Text2:		Banpoäng för bortalaget
+		Text3:		Namn på hemmalag
+		Text4:		Namn på bortalag
+
+								
+		Copyright 2014 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+<layer_after_11>
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Lagpoäng Hemma</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>100</x>
+			<y>10;10;5;2</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>right</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<text>Lagnamn Hemma</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>10;10;5;2</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id>
+		<text>Lagpoäng Borta</text>
+		<align>right</align>	
+		<rect>
+			<x>100</x>
+			<y>40;40;35;20</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<text>Lagnamn Borta</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>40;40;35;20</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+</layer_after_11>
+
+
+
+	

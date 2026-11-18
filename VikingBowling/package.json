@@ -1,0 +1,21 @@
+{
+  "name": "viking-bowling",
+  "version": "1.0.0",
+  "description": "Viking Bowling - VBS Bowling AB. Built on Viking Scoring System 4.4.",
+  "scripts": {
+    "vendor": "node tools/vendor.mjs",
+    "manifest": "node tools/make_manifest.mjs",
+    "serve": "node tests/serve.mjs 8000",
+    "test:bots": "node tests/bot_stats.mjs 20000 1",
+    "test:vbst": "node tests/vbst_formats.mjs 7",
+    "test:swipe": "node tests/swipe_test.mjs",
+    "test:physics": "node tests/physics_tune.mjs"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "dependencies": {
+    "cannon-es": "0.20.0",
+    "three": "0.180.0"
+  },
+  "type": "module",
+  "private": true
+}

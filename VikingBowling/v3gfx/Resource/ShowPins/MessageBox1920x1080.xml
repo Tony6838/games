@@ -1,0 +1,124 @@
+<!--
+
+Message Box 600x400
+-->
+
+
+<!-- Body -->
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>1</y>
+		<w>1920</w>
+		<h>19</h>
+	</rect>
+	<color>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>1060</y>
+		<w>1920</w>
+		<h>19</h>
+	</rect>
+	<color>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>20</y>
+		<w>19</w>
+		<h>1060</h>
+	</rect>
+	<color>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1900</x>
+		<y>20</y>
+		<w>19</w>
+		<h>1060</h>
+	</rect>
+	<color>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Highlights and Shadows -->
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>0</y>
+		<w>1918</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>208</red>
+	<green>208</green>
+	<blue>208</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>1078</y>
+		<w>1918</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>80</red>
+	<green>80</green>
+	<blue>80</blue>
+	</color>	
+</rectangle_fill>
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>1079</y>
+		<w>1918</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>55</trans>
+	<red>40</red>
+	<green>40</green>
+	<blue>40</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Background -->
+<rectangle_fill>
+	<rect>
+		<x>20</x>
+		<y>20</y>
+		<w>1880</w>
+		<h>1040</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>255</red>
+	<green>255</green>
+	<blue>255</blue>
+	</color>	
+</rectangle_fill>
+

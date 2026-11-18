@@ -1,0 +1,180 @@
+<!--
+	===========================================================================================================
+		Filen testas med protkollet Viking.
+		
+		Datum:		20170912
+						
+		Text1:		Kägelpoäng för lag1 för aktuell serie
+		Text2:		Kägelpoäng för lag2 för aktuell serie
+		Text3:		Kägelpoäng för lag3 för aktuell serie
+		Text4:		Banpoäng för lag1
+		Text5:		Banpoäng för lag2
+		Text6:		Banpoäng för lag3
+		Text7:		Total kägelpoäng för lag1
+		Text8:		Total kägelpoäng för lag2		
+		Text9:		Total kägelpoäng för lag3	
+		Text10:		Namn för lag1
+		Text11:		Namn för lag2
+		Text12:		Namn för lag3
+		
+		Copyright 2017 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+<layer_after_11>
+
+</layer_after_11>
+
+<!-- VBS-T Lagnamn och resultat nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>105</y_generate>
+	
+	<!-- Lag 1 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<text>Hemmalag</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>20</x>
+			<y>5</y>
+			<w>30</w>
+			<h>30</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text10#</id>
+		<text>Lagnamn</text>
+		<align>left</align>	
+		<rect>
+			<x>60</x>
+			<w>200</w>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Hemma aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>335</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Hemma total slagning</text>
+		<align>left</align>	
+		<rect>
+			<x>440</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+
+	
+<!-- Lag 2 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<text>Bortalag</text>
+		<rect>
+			<x>20</x>
+			<y>40</y>
+			<w>30</w>
+			<h>30</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<text>Bortalag</text>
+		<rect>
+			<x>60</x>
+			<w>200</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id>
+		<text>Borta aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>335</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<text>Borta total slagning</text>
+		<align>left</align>	
+		<rect>
+			<x>440</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+
+<!-- Lag 3 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text6#</id>
+		<text>Bortalag</text>
+		<rect>
+			<x>20</x>
+			<y>75</y>
+			<w>30</w>
+			<h>30</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text12#</id>
+		<text>Bortalag</text>
+		<rect>
+			<x>60</x>
+			<w>200</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<text>Borta aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>335</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<text>Borta total slagning</text>
+		<align>left</align>	
+		<rect>
+			<x>440</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+	
+</bottom_panel_11>	

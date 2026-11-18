@@ -1,0 +1,85 @@
+<!--
+	===========================================================================================================
+		Filen testas med protkollet Viking.
+		
+		Datum:		20210303
+						
+		Text1:		Kägelpoäng för lag1 för aktuell serie
+		Text2:		Total kägelpoäng för lag1
+		Text3:		Namn för lag1
+
+		Copyright 2021 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+<layer_after_11>
+
+</layer_after_11>
+
+<!-- VBS-T Lagnamn och resultat nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>40</y_generate>
+	
+	<!-- Lag 1 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<text>Hemmalag</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>60</x>
+			<y>5</y>
+			<w>170</w>
+			<h>30</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Hemma aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>335</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id>
+		<text>Hemma total slagning</text>
+		<align>left</align>	
+		<rect>
+			<x>440</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+
+	
+</bottom_panel_11>	

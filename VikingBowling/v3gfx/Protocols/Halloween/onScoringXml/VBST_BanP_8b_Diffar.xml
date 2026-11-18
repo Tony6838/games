@@ -1,0 +1,411 @@
+<!-- 
+Banpoäng 8 banor 
+200 + 150 + 4 x 200 + 150 = 1300  
+1300px
+
+-->
+
+
+<!-- Ramen runt om -->
+<rectangle_fill>
+	<rect>
+		<x>8</x>
+		<y>0</y>
+		<w>1284</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>208</red>
+	<green>208</green>
+	<blue>208</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>6</x>
+		<y>1</y>
+		<w>1288</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>4</x>
+		<y>2</y>
+		<w>1292</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>3</x>
+		<y>3</y>
+		<w>1294</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>4</y>
+		<w>1296</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>5</y>
+		<w>1298</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- mitten -->
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>7</y>
+		<w>1300</w>
+		<h>222</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>15</y>
+		<w>196</w>
+		<h>207</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>255</red>
+	<green>255</green>
+	<blue>255</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>350</x>
+		<y>15</y>
+		<w>800</w>
+		<h>207</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>255</red>
+	<green>255</green>
+	<blue>255</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>222</y>
+		<w>1300</w>
+		<h>9</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Botten -->
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>231</y>
+		<w>1298</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>233</y>
+		<w>1296</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>3</x>
+		<y>234</y>
+		<w>1294</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>5</x>
+		<y>235</y>
+		<w>1290</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>16</red>
+	<green>110</green>
+	<blue>190</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- skuggor -->
+<rectangle_fill>
+	<rect>
+		<x>7</x>
+		<y>236</y>
+		<w>1286</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>80</red>
+	<green>80</green>
+	<blue>80</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>8</x>
+		<y>237</y>
+		<w>1284</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>55</trans>
+	<red>40</red>
+	<green>40</green>
+	<blue>40</blue>
+	</color>	
+</rectangle_fill>
+
+
+<!-- Streck mellan summorna -->
+<rectangle_fill>
+	<rect>
+		<x>550</x>
+		<y>35</y>
+		<w>1</w>
+		<h>167</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>750</x>
+		<y>35</y>
+		<w>1</w>
+		<h>167</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>950</x>
+		<y>35</y>
+		<w>1</w>
+		<h>167</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+	<!-- Pari -->
+	<true_type_text>	
+		<text>Pari</text>
+		<rect>
+			<x>235</x>
+			<y>45</y>
+			<w>80</w>
+			<h>50</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<rect>
+			<y>135</y>
+		</rect>
+	</true_type_text>
+	
+	<!-- Tid kvar -->
+	<true_type_text>	
+		<id>#IDS_TIMELEFTD#</id>
+		<rect>
+			<x>1170</x>
+			<y>45</y>
+			<w>110</w>
+			<h>50</h>
+		</rect>
+	</true_type_text>	
+	
+	<true_type_text>	
+		<id>#PLAY_TIME#</id>
+		<rect>
+			<y>135</y>
+		</rect>
+	</true_type_text>
+	
+	
+	<!-- Diffar -->
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<rect>
+			<x>60</x>
+			<y>35</y>
+			<w>80</w>
+			<h>167</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id>
+		<rect>
+			<x>410</x>
+		</rect>
+	</true_type_text>
+
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<rect>
+			<x>610</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<rect>
+			<x>810</x>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<rect>
+			<x>1010</x>
+		</rect>
+	</true_type_text>	
+	

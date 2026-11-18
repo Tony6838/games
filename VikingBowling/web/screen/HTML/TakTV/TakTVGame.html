@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="-1">
+<meta http-equiv="CACHE-CONTROL" content="NO-CACHE">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+<link rel="icon" type="image/x-icon" href="../../common/img/favicon.ico">
+<title>Viking</title>
+<link rel="stylesheet" href="TakTV.css">
+<!-- The per-hall override the XML lane TV also loads last. Normally absent, and
+     a 404 for it is expected rather than a fault. -->
+<link rel="stylesheet" href="../../common/css/customSettings.css">
+</head>
+
+<body>
+
+<!--
+  Same page as the XML lane TV (..\..\TV\TakTV.html): a full-bleed media area
+  with the bottom banner strip and clock under it, and the same element ids so
+  the two can be compared side by side. The one difference is what fills the
+  media area. There it is a single <img> showing whatever picture the slave
+  produced, the scoring sheet included; here the sheet is drawn as SVG in
+  #stage, and #imageFx sits above it for the pictures that cover it -
+  commercials, messages, the slow-waiting media. See vbsrender.js for the sheet
+  and vbsmedia.js for the layer above it.
+-->
+<div class="main-wrapper">
+  <div id="main_content">
+    <div id="stage">
+      <!-- preserveAspectRatio="none", i.e. stretch to fill, because that is what
+           the XML path does: CGame::RenderScreen2 hands the protocol bitmap to
+           ResizeBitmap(pI, 960, 540), which is a plain gr.DrawImage into that
+           rectangle with no aspect handling at all, and the lane screen then
+           stretches it again. With "meet" the sheet is fitted instead, and since
+           the media area is 95% of the height it is slightly wider than 16:9 -
+           so the fit left a black bar down each side that the XML screen does
+           not have. -->
+      <svg id="sheet" viewBox="0 0 1920 1080" preserveAspectRatio="none"></svg>
+    </div>
+    <img id="imageFx" class="scoring-img-full-size" hidden>
+  </div>
+
+  <!--
+    The sheet as it goes into the file, drawn separately from the one on screen.
+    The picture written to GameCtrl\VTVFile<n>.jpg is history - it is what
+    the restore dialog shows and what anyone reviewing a game looks at - so it
+    must always carry the scoring table and the VBS-T OnScoring panel, never the
+    full-screen pin picture or anything else that covers them for a moment while
+    the game is being played. See captureSheet() in TakTV.js.
+
+    Positioned off screen rather than hidden with display:none, because a
+    display:none SVG has no layout and text measurement inside it would come back
+    zero.
+  -->
+
+  <svg id="sheetForFile" viewBox="0 0 1920 1080" preserveAspectRatio="none" aria-hidden="true"></svg>
+
+  <div id="message_content"></div>
+
+  <div id="bottom_content">
+    <div id="bannerText"></div>
+    <div id="clock"></div>
+  </div>
+</div>
+
+<div id="status"></div>
+
+<!-- Hide the mouse pointer when the mouse has stopped moving: this is a screen in
+     the hall, not a workstation. Deliberately not loaded by the reception Web UI or
+     by VBS mechanic. See common/js/vbscursor.js. -->
+<!-- Viking Bowling: the game's stand-in for LoadCom's HTML service (/html/events and friends).
+     The only line this page adds to TakTV.html. -->
+<script src="../../../../js/standin/manifest.js"></script>
+<script src="../../../../js/standin/tv-standin.js"></script>
+<script src="../../common/js/vbscursor.js"></script>
+<script src="protocol_viking.js"></script>
+<script src="protocol_viking_refresh.js"></script>
+<script src="vbstokens.js"></script>
+<script src="vbsxml.js"></script>
+<script src="vbsonscoring.js"></script>
+<script src="vbsprotocol.js"></script>
+<script src="vbsgamma.js"></script>
+<script src="vbsrender.js"></script>
+<script src="vbssheet.js"></script>
+<script src="vbsexport.js"></script>
+<script src="vbsmedia.js"></script>
+<!-- The six name boxes shown while player names are being typed at the lane. It
+     draws over the media area rather than into it, so nothing below is changed
+     by it; TakTV.js hands it each payload from acceptPayload. -->
+<script src="vbsnameentry.js"></script>
+<script src="TakTV.js"></script>
+</body>
+</html>

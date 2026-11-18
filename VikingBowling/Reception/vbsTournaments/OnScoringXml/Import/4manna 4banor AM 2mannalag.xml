@@ -1,0 +1,20 @@
+<!--
+	===========================================================================================================
+						
+		Text1:		Total Diff mellan lagen
+		Text2:		Diff för Banpar 1-2
+		Text3:		Diff för Banpar 3-4
+		Text4:		Lagpoäng för hemmalaget
+		Text5:		Lagpoäng för bortalaget
+		Text6:		Pari (värde)
+		Text7:		Första banparet
+		Text8:		Andra banparet
+		Text9:		Namn på hemmalag
+		Text10:		Namn på bortalag
+		Text11:		Pari (text)
+								
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+<import>onScoringXML\4manna 4banor AM 2mannalag.xml</import>

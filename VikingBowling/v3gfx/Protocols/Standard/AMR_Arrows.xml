@@ -1,0 +1,28 @@
+<!--
+
+-->
+<picture>
+	<id>#LEFT_ARROW#</id>
+	<file>LeftBold.png</file>
+	<rect>
+		<x>0</x>
+		<y>90</y>
+		<w>70</w>
+		<h>140</h>
+	</rect>	
+	<color_factor>1.0</color_factor>
+	<trans>1</trans>
+</picture>
+	
+<picture>
+	<id>#RIGHT_ARROW#</id>
+	<file>RightBold.png</file>
+	<rect>
+		<x>1850</x>
+		<y>90</y>
+		<w>70</w>
+		<h>140</h>
+	</rect>	
+	<color_factor>1.0</color_factor>
+	<trans>1</trans>
+</picture>

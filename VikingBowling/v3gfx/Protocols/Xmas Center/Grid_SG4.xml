@@ -1,0 +1,142 @@
+<!--
+
+-->
+
+<!-- Horisontala streck -->
+<rectangle_fill>
+	<rect>
+		<x>20</x>
+		<y>120</y>
+		<w>1880</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+
+<!-- Vertikala streck -->
+<rectangle_fill>
+	<rect>
+		<x>213</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>426</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>639</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>852</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1065</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1278</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1491</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1704</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+

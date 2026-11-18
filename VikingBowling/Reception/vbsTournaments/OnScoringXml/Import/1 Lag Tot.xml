@@ -1,0 +1,12 @@
+<!--
+	===========================================================================================================
+		Filen testas med protkollet Viking.
+						
+		Text1:		Total kägelpoäng för hemmalaget
+		Text2:		Namn på hemmalag
+		
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+	<import>onScoringXml\1 Lag Tot.xml</import>

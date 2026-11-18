@@ -1,0 +1,96 @@
+<!--
+	===========================================================================================================
+		Viking Refresh
+		Copyright 2023 VBS Bowling AB									
+	===========================================================================================================	
+-->
+<true_type_text>
+	<text>1</text>
+	<font>Arial</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>255</red>
+		<green>255</green>
+		<blue>255</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>
+	<color_shadow>
+		<trans>155</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_shadow>
+	<rect>
+		<x>35</x>
+		<y>310;210;100</y>
+		<w>174</w>
+		<h>35</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>center</align>
+	<aspect>0.75</aspect>
+	<halo_factor>0</halo_factor>
+	<pen_width>1</pen_width>
+	<shadow_factor>2</shadow_factor>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+<true_type_text>
+	<text>2</text>
+	<rect>
+		<x>+=176</x>
+		</rect>
+</true_type_text>
+<true_type_text>
+	<text>3</text>
+	<rect>
+		<x>+=176</x>
+		</rect>
+</true_type_text>
+<true_type_text>
+	<text>4</text>
+	<rect>
+		<x>+=176</x>
+	</rect>
+</true_type_text>
+<true_type_text>
+	<text>5</text>
+	<rect>
+		<x>+=176</x>
+	</rect>
+</true_type_text>
+<true_type_text>
+	<text>6</text>
+	<rect>
+		<x>+=176</x>
+	</rect>
+</true_type_text>
+<true_type_text>
+	<text>7</text>
+	<rect>
+		<x>+=176</x>
+	</rect>
+</true_type_text>
+<true_type_text>
+	<text>8</text>
+	<rect>
+		<x>+=176</x>
+	</rect>
+</true_type_text>
+<true_type_text>
+	<text>9</text>
+	<rect>
+		<x>+=176</x>>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<text>10</text>
+	<rect>
+		<x>+=176</x>
+		<w>258</w>
+	</rect>
+</true_type_text>

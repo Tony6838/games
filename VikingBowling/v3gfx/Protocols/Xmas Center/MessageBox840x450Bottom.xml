@@ -1,0 +1,244 @@
+<!--
+
+Message Box Bottom 640x440
+-->
+
+<rectangle_fill>
+	<rect>
+		<x>548</x>
+		<y>20</y>
+		<w>824</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>208</red>
+	<green>208</green>
+	<blue>208</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>546</x>
+		<y>21</y>
+		<w>828</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>544</x>
+		<y>22</y>
+		<w>832</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>543</x>
+		<y>23</y>
+		<w>834</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>542</x>
+		<y>24</y>
+		<w>836</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>541</x>
+		<y>25</y>
+		<w>838</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- mitten -->
+<rectangle_fill>
+	<rect>
+		<x>540</x>
+		<y>27</y>
+		<w>840</w>
+		<h>399</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>550</x>
+		<y>35</y>
+		<w>820</w>
+		<h>382</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>255</red>
+	<green>255</green>
+	<blue>255</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Botten -->
+<rectangle_fill>
+	<rect>
+		<x>541</x>
+		<y>426</y>
+		<w>838</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>542</x>
+		<y>428</y>
+		<w>836</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>543</x>
+		<y>429</y>
+		<w>834</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>545</x>
+		<y>430</y>
+		<w>830</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- skuggor -->
+<rectangle_fill>
+	<rect>
+		<x>547</x>
+		<y>431</y>
+		<w>826</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>80</red>
+	<green>80</green>
+	<blue>80</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>548</x>
+		<y>432</y>
+		<w>824</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>55</trans>
+	<red>40</red>
+	<green>40</green>
+	<blue>40</blue>
+	</color>	
+</rectangle_fill>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

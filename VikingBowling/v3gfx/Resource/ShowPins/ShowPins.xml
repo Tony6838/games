@@ -1,0 +1,115 @@
+<showpins>
+	<x_generate>1920</x_generate>
+	<y_generate>1080</y_generate>
+	<layer_after_1>
+	
+	<!-- Background -->
+	<picture>
+	<file>background.png</file>
+		<rect>			
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>1080</h>	
+		</rect>	
+	</picture>
+	
+	<!-- Pin Table -->
+	<picture>
+	<file>Laminate.png</file>
+		<rect>			
+			<x>-50</x>
+			<y>400</y>
+			<w>2000</w>
+			<h>700</h>	
+		</rect>	
+	</picture>
+
+	<!-- Commercial x 2 -->	
+	<picture>
+		<file>Frame960x540.png</file>
+		<rect>			
+		<x>270</x>
+			<y>30</y>
+			<w>560</w>
+			<h>340</h>	
+		</rect>	
+		<layer_before_1>
+			<picture> 
+			<file>Helmet.jpg</file> 
+			<image_transparancy>1.0</image_transparancy> 
+			<rect>
+				<x>5</x>
+				<y>5</y>
+				<w>950</w>
+				<h>530</h>
+			</rect>	
+			</picture>	
+		</layer_before_1>
+		
+		<layer_after_1>
+			<picture> 
+			<file>#RANDOM_COMMERCIAL1#</file> 
+			<image_transparancy>1.0</image_transparancy> 
+			<rect>
+				<x>5</x>
+				<y>5</y>
+				<w>950</w>
+				<h>530</h>
+			</rect>	
+			</picture>	
+		</layer_after_1>
+	</picture>
+
+	<picture>
+		<file>Frame960x540.png</file>
+		<rect>			
+			<x>870</x>
+			<y>30</y>
+			<w>560</w>
+			<h>340</h>	
+		</rect>	
+		<layer_before_1>
+			<picture> 
+			<file>Helmet.jpg</file> 
+			<image_transparancy>1.0</image_transparancy> 
+			<rect>
+				<x>5</x>
+				<y>5</y>
+				<w>950</w>
+				<h>530</h>
+			</rect>	
+			</picture>	
+		</layer_before_1>
+		<layer_after_1>
+			<picture> 
+			<file>#RANDOM_COMMERCIAL2#</file> 
+			<image_transparancy>1.0</image_transparancy> 
+			<rect>
+				<x>5</x>
+				<y>5</y>
+				<w>950</w>
+				<h>530</h>
+			</rect>	
+			</picture>	
+		</layer_after_1>
+	</picture>
+
+
+	<picture>
+		<file>Empty1920x1080.png</file>
+		<color_factor>1.0</color_factor>
+		<image_transparancy>1.0</image_transparancy>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>1080</h>
+		</rect>	
+		<layer_after_1> 
+			<import>BrunswickPinsAny.xml</import>
+		</layer_after_1>	
+	</picture>	
+
+	</layer_after_1>
+</showpins>

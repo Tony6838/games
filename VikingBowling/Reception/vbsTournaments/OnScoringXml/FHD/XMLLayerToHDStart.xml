@@ -1,0 +1,12 @@
+<picture>
+	<!-- läs in tidigare fil och stretcha ut den -->
+	<file>640x480.png</file>
+	<rect>
+		<x>0</x>
+		<y>0</y>
+		<w>1920</w>
+		<h>1080</h>
+	</rect>
+	<color_factor>1</color_factor>	
+	<layer_after_1>
+

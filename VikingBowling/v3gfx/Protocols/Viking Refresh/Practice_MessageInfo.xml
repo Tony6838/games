@@ -1,0 +1,126 @@
+<!--
+	===========================================================================================================
+		Viking2001 Refresh
+		Copyright 2023 VBS Bowling AB		
+	===========================================================================================================	
+-->
+<picture>
+	<id>#PRACTICE1#</id>
+	<file>PracticeHeader.png</file>
+	<rect>
+		<x>362</x>
+		<y>200</y>
+		<w>1205</w>
+		<h>110</h>
+	</rect>
+
+	<layer_after_1>
+		<true_type_text>	<!-- Beskrivning för Inspelningstid/provrutor -->
+			<id>#PRACTICE1#</id>
+			<text>IDS_PRACTICE_DESC</text>
+			<font>Arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<rect>
+				<x>26</x>
+				<y>16</y>
+				<w>600</w>
+				<h>68</h>
+			</rect>
+			<fontstyle>bold</fontstyle>
+			<align>left</align>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>2</pen_width>
+			<aspect>0.85</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>
+
+		<true_type_text>
+			<id>#PRACTICE2#</id>
+			<text>Tid Kvar</text>
+			<rect>
+				<x>616</x>
+				<w>543</w>	
+			</rect>
+			<align>right</align>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>	
+	</layer_after_1>
+</picture>
+
+<!-- Stopp!! Er inspelningstid är nu slut!! -->
+<picture> 
+	<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+	<file>C:\Viking2001\v3gfx\resource\objects\STOPHappyPin.png</file>
+	<rect>
+		<x>227</x>
+		<y>415</y>
+		<w>280</w>
+		<h>250</h>
+	</rect>
+</picture>
+<picture>
+	<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+	<file>PracticeMessage.png</file>
+	<rect>
+		<x>528</x>
+		<y>435</y>
+		<w>1165</w>
+		<h>210</h>
+	</rect>
+	<layer_after_1>
+		<true_type_text>	<!-- Meddelanden -->
+			<id>#IDS_MASKPIC_STOP_PRACTICE_MESSAGE#</id>
+			<text>Slut på inspelningen!</text>
+			<rect>
+				<x>26</x>
+				<y>26</y>
+				<w>1148</w>
+				<h>148</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>			
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>2</pen_width>
+			<aspect>0.95</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>	
+		
+	</layer_after_1>	
+</picture>

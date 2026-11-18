@@ -1,0 +1,19 @@
+<!--
+	===========================================================================================================
+		Viking - Svenskt Banpoängspel 8man 4banor
+
+						
+		Text1:		Total Diff mellan lagen
+		Text2:		Diff för Banpar 1-2
+		Text3:		Diff för Banpar 3-4
+		Text4:		Lagpoäng för hemmalaget
+		Text5:		Lagpoäng för bortalaget
+		Text6:		Pari (värde)
+		Text7:		Namn på hemmalag
+		Text8:		Namn på bortalag
+		Text9:		Pari (text)
+			
+	===========================================================================================================	
+-->
+
+	<import>onScoringXml\banpoäng8man4banor.xml</import>

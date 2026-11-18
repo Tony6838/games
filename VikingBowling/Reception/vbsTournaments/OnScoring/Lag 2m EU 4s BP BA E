@@ -1,0 +1,80 @@
+[JOBS]
+Job1Mode=TeamPoints
+Job1Plus1=#VAL_HOME#
+Job1Text1=text1
+
+Job2Mode=TeamPoints
+Job2Plus1=#VAL_AWAY#
+Job2Text1=text2
+
+
+[text1]
+font=Times
+size=24
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=80
+y=11
+
+[text2]
+font=Times
+size=24
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=80
+y=31
+
+
+### Begin texts
+
+[text3]
+font=Times
+size=24
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_HOME#
+x=116
+y=11
+
+[text4]
+font=Times
+size=24
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_AWAY#
+x=116
+y=31
+
+
+
+#CLIPHERE#
+
+#[JOBS]
+#Job1Mode=Pari / Calculated*
+#Job1Where=AllLanes / #VAL_12#,3,5
+#Job1When=Latest / Completed
+#Job1What=ScrathGame / ScratchAll / TotGame / TotAll 
+#Job1Plus1=aa			= Lagnamn
+#Job1Minus1=bb			= Lagnamn
+#Job1Text1=text1		= Vart skall summan hamna
+#Job1Text2=text2		= Vart skall summan hamna
+# * = Ej klar
+
+[SWAPS]
+Swap1Question=Vad skall Hemmalaget heta?
+Swap1Text=#VAL_HOME#
+Swap1Default=Hemmalag
+Swap2Question=Vad skall Bortalaget heta?
+Swap2Text=#VAL_AWAY#
+Swap2Default=Bortalag
+

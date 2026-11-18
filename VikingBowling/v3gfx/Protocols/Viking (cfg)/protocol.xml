@@ -1,0 +1,556 @@
+<!--
+	===========================================================================================================
+		Viking
+		Copyright 2011 VBS Bowling AB
+
+		
+		Filbehov:	Viking2001_CommonInfo.xml
+					Viking2001_Grids.xml
+					Viking2001_Header.xml
+					Viking2001_MessageInfo.xml
+					Viking2001_TeamInfo.xml
+			
+	===========================================================================================================	
+-->
+<protocol>
+	<x_generate>640</x_generate>
+	<y_generate>480</y_generate>
+	<y_start>152;110;80;65;65;65;65;60</y_start>  <!-- så här högt upp börjar protokoll -->
+	
+	<layer_before_1> <!-- Lagerutritning under protokoll -->
+		<import>Viking2001_Header.xml</import>
+		<import>Time.xml</import>		
+	</layer_before_1>	
+	
+	<active_player>  <!-- Hur vi ritar under aktiva spelarna (0-2st) -->
+		<file>
+		Viking2001_Grid1-5_Active.png;
+		Viking2001_Grid1-5_Active.png;
+		Viking2001_Grid1-5_Active.png;
+		Viking2001_Grid1-5_Active.png;
+		Viking2001_Grid1-5_Active.png;
+		Viking2001_Grid6-8_Active.png;
+		Viking2001_Grid6-8_Active.png;
+		Viking2001_Grid6-8_Active.png</file>
+		<y_pre_addon>5;5;3;2;2;1;1;1</y_pre_addon> <!-- marginal till ovanstående spelare om inte detta är första spelaren. -->
+		<y_post_addon>4;4;2;1;1;1;1;1</y_post_addon> <!-- marginal till underliggande spelare (värdena gäller 1-8 spelare)-->
+		<xpos>25</xpos> <!-- marginal till vänster kant av bild-->
+		<y_scale>1.4;1.4;1.3;1.05;0.88;1.15;1.05;0.9</y_scale> <!-- hur mycket skall vi förstora/minska grid.png för de olika spelarantalen-->
+
+		<layer_before_1>
+			<gradient_fill>    <!-- Fältet för spelarnamn etc. -->
+			<mode>1</mode>
+			<point1>
+				<x>0</x>
+				<y>0</y>
+				<color>
+					<trans>255;255;255;255;255;0</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>10</blue>
+				</color>
+			</point1>
+			<point2>
+				<x>304</x>
+				<y>20</y>
+				<color>
+					<trans>255;255;255;255;255;0</trans>
+					<red>255</red>
+					<green>75</green>
+					<blue>0</blue>
+				</color>
+			</point2>
+			<rect>
+				<x>1</x>
+				<y>59</y>
+				<w>581</w>
+				<h>28</h>
+			</rect>			
+		</gradient_fill>
+		<rectangle_fill>   <!-- Fälten för slagning -->
+			<rect>
+				<x>1</x>
+				<y>1</y>
+				<w>580;580;580;580;580;585</w>
+				<h>28</h>
+			</rect>
+			<color>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color>
+		</rectangle_fill>
+		<rectangle_fill>   <!-- Fälten för summering i resp ruta -->
+			<rect>
+				<x>1</x>
+				<y>30</y>
+				<w>580;580;580;580;580;585</w>
+				<h>28</h>
+			</rect>
+			<color>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color>
+		</rectangle_fill>
+		<true_type_text>	<!-- Spelarnamnet för aktiv spelare -->
+			<id>#NAME#;#NAME#;#NAME#;#NAME#;#NAME#;#NAME8#</id>
+			<text>Player1</text>
+			<font>Arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<rect>
+				<x>4</x>
+				<y>61;61;61;61;61;31</y>
+				<w>175;175;175;175;175;105</w>
+				<h>24</h>
+			</rect>
+			<fontstyle>bold</fontstyle>
+			<align>left</align>
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>0</shadow_factor>
+			<pen_width>0</pen_width>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>
+		<true_type_text>	<!-- Klothastighet -->
+			<id>#SPEED#</id>
+			<rect>
+				<x>185</x>
+				<y>64</y>
+				<w>80;80;80;80;80;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<align>left</align>
+			<aspect>10.75</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>	
+		<true_type_text>	<!-- HCP Beskrivning -->
+			<id>#HCPD#</id>
+			<text>HCP</text>			
+			<rect>
+				<x>280</x>
+				<y>64</y>
+				<w>35;35;35;35;35;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>		
+		<true_type_text>	<!-- HCP värde -->
+			<id>#HCP#</id>
+			<text>44</text>				
+			<rect>
+				<x>320</x>
+				<y>64</y>
+				<w>35;35;35;35;35;0</w>
+				<h>18;18;18;18;18;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>		
+		<true_type_text>	<!-- SER Beskrivning -->
+			<id>#SCRD#</id>
+			<text>SER</text>		
+			<rect>
+				<x>365</x>
+				<y>64</y>
+				<w>40;40;40;40;40;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>		
+		<true_type_text>	<!-- SER värde -->
+			<id>#SCR_CFG#</id>
+			<text>44</text>			
+			<rect>
+				<x>410;410;410;410;410;4</x>
+				<y>64;64;64;64;64;5</y>
+				<w>55;55;55;55;55;97</w>
+				<h>18</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<align>left;left;left;left;left;center</align>
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>	
+		<true_type_text>	<!-- Total Beskrivning -->
+			<id>#TOTD#</id>
+			<text>TOT</text>
+			<rect>
+				<x>475</x>
+				<y>64</y>
+				<w>40;40;40;40;40;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<align>left</align>
+			<aspect>0.75</aspect>
+			<is_text_rec>1</is_text_rec>
+			</true_type_text>		
+		<true_type_text>	<!-- Total värde -->
+			<id>#TOT_CFG#</id>
+			<text>44</text>			
+			<rect>
+				<x>520</x>
+				<y>64</y>
+				<w>55;55;55;55;55;0</w>
+				<h>18;18;18;18;18;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>			
+	</layer_before_1>
+	
+	<layer_after_1>				<!-- Klot och summor -->
+		<import>Viking2001_StandardGrids.xml</import>
+	</layer_after_1>
+	
+	<layer_after_2>				<!-- Pilar för AMR och Nästa bana-->
+			<picture>
+			<id>#LEFT_ARROW#</id>
+				<file>LeftArrow.png</file>
+				<rect>
+					<x>0</x>
+					<y>2</y>
+					<w>62</w>
+					<h>56</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>0.80</trans>
+			</picture>
+			<picture>
+			<id>#RIGHT_ARROW#</id>
+				<file>RightArrow.png</file>
+				<rect>
+					<x>519</x>
+					<y>2</y>
+					<w>62</w>
+					<h>56</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>0.80</trans>
+			</picture>
+		<picture>
+		<id>||||||||#ID_NEXT_GAME_LANE#</id>
+			<file>c:\Viking2001\V3Gfx\Resource\Objects\MessageFrame.png</file>
+			<rect>
+				<x>65</x>
+				<y>11</y>
+				<w>200</w>
+				<h>38</h>
+			</rect>
+			<color_factor>1</color_factor>
+			<trans>0.8</trans>
+			<layer_after_1>
+				<true_type_text>
+				<id>#NEXT_GAME_LANED#</id>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<rect>
+					<x>40</x>
+					<y>50</y>
+					<w>250</w>
+					<h>200</h>
+				</rect>
+				<pen_width>2</pen_width>
+				<aspect>0.75</aspect>
+				<align>center</align>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>
+			<true_type_text>
+			<id>#NEXT_GAME_LANE#</id>
+			<font>Arial</font>
+			<rect>
+				<x>310</x>
+				<y>50</y>
+				<w>80</w>
+				<h>170</h>
+			</rect>
+			<align>center</align>
+			<aspect>0.45</aspect>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+			</layer_after_1>
+		</picture>
+		</layer_after_2>
+	</active_player>
+	
+	<inactive_player>
+		<file>Viking2001_Grid1-5_Inactive.png;
+		Viking2001_Grid1-5_Inactive.png;
+		Viking2001_Grid1-5_Inactive.png;
+		Viking2001_Grid1-5_Inactive.png;
+		Viking2001_Grid1-5_Inactive.png;
+		Viking2001_Grid6-8_Inactive.png;
+		Viking2001_Grid6-8_Inactive.png;
+		Viking2001_Grid6-8_Inactive.png</file>
+		<y_pre_addon>5;5;3;1;1;1;1;1</y_pre_addon> <!-- marginal till ovanstående spelare om inte detta är första spelaren. -->
+		<y_post_addon>4;4;3;2;2;2;1;1</y_post_addon> <!-- marginal till underliggande spelare (värdena gäller 1-8 spelare)-->
+		<xpos>25</xpos> <!-- marginal till vänster kant av bild-->
+		<y_scale>1.4;1.4;1.3;1;0.82;0.98;0.82;0.75</y_scale> <!-- hur mycket skall vi förstora/minska grid.png för de olika spelarantalen-->
+		<layer_before_1>
+			<gradient_fill>    <!-- Fältet för spelarnamn etc. -->
+				<mode>1</mode>
+				<point1>
+					<x>0</x>
+					<y>0</y>
+					<color>
+						<trans>55;55;55;55;55;0</trans>
+						<red>255</red>
+						<green>255</green>
+						<blue>255</blue>
+					</color>
+				</point1>
+				<point2>
+					<x>317</x>
+					<y>0</y>
+					<color>
+						<trans>55;55;55;55;55;0</trans>
+						<red>255</red>
+						<green>255</green>
+						<blue>255</blue>
+					</color>
+				</point2>
+				<rect>
+					<x>1</x>
+					<y>59</y>
+					<w>580</w>
+					<h>28</h>
+				</rect>			
+			</gradient_fill>
+			<rectangle_fill>   <!-- Fälten för slagning -->
+				<rect>
+					<x>1</x>
+					<y>1</y>
+					<w>580;580;580;580;580;590</w>
+					<h>28</h>
+				</rect>
+				<color>
+					<trans>55</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color>
+			</rectangle_fill>
+			<rectangle_fill>   <!-- Fälten för summering i resp ruta -->
+				<rect>
+					<x>1</x>
+					<y>30</y>
+					<w>580;580;580;580;580;590</w>
+					<h>28</h>
+				</rect>
+				<color>
+					<trans>55</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color>
+			</rectangle_fill>
+		<true_type_text>	<!-- Spelarnamnet för aktiv spelare -->
+			<id>#NAME#;#NAME#;#NAME#;#NAME#;#NAME#;#NAME8#</id>
+			<text>Player1</text>
+			<font>Arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<rect>
+				<x>4</x>
+				<y>61;61;61;61;61;31</y>
+				<w>175;175;175;175;175;105</w>
+				<h>24</h>
+			</rect>
+			<fontstyle>bold</fontstyle>
+			<align>left</align>
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>0</shadow_factor>
+			<pen_width>0</pen_width>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>
+		<true_type_text>	<!-- Klothastighet -->
+			<id>#SPEED#</id>
+			<rect>
+				<x>185</x>
+				<y>64</y>
+				<w>80;80;80;80;80;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<align>left</align>
+			<aspect>10.75</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>	
+		<true_type_text>	<!-- HCP Beskrivning -->
+			<id>#HCPD#</id>
+			<text>HCP</text>			
+			<rect>
+				<x>280</x>
+				<y>64</y>
+				<w>35;35;35;35;35;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>		
+		<true_type_text>	<!-- HCP värde -->
+			<id>#HCP#</id>
+			<text>44</text>				
+			<rect>
+				<x>320</x>
+				<y>64</y>
+				<w>35;35;35;35;35;0</w>
+				<h>18;18;18;18;18;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>		
+		<true_type_text>	<!-- SER Beskrivning -->
+			<id>#SCRD#</id>
+			<text>SER</text>		
+			<rect>
+				<x>365</x>
+				<y>64</y>
+				<w>40;40;40;40;40;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>		
+		<true_type_text>	<!-- SER värde -->
+			<id>#SCR_CFG#</id>
+			<text>44</text>			
+			<rect>
+				<x>410;410;410;410;410;4</x>
+				<y>64;64;64;64;64;5</y>
+				<w>55;55;55;55;55;97</w>
+				<h>18</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<align>left;left;left;left;left;center</align>
+			<is_text_rec>0</is_text_rec>	
+		</true_type_text>	
+		<true_type_text>	<!-- Total Beskrivning -->
+			<id>#TOTD#</id>
+			<text>TOT</text>
+			<rect>
+				<x>475</x>
+				<y>64</y>
+				<w>40;40;40;40;40;0</w>
+				<h>22;22;22;22;22;0</h>
+			</rect>
+			<align>left</align>
+			<aspect>0.75</aspect>
+			<is_text_rec>1</is_text_rec>
+			</true_type_text>		
+		<true_type_text>	<!-- Total värde -->
+			<id>#TOT_CFG#</id>
+			<text>44</text>			
+			<rect>
+				<x>520</x>
+				<y>64</y>
+				<w>55;55;55;55;55;0</w>
+				<h>18;18;18;18;18;0</h>
+			</rect>
+			<aspect>0.75</aspect>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>			
+		</layer_before_1>
+	
+		<layer_after_1>	
+			<import>Viking2001_StandardGrids.xml</import>
+		</layer_after_1>
+		
+		<layer_after_2>
+		<picture>
+		<id>||||||||#ID_NEXT_GAME_LANE#</id>
+			<file>c:\Viking2001\V3Gfx\Resource\Objects\MessageFrame.png</file>
+			<rect>
+				<x>65</x>
+				<y>11</y>
+				<w>200</w>
+				<h>38</h>
+			</rect>
+			<color_factor>1</color_factor>
+			<trans>0.8</trans>
+			<layer_after_1>
+				<true_type_text>
+				<id>#NEXT_GAME_LANED#</id>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<rect>
+					<x>40</x>
+					<y>50</y>
+					<w>250</w>
+					<h>200</h>
+				</rect>
+				<pen_width>2</pen_width>
+				<aspect>0.75</aspect>
+				<align>center</align>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>
+			<true_type_text>
+			<id>#NEXT_GAME_LANE#</id>
+			<font>Arial</font>
+			<rect>
+				<x>310</x>
+				<y>50</y>
+				<w>80</w>
+				<h>170</h>
+			</rect>
+			<align>center</align>
+			<aspect>0.45</aspect>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+			</layer_after_1>
+		</picture>
+		</layer_after_2>
+		
+	</inactive_player>
+	
+	<layer_after_1>	
+		<import>Viking2001_CommonInfo.xml</import>
+	</layer_after_1>
+
+	<layer_after_2>
+	
+	</layer_after_2>
+	
+	<layer_after_3>
+		<import>#PINS_ON_PROTOCOL#</import>
+	</layer_after_3>
+	
+	<layer_after_4>
+		<import>Viking2001_MessageInfo.xml</import>	
+	</layer_after_4>
+		<import>Viking2001_TeamInfo.xml</import>		
+</protocol>

@@ -1,0 +1,787 @@
+<!--
+	===========================================================================================================
+		Lagspel 6 banpoäng resp aktuell serie
+								
+		Text1:		Lag1 slagning i aktuell serie
+		Text3:		Lag1 Banpoäng
+		Text5:		Lag2 slagning i aktuell serie
+		Text7:		Lag2 Banpoäng
+		Text9:		Lag3 slagning i aktuell serie
+		Text11:		Lag3 Banpoäng
+		Text13:		Lag4 slagning i aktuell serie
+		Text15:		Lag4 Banpoäng
+		Text17:		Lag5 slagning i aktuell serie
+		Text19:		Lag5 Banpoäng
+		Text21:		Lag6 slagning i aktuell serie
+		Text23:		Lag6 Banpoäng
+		Text25:		Lag7 slagning i aktuell serie
+		Text27:		Lag7 Banpoäng
+		Text29:		Lag8 slagning i aktuell serie
+		Text31:		Lag8 Banpoäng		
+		Text33:		Pari (värde)
+		
+		Text35:		Namn för Lag1
+		Text37:		Namn för Lag2
+		Text39:		Namn för Lag3
+		Text41:		Namn för Lag4
+		Text43:		Namn för Lag5
+		Text45:		Namn för Lag6
+		Text47:		Namn för Lag7
+		Text49:		Namn för Lag8
+		
+		Text51:		Diff Lag1-Lag2
+		Text53:		Diff Lag3-Lag4
+		Text55:		Diff Lag5-Lag6
+		Text57:		Diff Lag7-Lag8
+		
+		Copyright 2018 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+
+<!-- VBS-T banparsdiffar nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>240</y_generate>
+
+	<rectangle_fill>
+		<rect>
+			<x>10</x>
+			<y>21</y>
+			<w>240</w>
+			<h>86</h>
+		</rect>
+		<color>
+			<trans>150</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color>
+	</rectangle_fill>
+
+	<rectangle_fill>
+		<rect>
+			<x>10</x>
+			<y>114</y>
+			<w>240</w>
+			<h>86</h>
+		</rect>
+		<color>
+			<trans>150</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color>
+	</rectangle_fill>
+
+	<rectangle_fill>
+		<rect>
+			<x>330</x>
+			<y>21</y>
+			<w>240</w>
+			<h>86</h>
+		</rect>
+		<color>
+			<trans>150</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color>
+	</rectangle_fill>
+	
+	<rectangle_fill>
+		<rect>
+			<x>330</x>
+			<y>114</y>
+			<w>240</w>
+			<h>86</h>
+		</rect>
+		<color>
+			<trans>150</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color>
+	</rectangle_fill>	
+
+	
+	<!--Rubriker -->
+	<true_type_text>	
+		<text>Poäng</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>15</x>
+			<y>0</y>
+			<w>30</w>
+			<h>18</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.6</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<text>Namn</text>
+		<align>left</align>	
+		<rect>
+			<x>50</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<text>Serie</text>
+		<align>center</align>	
+		<rect>
+			<x>210</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>
+
+	<!--Rubriker -->
+	<true_type_text>	
+		<text>Poäng</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>335</x>
+			<y>0</y>
+			<w>30</w>
+			<h>18</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.6</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<text>Namn</text>
+		<align>left</align>	
+		<rect>
+			<x>370</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<text>Serie</text>
+		<align>center</align>	
+		<rect>
+			<x>530</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 1 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<text>Lagnamn Lag1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>15</x>
+			<y>25</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.7</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text35#</id>
+		<text>Aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>50</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Total slagning</text>
+		<align>center</align>	
+		<rect>
+			<x>210</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 2 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Lagnamn Lag1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>15</x>
+			<y>70</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.7</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text37#</id>
+		<text>Aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>50</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<text>Total slagning</text>
+		<align>center</align>	
+		<rect>
+			<x>210</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>
+
+	<picture>	<!-- Diff mellan lagen -->
+		<id>#VBST_JOB_text51#</id>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled110x85.png</file>
+		<rect>
+			<x>255</x>
+			<y>30</y>	
+			<w>55</w>
+			<h>70</h>			
+		</rect>
+		<layer_after_1>
+			<true_type_text>	
+			<id>#VBST_JOB_text51#</id>
+			<align>center</align>	
+			<rect>
+				<x>20</x>
+				<y>15</y>
+				<w>70</w>
+				<h>55</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>	
+	
+
+	
+	<!-- Lag 3 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>15</x>
+			<y>118</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text39#</id>
+		<align>left</align>	
+		<rect>
+			<x>50</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<align>center</align>	
+		<rect>
+			<x>210</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 4 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text15#</id>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>15</x>
+			<y>163</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text41#</id>
+		<align>left</align>	
+		<rect>
+			<x>50</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text13#</id>
+		<align>center</align>	
+		<rect>
+			<x>210</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>	
+	
+	<picture>	<!-- Diff mellan lagen -->
+		<id>#VBST_JOB_text53#</id>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled110x85.png</file>
+		<rect>
+			<x>255</x>
+			<y>123</y>	
+			<w>55</w>
+			<h>70</h>			
+		</rect>
+		<layer_after_1>
+			<true_type_text>	
+			<id>#VBST_JOB_text53#</id>
+			<align>center</align>	
+			<rect>
+				<x>20</x>
+				<y>15</y>
+				<w>70</w>
+				<h>55</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>	
+	
+	<!-- Lag 5 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text19#</id>
+		<text>Lagnamn Lag1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>335</x>
+			<y>25</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.7</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text43#</id>
+		<text>Aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>370</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text17#</id>
+		<text>Total slagning</text>
+		<align>center</align>	
+		<rect>
+			<x>530</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 6 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text23#</id>
+		<text>Lagnamn Lag1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>335</x>
+			<y>70</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.7</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text45#</id>
+		<text>Aktuell serie</text>
+		<align>left</align>	
+		<rect>
+			<x>370</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text21#</id>
+		<text>Total slagning</text>
+		<align>center</align>	
+		<rect>
+			<x>530</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>	
+	
+	<picture>	<!-- Diff mellan lagen -->
+		<id>#VBST_JOB_text55#</id>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled110x85.png</file>
+		<rect>
+			<x>575</x>
+			<y>30</y>	
+			<w>55</w>
+			<h>70</h>			
+		</rect>
+		<layer_after_1>
+			<true_type_text>	
+			<id>#VBST_JOB_text55#</id>
+			<align>center</align>	
+			<rect>
+				<x>20</x>
+				<y>15</y>
+				<w>70</w>
+				<h>55</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>			
+
+	<!-- Lag 7 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text27#</id>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>335</x>
+			<y>118</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text47#</id>
+		<align>left</align>	
+		<rect>
+			<x>370</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text25#</id>
+		<align>center</align>	
+		<rect>
+			<x>530</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>
+	
+	<!-- Lag 8 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text31#</id>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>335</x>
+			<y>163</y>
+			<w>30</w>
+			<h>33</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text49#</id>
+		<align>left</align>	
+		<rect>
+			<x>370</x>
+			<w>150</w>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text29#</id>
+		<align>center</align>	
+		<rect>
+			<x>530</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>	
+	
+	<picture>	<!-- Diff mellan lagen -->
+		<id>#VBST_JOB_text57#</id>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled110x85.png</file>
+		<rect>
+			<x>575</x>
+			<y>123</y>	
+			<w>55</w>
+			<h>70</h>			
+		</rect>
+		<layer_after_1>
+			<true_type_text>	
+			<id>#VBST_JOB_text53#</id>
+			<align>center</align>	
+			<rect>
+				<x>20</x>
+				<y>15</y>
+				<w>70</w>
+				<h>55</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>
+	
+</bottom_panel_11>	
+
+
+	

@@ -1,0 +1,291 @@
+<!--
+	===========================================================================================================
+		
+		Text1:		Banpoäng för hemmalaget
+		Text2:		Banpoäng för bortalaget
+		Text3:		Namn på hemmalag
+		Text4:		Namn på bortalag
+		
+	===========================================================================================================	
+-->
+
+<!--
+	Ryms i protokollets egna 1920 x 1080 - bilden trycks aldrig ihop för 1-2 spelare (Stefan 2026-10-03:
+	"rätt storlek på protokollet utan en massa tomt utrymme över och under"):
+	  1-2 spelare: ovanför och under protokollet, ingen panel.
+	  3-4 spelare: en rad ovanför protokollet, resten i en panel.
+	  5+ spelare:  allt i panelen (Standard, Halloween och Xmas börjar protokollet högre).
+	Värdena "a;a;b;b;c" väljs efter antal spelare på protokollet (1, 2, 3, 4, 5 eller fler).
+	Skapad av testtools/onscoring_fhd/fhd1080.py.
+-->
+
+<layer_after_11>
+	<picture>	<!-- Hemmalag -->
+		<file>C:\Viking2001\v3gfx\Resource\Objects\LU600X110R10.png</file>
+		<rect>
+			<x>122;122;150;150;131</x>
+			<y>970;970;3;3;1085</y>
+			<w>650;650;556;556;650</w>
+			<h>100;100;95;95;95</h>
+		</rect>
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>175</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>595</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>
+		</layer_before_1>
+		<layer_after_1>
+			<true_type_text>
+				<id>#VBST_JOB_text3#</id>
+				<text>Hemmalag</text>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<rect>
+					<x>25</x>
+					<y>20</y>
+					<w>550</w>
+					<h>60</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<maxsize>0</maxsize>
+				<aspect>0.75</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>2</shadow_factor>
+				<pen_width>1</pen_width>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>
+	<picture>	<!-- Hemma poäng -->
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X110R10.png</file>
+		<rect>
+			<x>777;777;711;711;786</x>
+			<y>970;970;3;3;1085</y>
+			<w>180;180;171;171;171</w>
+			<h>100;100;95;95;95</h>
+		</rect>
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>
+		</layer_before_1>
+		<layer_after_1>
+			<true_type_text>
+				<id>#VBST_JOB_text1#</id>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<rect>
+					<x>20</x>
+					<y>20</y>
+					<w>160</w>
+					<h>60</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<maxsize>0</maxsize>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<pen_width>1</pen_width>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>
+	<picture>	<!-- Borta poäng -->
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X110R10.png</file>
+		<rect>
+			<x>962;962;887;887;962</x>
+			<y>970;970;3;3;1085</y>
+			<w>180;180;171;171;171</w>
+			<h>100;100;95;95;95</h>
+		</rect>
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>
+		</layer_before_1>
+		<layer_after_1>
+			<true_type_text>
+				<id>#VBST_JOB_text2#</id>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<rect>
+					<x>20</x>
+					<y>20</y>
+					<w>160</w>
+					<h>60</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<maxsize>0</maxsize>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<pen_width>1</pen_width>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>
+	<picture>	<!-- Bortalag -->
+		<file>C:\Viking2001\v3gfx\Resource\Objects\RU600X110R10.png</file>
+		<rect>
+			<x>1147;1147;1063;1063;1138</x>
+			<y>970;970;3;3;1085</y>
+			<w>650;650;556;556;650</w>
+			<h>100;100;95;95;95</h>
+		</rect>
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>175</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>0</x>
+					<y>5</y>
+					<w>595</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>
+		</layer_before_1>
+		<layer_after_1>
+			<true_type_text>
+				<id>#VBST_JOB_text4#</id>
+				<text>Bortalag</text>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<rect>
+					<x>25</x>
+					<y>20</y>
+					<w>550</w>
+					<h>60</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<maxsize>0</maxsize>
+				<aspect>0.75</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>2</shadow_factor>
+				<pen_width>1</pen_width>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>
+</layer_after_11>
+
+<!-- Panelen finns bara när protokollet saknar plats: 0 hög för 1-2 spelare -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>0;0;0;0;110</y_generate>
+</bottom_panel_11>

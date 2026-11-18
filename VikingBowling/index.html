@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0A1322">
+<title>Viking Bowling</title>
+<link rel="icon" href="web/screen/common/img/favicon.ico">
+<link rel="stylesheet" href="web/screen/console/fonts/barlow.css">
+<link rel="stylesheet" href="css/game.css">
+<script type="importmap">
+{ "imports": {
+    "three": "./lib/three/three.module.js",
+    "three/addons/": "./lib/three/addons/",
+    "cannon-es": "./lib/cannon-es/cannon-es.js"
+} }
+</script>
+</head>
+<body>
+<!--
+  Viking Bowling - VBS Bowling AB. Built on Viking Scoring System 4.4: the OpenPlay
+  scoring and game logic (js/engine), the HTML lane TV (web/screen/HTML/TakTV, fed by the
+  game's stand-in for LoadCom), the lane console's look and texts.
+-->
+<div id="stage"></div>
+<canvas id="trail"></canvas>
+
+<!-- 1. Splash: the 4.4 splash, the five languages, the short help and copyright -->
+<section id="splash" class="screen active">
+  <div class="splashBg"></div>
+  <div class="splashCard">
+    <img class="splashImg" src="img/Splash44.png" alt="Viking Scoring System 4.4">
+    <div class="splashTitle">VIKING BOWLING</div>
+    <div class="langRow" id="langRow" role="radiogroup"></div>
+    <div class="infoBox">
+      <h2 data-t="infoTitle"></h2>
+      <p data-t="infoText"></p>
+      <p class="howTo" data-t="howTo"></p>
+      <p class="copy" data-t="copyright"></p>
+    </div>
+    <button id="okBtn" class="btn gold big" data-t="ok"></button>
+  </div>
+</section>
+
+<!-- 2. Game choice -->
+<section id="menu" class="screen">
+  <div class="panel wide">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="open" data-t="openPlay"></button>
+      <button class="tab" data-tab="vbst" data-t="vbst"></button>
+    </div>
+    <div class="styleRow">
+      <span class="label" data-t="playStyle"></span>
+      <button class="chip active" data-style="eur"><b data-t="eur"></b><small data-t="eurHint"></small></button>
+      <button class="chip" data-style="amr"><b data-t="amr"></b><small data-t="amrHint"></small></button>
+    </div>
+    <div id="openPane" class="pane">
+      <div class="gameGrid" id="gameGrid"></div>
+      <div class="optRow">
+        <label class="opt"><input type="checkbox" id="optRedPin"> <span data-t="redPin"></span></label>
+        <label class="opt"><input type="checkbox" id="optAim" checked> <span data-t="aimLine"></span></label>
+        <label class="opt"><input type="checkbox" id="optSpeed"> <span data-t="showSpeed"></span></label>
+        <label class="opt sel"><span data-t="theme"></span>
+          <select id="optTheme">
+            <option value="Standard">Standard</option>
+            <option value="Viking Refresh">Viking Refresh</option>
+            <option value="Halloween">Halloween</option>
+            <option value="Xmas Center">Xmas</option>
+          </select></label>
+        <label class="opt sel"><span data-t="robots"></span>
+          <select id="optRobots"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
+        <label class="opt sel"><span data-t="skill"></span><select id="optSkill"></select></label>
+      </div>
+    </div>
+    <div id="vbstPane" class="pane" hidden>
+      <div class="formatTabs">
+        <button class="chip active" data-ftab="pre" data-t="predefined"></button>
+        <button class="chip" data-ftab="auto" data-t="autoFormats"></button>
+        <input id="autoSearch" class="search" type="search" hidden>
+      </div>
+      <div class="formatList" id="formatList"></div>
+      <div class="optRow">
+        <label class="opt"><input type="checkbox" id="optAimV" checked> <span data-t="aimLine"></span></label>
+        <label class="opt sel"><span data-t="skill"></span><select id="optSkillV"></select></label>
+      </div>
+    </div>
+    <div class="footer">
+      <button class="btn" id="menuBack" data-t="back"></button>
+      <button class="btn gold" id="menuNext" data-t="next"></button>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Names -->
+<section id="names" class="screen">
+  <div class="panel">
+    <h2 id="namesTitle"></h2>
+    <label class="field"><span data-t="yourName"></span><input id="humanName" maxlength="20" autocomplete="off"></label>
+    <div id="robotList" class="robotList"></div>
+    <div class="footer">
+      <button class="btn" id="namesBack" data-t="back"></button>
+      <button class="btn" id="reroll" data-t="reroll"></button>
+      <button class="btn gold" id="startBtn" data-t="start"></button>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Play: the lane TV, the status line, the buttons -->
+<section id="play" class="screen hud">
+  <div id="tvBox" class="tvBox" title="">
+    <iframe id="tv1" class="tv" title="Lane TV"></iframe>
+    <iframe id="tv2" class="tv" title="Lane TV" hidden></iframe>
+    <div class="tvTabs" id="tvTabs" hidden><button data-lane="1"></button><button data-lane="2"></button></div>
+  </div>
+  <div id="effect" class="effect"></div>
+  <div id="status" class="status"></div>
+  <div class="hudBtns">
+    <button id="btnMenu" class="icon" aria-label="Menu">&#9776;</button>
+    <button id="btnFast" class="icon" aria-label="Fast">&#9193;</button>
+    <button id="btnSound" class="icon" aria-label="Sound">&#128266;</button>
+    <button id="btnFull" class="icon" aria-label="Full screen">&#x26F6;</button>
+  </div>
+  <div id="speedo" class="speedo"></div>
+</section>
+
+<!-- VBS-T standings between series -->
+<section id="standings" class="screen">
+  <div class="panel wide">
+    <h2 id="standTitle"></h2>
+    <div id="standBody" class="standBody"></div>
+    <div class="footer">
+      <button class="btn" id="standMenu" data-t="menu"></button>
+      <button class="btn gold" id="standNext" data-t="nextSerie"></button>
+    </div>
+  </div>
+</section>
+
+<!-- 6. Summary -->
+<section id="summary" class="screen">
+  <div class="panel wide">
+    <h2 data-t="summary"></h2>
+    <div id="sumBody"></div>
+    <div class="footer">
+      <button class="btn" id="sumMenu" data-t="newGame"></button>
+      <button class="btn gold" id="sumAgain" data-t="playAgain"></button>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="toast"></div>
+<noscript>Viking Bowling needs JavaScript.</noscript>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+[hidden] { display: none !important; }
+/* Viking Bowling - the lane console's palette and fonts (web/screen/console/touchconsoleLane.css) */
+:root {
+  --bg: #0A1322; --surface: #111D31; --surface2: #17263F; --raised: #1D2E4C; --line: #24375A;
+  --text: #EEF2F8; --muted: #9AA8BF; --gold: #E2B550; --goldHover: #ECC46A; --goldInk: #1A1306;
+  --blue: #2F86E0; --red: #E5484D;
+  --font: Barlow, "Segoe UI", Roboto, system-ui, sans-serif;
+  --fontCond: "Barlow Condensed", "Segoe UI Semibold", "Roboto Condensed", Barlow, sans-serif;
+  --safeB: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font);
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; touch-action: none; }
+button, input, select { font-family: inherit; font-size: inherit; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; }
+#trail { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+
+.screen { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 10;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(12px, var(--safeB)); overflow-y: auto; }
+.screen.active { display: flex; }
+.screen.hud { pointer-events: none; display: none; z-index: 8; padding: 0; }
+.screen.hud.active { display: block; }
+.screen:not(.hud) { background: radial-gradient(ellipse at 50% 30%, rgba(17,29,49,0.82), rgba(5,9,18,0.94)); }
+
+/* splash */
+#splash { background: #000; }
+/* The 4.4 "Loading" artwork behind the card, with the word "Loading" (the top quarter of the
+   picture) pushed off the top of the screen, so the page cannot look as if it is still
+   loading: the box is 38 % taller than the screen and the picture sits at its bottom. Fixed,
+   so it never adds to the splash's scrolling. */
+.splashBg { position: fixed; inset: -38% 0 0 0; background: url(../img/SplashW.jpg) center bottom / cover no-repeat;
+  filter: blur(6px) brightness(0.5); transform: scale(1.08); }
+.splashCard { position: relative; width: min(560px, 100%); display: flex; flex-direction: column; align-items: center; gap: 12px; margin: auto; }
+.splashImg { width: min(530px, 100%); height: auto; border-radius: 8px; box-shadow: 0 12px 40px rgba(0,0,0,0.6); border: 1px solid rgba(226,181,80,0.5); }
+.splashTitle { font-family: var(--fontCond); font-weight: 700; font-size: clamp(26px, 6vw, 40px); letter-spacing: 0.08em; color: var(--gold);
+  text-shadow: 0 2px 8px #000; margin-top: -4px; }
+.langRow { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.flagBtn { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 10px 6px; border-radius: 10px;
+  background: rgba(17,29,49,0.85); border: 2px solid var(--line); color: var(--text); cursor: pointer; min-width: 74px; }
+.flagBtn svg { width: 52px; height: 33px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(255,255,255,0.25); display: block; }
+.flagBtn span { font-size: 13px; font-weight: 600; }
+.flagBtn.active { border-color: var(--gold); background: var(--surface2); box-shadow: 0 0 0 3px rgba(226,181,80,0.25); }
+.infoBox { background: rgba(10,19,34,0.88); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; font-size: 14px; line-height: 1.4; width: 100%; }
+.infoBox h2 { margin: 0 0 6px; font-family: var(--fontCond); font-size: 20px; color: var(--gold); }
+.infoBox p { margin: 4px 0; }
+.infoBox .copy { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+
+/* panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; width: min(560px, 100%);
+  max-height: 100%; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 16px 50px rgba(0,0,0,0.5); }
+.panel.wide { width: min(980px, 100%); }
+.panel h2 { margin: 0; font-family: var(--fontCond); font-size: 24px; color: var(--gold); }
+.footer { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; margin-top: 4px; }
+.btn { background: var(--raised); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 11px 18px; font-weight: 600; cursor: pointer; min-height: 44px; }
+.btn:hover { background: var(--surface2); }
+.btn.gold { background: var(--gold); color: var(--goldInk); border-color: var(--gold); }
+.btn.gold:hover { background: var(--goldHover); }
+.btn.big { font-size: 18px; padding: 14px 28px; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); }
+.tab { flex: 1; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted); padding: 10px; font-weight: 700; font-family: var(--fontCond); font-size: 19px; cursor: pointer; }
+.tab.active { color: var(--text); border-bottom-color: var(--gold); }
+.styleRow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.label { color: var(--muted); font-size: 14px; margin-right: 4px; }
+.chip { background: var(--surface2); color: var(--text); border: 1.5px solid var(--line); border-radius: 10px; padding: 7px 12px; cursor: pointer; text-align: left; }
+.chip b { display: block; font-size: 14px; }
+.chip small { color: var(--muted); font-size: 12px; }
+.chip.active { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+.pane { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+.gameGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.gameTile { position: relative; border-radius: 10px; overflow: hidden; border: 2px solid var(--line); background: var(--surface2) center / cover no-repeat;
+  min-height: 82px; cursor: pointer; display: flex; align-items: flex-end; padding: 0; color: var(--text); text-align: left; }
+.gameTile span { display: block; width: 100%; padding: 6px 9px; background: linear-gradient(transparent, rgba(5,9,18,0.92) 45%); font-weight: 700; font-family: var(--fontCond); font-size: 17px; }
+.gameTile.active { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(226,181,80,0.35); }
+.optRow { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 14px; }
+.opt { display: flex; align-items: center; gap: 6px; }
+.opt input[type=checkbox] { width: 20px; height: 20px; accent-color: var(--gold); }
+.opt select, .search { background: var(--surface2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.formatTabs { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.search { flex: 1; min-width: 140px; }
+.formatList { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; overflow: auto; max-height: 46vh; }
+.fmt { background: var(--surface2); border: 1.5px solid var(--line); border-radius: 10px; padding: 8px 10px; cursor: pointer; text-align: left; color: var(--text); }
+.fmt b { display: block; font-size: 14.5px; }
+.fmt small { color: var(--muted); font-size: 12px; }
+.fmt.active { border-color: var(--gold); }
+.fmt.bad { opacity: 0.55; }
+.field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--muted); }
+.field input { background: var(--bg); color: var(--text); border: 1.5px solid var(--line); border-radius: 10px; padding: 12px; font-size: 18px; user-select: text; -webkit-user-select: text; }
+.field input:focus { outline: none; border-color: var(--gold); }
+.robotList { display: flex; flex-direction: column; gap: 6px; overflow: auto; max-height: 50vh; }
+.robot { display: flex; justify-content: space-between; align-items: center; background: var(--surface2); border-radius: 8px; padding: 7px 10px; font-size: 15px; gap: 8px; }
+.robot small { color: var(--muted); }
+.robot .teamTag { font-size: 12px; color: var(--goldInk); background: var(--gold); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
+.robot.me { border: 1px solid var(--gold); }
+
+/* the game HUD */
+.tvBox { position: absolute; top: max(8px, env(safe-area-inset-top)); right: 8px; width: min(40vw, 640px); aspect-ratio: 16 / 9;
+  border-radius: 8px; overflow: hidden; box-shadow: 0 6px 24px rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.15);
+  pointer-events: auto; background: #000; cursor: zoom-in; transition: all 0.25s ease; }
+.tvBox .tv { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+/* Full size: the box covers the screen (black, a tap anywhere makes it small again) and the
+   lane TV inside keeps 16:9, as large as fits and centred - never stretched to the screen. */
+.tvBox.big { top: 0; right: 0; left: 0; bottom: 0; width: 100vw; height: 100vh; height: 100dvh; aspect-ratio: auto; border-radius: 0;
+  border: 0; cursor: zoom-out; z-index: 20; }
+.tvBox.big .tv { inset: auto; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(100vw, 100vh * 16 / 9); height: min(100vw * 9 / 16, 100vh);
+  width: min(100vw, 100dvh * 16 / 9); height: min(100vw * 9 / 16, 100dvh); }
+.tvTabs { position: absolute; left: 6px; bottom: 6px; display: flex; gap: 4px; }
+.tvTabs button { background: rgba(10,19,34,0.8); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; pointer-events: auto; }
+.tvTabs button.active { border-color: var(--gold); color: var(--gold); }
+@media (orientation: portrait) {
+  .tvBox { left: 0; right: 0; top: 0; width: 100vw; border-radius: 0; }
+}
+.status { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(18px + var(--safeB)); background: rgba(10,19,34,0.86);
+  border: 1px solid var(--line); border-radius: 22px; padding: 9px 18px; font-weight: 700; font-size: clamp(14px, 2.2vw, 19px); white-space: nowrap; max-width: 92vw; overflow: hidden; text-overflow: ellipsis; }
+.status.mine { border-color: var(--gold); color: var(--gold); }
+.hudBtns { position: absolute; left: 8px; top: max(8px, env(safe-area-inset-top)); display: flex; gap: 6px; pointer-events: auto; }
+@media (orientation: portrait) { .hudBtns { top: auto; bottom: calc(66px + var(--safeB)); flex-direction: column; } }
+.icon { width: 44px; height: 44px; border-radius: 10px; background: rgba(10,19,34,0.8); color: var(--text); border: 1px solid var(--line); font-size: 20px; cursor: pointer; }
+.icon.on { border-color: var(--gold); color: var(--gold); }
+.speedo { position: absolute; right: 12px; bottom: calc(20px + var(--safeB)); font-family: var(--fontCond); font-size: 18px; color: var(--muted); }
+.effect { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-family: var(--fontCond); font-weight: 700; font-size: clamp(44px, 12vw, 120px);
+  color: var(--gold); text-shadow: 0 4px 24px rgba(0,0,0,0.8), 0 0 40px rgba(226,181,80,0.5); opacity: 0; pointer-events: none; letter-spacing: 0.04em; }
+.effect.show { animation: pop 1.6s ease-out; }
+.effect.red { color: #ff4a4a; }
+.effect.white { color: var(--text); font-size: clamp(32px, 8vw, 80px); }
+@keyframes pop { 0% { opacity: 0; transform: scale(0.4); } 15% { opacity: 1; transform: scale(1.12); } 30% { transform: scale(1); } 75% { opacity: 1; } 100% { opacity: 0; transform: scale(1.05) translateY(-20px); } }
+.toast { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); background: rgba(10,19,34,0.92); border: 1px solid var(--gold); color: var(--text);
+  padding: 10px 16px; border-radius: 10px; z-index: 30; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90vw; text-align: center; }
+.toast.show { opacity: 1; }
+
+/* tables: each in a wrapper that scrolls sideways if a table is still too wide, so no column
+   is ever cut off; on a narrow screen the padding and font are tighter and the secondary
+   columns (class "sec": splits, earlier series) are hidden - the place, the name, the
+   score, the pins, the points and the total always show. In the VBS-T standings the last
+   column (the total, or the team's points) stays in view at every width: it is sticky on the
+   right with a solid background, so many series scroll sideways underneath it. The cells
+   keep their own borders (separate, spacing 0), so a sticky cell's border moves with it. */
+.tableWrap { flex: none; max-width: 100%; overflow-x: auto; overflow-y: hidden; touch-action: pan-x pan-y; }
+table.res { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 15px; }
+table.res th, table.res td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--line); }
+#standBody table.res th:last-child, #standBody table.res td:last-child { position: sticky; right: 0; z-index: 1;
+  background: var(--surface); box-shadow: -10px 0 8px -8px rgba(0,0,0,0.65); }
+table.res th:nth-child(2), table.res td:nth-child(2) { text-align: left; }
+table.res th { color: var(--muted); font-weight: 600; font-size: 13px; }
+table.res tr.me td { color: var(--gold); font-weight: 700; }
+table.res tr.win td:nth-child(2)::after { content: ' \1F3C6'; }
+@media (max-width: 480px) {
+  #summary, #standings { padding-left: 8px; padding-right: 8px; }
+  #summary .panel, #standings .panel { padding: 12px; }
+  table.res { font-size: 13.5px; }
+  table.res th, table.res td { padding: 6px 4px; }
+  table.res th { font-size: 12px; }
+  table.res .sec { display: none; }
+}
+.standBody, #sumBody { overflow: auto; display: flex; flex-direction: column; gap: 14px; }
+.teamBoxes { display: flex; gap: 10px; flex-wrap: wrap; }
+.teamBox { flex: 1; min-width: 200px; background: var(--surface2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.teamBox b { font-size: 18px; }
+.teamBox .big { font-family: var(--fontCond); font-size: 34px; color: var(--gold); }
+.teamBox.lead { border-color: var(--gold); }
+.note { color: var(--muted); font-size: 13px; }

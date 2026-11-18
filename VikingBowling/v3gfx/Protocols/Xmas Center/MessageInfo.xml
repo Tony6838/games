@@ -1,0 +1,232 @@
+<!--
+	===========================================================================================================
+	MessageInfo
+	
+	ID	Description
+	19	Inspelning pågår
+	20	Inspelning slut
+	21	Notap Strike utförs
+	22	Serviceknapp tryckt
+	23	Ur sekvens
+	24	Ny serie - Press Space
+	
+	Layer
+	2	Ny serie - Spela klot
+	2	Ny serie - Belgium Odd
+	2	Ny serie - Belgium Even
+	2	10th Frame Reset
+-->
+
+<!-- OK    Inspelning pågår -->
+<bottom_panel_19>
+	<y_generate>450;330;300;300;300;200;150</y_generate>
+	<id>#PRACTICE1#</id>
+	<picture>
+		<file>Empty1920x450.png</file>
+		<id>#PRACTICE1#</id>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>450;330;300;300;300;200;150</h>
+		</rect>
+		<import>common_practice.xml</import>
+	</picture>
+</bottom_panel_19>
+
+<!-- KONTROLLERA HUR DENNE TAG FUNGERAR!!!   Inspelning slut -->
+<bottom_panel_20>
+	<y_generate>450;330;300;300;300;200;150</y_generate>
+	<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+	<picture>
+		<file>Empty1920x450.png</file>
+		<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>450;330;300;300;300;200;150</h>
+		</rect>
+		<import>common_stop_practice.xml</import>	
+	</picture>
+</bottom_panel_20>
+
+<!-- TESTA   NoTap reset -->
+<bottom_panel_21>
+	<y_generate>450;330;300;300;300;200;150</y_generate>
+	<id>#ID_MASKPIC_STOP_NOTAP#</id>
+	<picture>
+		<file>Empty1920x450.png</file>
+		<id>#ID_MASKPIC_STOP_NOTAP#</id>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>450;330;300;300;300;200;150</h>
+		</rect>
+	<import>Common_NotapReset.xml</import>		
+	</picture>
+</bottom_panel_21>
+
+<!-- Serviceknappen tryckt -->
+<bottom_panel_22>
+	<y_generate>450;330;300;300;300;200;150</y_generate>
+	<id>#ID_MASKPIC_SERVICE#</id>
+	<picture>
+		<file>Empty1920x450.png</file>
+		<id>#ID_MASKPIC_SERVICE#</id>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>450;330;300;300;300;200;150</h>
+		</rect>
+	<import>Common_Service.xml</import>			
+	</picture>
+</bottom_panel_22>
+
+<!-- KAN INTE TESTAS Ur sekvens -->
+<bottom_panel_23>
+	<y_generate>450;330;300;300;300;200;150</y_generate>
+	<id>#ID_MASKPIC_OUT_OF_SEQUENCE#</id>
+	<picture>
+		<file>Empty1920x450.png</file>
+		<id>#ID_MASKPIC_OUT_OF_SEQUENCE#</id>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>450;330;300;300;300;200;150</h>
+		</rect>
+	<import>Common_OutOfSequence.xml</import>		
+	</picture>
+</bottom_panel_23>
+
+<!-- Press SPACE -->
+<bottom_panel_24>
+	<y_generate>450;330;300;300;300;200;150</y_generate>
+	<id>#ID_MASKPIC_WAITSPACE#</id>	
+	<picture>
+	<file>Empty1920x450.png</file>
+	<id>#ID_MASKPIC_WAITSPACE#</id>
+	<rect>
+		<x>0</x>
+		<y>0</y>
+		<w>1920</w>
+		<h>450;330;300;300;300;200;150</h>
+	</rect>
+	<import>Common_PressSpace.xml</import>	
+	</picture>
+</bottom_panel_24>
+
+
+<layer_before_2>
+
+
+
+
+</layer_before_2>
+
+
+<layer_after_3>
+	<!-- Serviceknappen tryckt -->
+	<picture>
+		<file>Varningstriangel.png</file>
+		<id>#ID_MASKPIC_SERVICE#</id>
+		<rect>
+			<x>300</x>
+			<y>100</y>
+			<w>1320</w>
+			<h>980</h>
+		</rect>
+		<trans>1</trans>
+		<layer_after_1>
+			<picture>
+			<file>Tools.png</file>
+			<rect>
+				<x>705</x>
+				<y>800</y>
+				<w>510</w>
+				<h>550</h>
+			</rect>
+			<trans>1</trans>
+		</picture>
+		</layer_after_1>
+		
+	</picture>
+
+	<!-- Spela klot för ny serie -->
+	<picture>
+	<file>Gray1920x1080_75.png</file>
+	<id>#ID_MASKPIC_BALL#</id>
+	<rect>
+		<x>0</x>
+		<y>0</y>
+		<w>1920</w>
+		<h>1080</h>
+	</rect>
+	</picture>
+	<picture>
+	<file>Empty1920x450.png</file>
+	<id>#ID_MASKPIC_BALL#</id>
+	<rect>
+		<x>0</x>
+		<y>650;420</y>
+		<w>1920</w>
+		<h>250</h>
+	</rect>
+	<import>Common_PlayBall.xml</import>
+	</picture>
+
+
+	<!-- 10th frame reset -->
+	<picture>
+	<file>Gray1920x1080_75.png</file>
+	<id>#ID_MASKPIC_STOP#</id>
+	<rect>
+		<x>0</x>
+		<y>0</y>
+		<w>1920</w>
+		<h>1080</h>
+	</rect>
+	</picture>
+	<picture>
+	<file>Empty1920x450.png</file>
+	<id>#ID_MASKPIC_STOP#</id>
+	<rect>
+		<x>0</x>
+		<y>650;370</y>
+		<w>2120</w>
+		<h>350</h>
+	</rect>
+	<import>Common_10FrameReset.xml</import>
+	</picture>
+
+
+	<!-- Belgium Odd, Tryck 1 för ny serie, 2 för att avsluta  -->
+	<picture>
+	<file>Empty1920x450.png</file>
+	<id>#ID_MASKPIC_BELGIUM_ODD#</id>
+	<rect>
+		<x>0</x>
+		<y>30</y>
+		<w>1920</w>
+		<h>250</h>
+	</rect>
+	<import>Common_Belgium_Odd.xml</import>	
+	</picture>
+
+	<!-- Belgium Even, Tryck 9 för ny serie, 0 för att avsluta  -->
+	<picture>
+	<file>Empty1920x450.png</file>
+	<id>#ID_MASKPIC_BELGIUM_EVEN#</id>
+	<rect>
+		<x>0</x>
+		<y>30</y>
+		<w>1920</w>
+		<h>250</h>
+	</rect>
+	<import>Common_Belgium_Even.xml</import>
+	</picture>
+	
+</layer_after_3>

@@ -1,0 +1,247 @@
+<!--
+
+Uppifrån och ned
+-->
+<rectangle_fill>
+	<rect>
+		<x>8</x>
+		<y>0</y>
+		<w>1904</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>208</red>
+	<green>208</green>
+	<blue>208</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>6</x>
+		<y>1</y>
+		<w>1908</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>4</x>
+		<y>2</y>
+		<w>1912</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>3</x>
+		<y>3</y>
+		<w>1914</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>4</y>
+		<w>1916</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>5</y>
+		<w>1918</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- mitten -->
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>7</y>
+		<w>1920</w>
+		<h>8</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>222</y>
+		<w>1920</w>
+		<h>9</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Botten -->
+<rectangle_fill>
+	<rect>
+		<x>1</x>
+		<y>231</y>
+		<w>1918</w>
+		<h>2</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>2</x>
+		<y>233</y>
+		<w>1916</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>3</x>
+		<y>234</y>
+		<w>1914</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>5</x>
+		<y>235</y>
+		<w>1910</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- skuggor -->
+<rectangle_fill>
+	<rect>
+		<x>7</x>
+		<y>236</y>
+		<w>1906</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>80</red>
+	<green>80</green>
+	<blue>80</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>8</x>
+		<y>237</y>
+		<w>1904</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>55</trans>
+	<red>40</red>
+	<green>40</green>
+	<blue>40</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Sidor -->
+<rectangle_fill>
+	<rect>
+		<x>0</x>
+		<y>15</y>
+		<w>2</w>
+		<h>207</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1918</x>
+		<y>15</y>
+		<w>2</w>
+		<h>207</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>218</red>
+	<green>165</green>
+	<blue>32</blue>
+	</color>	
+</rectangle_fill>

@@ -1,0 +1,269 @@
+<!--
+	===========================================================================================================
+		6 Lag Lagsummor
+								
+		Text1:		Lag1 totala slagning
+		Text2:		Lag2 totala slagning
+		Text3:		Lag3 totala slagning
+		Text4:		Lag4 totala slagning
+		Text5:		Lag5 totala slagning
+		
+		Text7:		Namn för Lag1
+		Text8:		Namn för Lag2
+		Text9:		Namn för Lag3
+		Text10:		Namn för Lag4
+		Text11:		Namn för Lag5
+		
+		Copyright 2022 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+
+<!-- VBS-T banparsdiffar nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>95</y_generate>
+	
+	<!-- Lag 1 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Lagnamn Lag1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>80</x>
+			<y>0</y>
+			<w>170</w>
+			<h>25</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<align>center</align>	
+		<rect>
+			<x>15</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+	
+<!-- Lag 2 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<text>Lagnamn Lag2</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>80</x>
+			<y>32</y>
+			<w>170</w>
+			<h>25</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id>
+		<align>center</align>	
+		<rect>
+			<x>15</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+
+
+	<!-- Lag 3 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<text>Lagnamn Lag3</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>80</x>
+			<y>64</y>
+			<w>170</w>
+			<h>25</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<align>center</align>	
+		<rect>
+			<x>15</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+
+	
+<!-- Lag 4 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text10#</id>
+		<text>Lagnamn Lag41</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>410</x>
+			<y>0</y>
+			<w>170</w>
+			<h>25</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<align>center</align>	
+		<rect>
+			<x>345</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+
+<!-- Lag 5 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<text>Lagnamn Lag5</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>410</x>
+			<y>32</y>
+			<w>170</w>
+			<h>25</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<align>center</align>	
+		<rect>
+			<x>345</x>
+			<w>60</w>
+		</rect>
+	</true_type_text>
+	
+</bottom_panel_11>	
+
+
+	

@@ -1,0 +1,133 @@
+<!--
+	===========================================================================================================
+		2022
+	===========================================================================================================	
+-->
+<protocol>
+	<x_generate>1920</x_generate>
+	<y_generate>1080</y_generate>
+	<y_start>340;220;170;160;130;100;80</y_start>
+	<use_last_player>1</use_last_player>
+		
+	<active_player>  <!-- Hur vi ritar under aktiva spelarna (0-2st) -->
+		<file>ActivePlayer1920x325.png</file>
+		<y_pre_addon>20;20;8;4;3;2;2;2</y_pre_addon> 
+		<y_post_addon>20;20;8;4;3;2;2;2</y_post_addon>
+		<xpos>0</xpos>
+		<y_scale>1;1;0.96;0.82;0.75;0.68;0.65;0.6</y_scale>
+
+		<layer_before_1>
+			<rectangle_fill>
+			<rect>
+				<x>35</x>
+				<y>75</y>
+				<w>1850</w>
+				<h>240</h>
+			</rect>
+			<color>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+				<trans>255</trans>
+			</color>
+			</rectangle_fill>
+
+			<rectangle_fill>
+			<rect>
+				<x>35</x>
+				<y>235</y>
+				<w>1850</w>
+				<h>80</h>
+			</rect>
+			<color>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+				<trans>255</trans>
+			</color>
+			</rectangle_fill>
+
+		</layer_before_1>
+
+		<layer_after_1>	
+			<import>ActiveScore.xml</import>	
+		</layer_after_1>	
+
+		<layer_after_2>
+			<import>AMR_Arrows.xml</import>			
+			<import>Common_NextLane_Active.xml</import>	
+		</layer_after_2>
+
+	</active_player>
+
+	<inactive_player>
+		<file>InactivePlayer1920x230.png</file>
+		<y_pre_addon>20;20;8;4;3;2;2;2</y_pre_addon> 
+		<y_post_addon>20;20;8;4;3;2;2;2</y_post_addon>
+		<xpos>0</xpos>
+		<y_scale>1;1;0.9;0.71;0.59;0.53;0.48;0.42</y_scale>
+
+		<layer_before_1>
+			<rectangle_fill>
+			<rect>
+				<x>65</x>
+				<y>10</y>
+				<w>1790</w>
+				<h>140</h>
+			</rect>
+			<color>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+				<trans>125</trans>
+			</color>
+			</rectangle_fill>
+
+			<rectangle_fill>
+			<rect>
+				<x>65</x>
+				<y>150</y>
+				<w>1790</w>
+				<h>70</h>
+			</rect>
+			<color>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+				<trans>225</trans>
+			</color>
+			</rectangle_fill>
+		</layer_before_1>
+		
+		<layer_after_1>	
+			<import>InactiveScore.xml</import>	
+			<import>AMR_Arrows.xml</import>		
+		</layer_after_1>	
+
+		<layer_after_2>
+			<import>Common_NextLane.xml</import>			
+		</layer_after_2>
+
+	
+	</inactive_player>	
+	
+	
+	
+	<layer_after_1>	
+		<import>CommonInfo.xml</import>
+		<import>/PinsOnProtocol/Pins_On_Protocol.xml</import>				
+	</layer_after_1>
+
+	<layer_before_1>	
+		<import>/theme/halloween_before.xml</import>				
+	</layer_before_1>
+	
+	<layer_after_2>	
+		<import>/theme/halloween_after.xml</import>				
+	</layer_after_2>
+		
+		
+	<import>MessageInfo.xml</import>	
+	<import>TeamInfo.xml</import>		
+		
+</protocol>

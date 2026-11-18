@@ -1,0 +1,136 @@
+<!--
+	===========================================================================================================
+		Xmas Center SG5
+	===========================================================================================================	
+-->
+<protocol>
+	<x_generate>1920</x_generate>
+	<y_generate>1080</y_generate>
+	<y_start>340;220;180;180;130;100;80</y_start>  <!-- så här högt upp börjar protokollen -->
+	<use_current_player>1</use_current_player>
+		
+	<active_player>  <!-- Hur vi ritar under aktiva spelarna (0-2st) -->
+		<file>Empty1920x240.png</file>
+		<y_pre_addon>10;10;5;5;3</y_pre_addon> 
+		<y_post_addon>10;10;5;5;3</y_post_addon>
+		<xpos>0</xpos>
+		<y_scale>1.3;1.3;1.3;1.1;1;0.8;0.75;0.68</y_scale>
+
+		<layer_after_1>
+		
+			<picture>
+				<file>Empty1920x240.png</file>
+				<rect>
+					<x>60</x>
+					<y>0</y>
+					<w>1800</w>
+					<h>240</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>1</trans>	
+				
+				<layer_after_1>	
+					<!-- Rita ram runt protokollet. -->
+					<import>Frame_AP.xml</import>	
+				
+					<picture>
+						<file>Empty1920x240.png</file>
+						<rect>
+							<x>0</x>
+							<y>14</y>
+							<w>1920</w>
+							<h>217</h>
+						</rect>	
+						<color_factor>1.0</color_factor>
+						<trans>1</trans>	
+						
+						<layer_after_1>	
+							<!-- Importera det som skall visas -->
+							<import>Frameset_AP_SG5.xml</import>	
+						</layer_after_1>	
+						
+					</picture>
+				</layer_after_1>				
+			</picture>
+			<picture>
+				<file>Empty1920x240.png</file>
+				<rect>
+					<x>0|0|0|0|0|-535|185|345|-340|4</x>
+					<y>0</y>
+					<w>1920</w>
+					<h>240</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>1</trans>	
+				<layer_after_1>	
+					<!-- Importera det som skall visas -->
+					<import>/PinsOnProtocol/Pins_On_Protocol.xml</import>
+				</layer_after_1>				
+			</picture>			
+			<import>AMR_Arrows.xml</import>							
+			</layer_after_1>
+	</active_player>
+
+	<inactive_player>
+		<file>Empty1920x240.png</file>
+		<y_pre_addon>10;10;5;5;3;3;2;1</y_pre_addon> 
+		<y_post_addon>10;10;5;5;3;3;2;1</y_post_addon>
+		<xpos>0</xpos>
+		<y_scale>1.3;1.2;1;0.8;0.7;0.6;0.5;0.49</y_scale>
+
+		<layer_after_1>
+		
+			<picture>
+				<file>Empty1920x240.png</file>
+				<rect>
+					<x>90</x>
+					<y>0</y>
+					<w>1740</w>
+					<h>240</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>1</trans>	
+				
+				<layer_after_1>	
+					<!-- Rita ram runt protokollet. -->
+					<import>Frame_IP.xml</import>	
+				
+					<picture>
+						<file>Empty1920x240.png</file>
+						<rect>
+							<x>0</x>
+							<y>14</y>
+							<w>1920</w>
+							<h>217</h>
+						</rect>	
+						<color_factor>1.0</color_factor>
+						<trans>1</trans>	
+						
+						<layer_after_1>	
+							<!-- Importera det som skall visas -->
+							<import>Frameset_IP_SG5.xml</import>	
+						</layer_after_1>	
+					</picture>
+					
+				</layer_after_1>				
+			</picture>
+			
+		</layer_after_1>
+	
+	</inactive_player>	
+	
+	<!-- Protocol theme -->
+	<layer_before_1>
+		<import>c:\viking2001\v3gfx\Resource\Themes\XmasCenter_Before.xml</import>
+	</layer_before_1>
+
+	<layer_after_2>	
+		<import>c:\viking2001\v3gfx\Resource\Themes\XmasCenter_After.xml</import>
+	</layer_after_2>	
+	<layer_after_1>	
+		<import>CommonInfo.xml</import>
+	</layer_after_1>
+
+	<import>MessageInfo.xml</import>
+	<import>TeamInfo.xml</import>
+</protocol>

@@ -1,0 +1,338 @@
+[JOBS]
+; --- Total Diff för aktuell serie ---
+Job1Mode=Pari
+Job1Where=AllLanes
+Job1Plus1=#VAL_HOME#
+Job1Minus1=#VAL_AWAY#
+Job1When=Latest
+Job1What=TotGame
+Job1Text1=text1
+Job1Text2=text2
+
+; --- Lagpoäng Hemma ---
+Job2Mode=TeamPoints
+Job2Plus1=#VAL_HOME#
+Job2Text1=text3
+Job2Text2=text4
+
+; --- Lagpoäng Borta ---
+Job3Mode=TeamPoints
+Job3Plus1=#VAL_AWAY#
+Job3Text1=text5
+Job3Text2=text6
+
+; --- Kägelpoäng Aktuell serie Hemma ---
+Job4Mode=Pari
+Job4Plus1=#VAL_HOME#
+Job4Where=AllLanes
+Job4When=Latest
+Job4What=TotGame
+Job4Text1=text7
+Job4Text2=text8
+
+; --- Kägelpoäng Totalt Hemma ---
+Job5Mode=Pari
+Job5Plus1=#VAL_HOME#
+Job5Where=AllLanes
+Job5When=Latest
+Job5What=TotAll
+Job5Text1=text9
+Job5Text2=text10
+
+; --- Kägelpoäng Aktuell serie Borta ---
+Job6Mode=Pari
+Job6Plus1=#VAL_AWAY#
+Job6Where=AllLanes
+Job6When=Latest
+Job6What=TotGame
+Job6Text1=text11
+Job6Text2=text12
+
+; --- Kägelpoäng Totalt Borta ---
+Job7Mode=Pari
+Job7Plus1=#VAL_AWAY#
+Job7Where=AllLanes
+Job7When=Latest
+Job7What=TotAll
+Job7Text1=text13
+Job7Text2=text14
+
+
+# Diff för banpar1-2
+Job8Mode=Pari
+Job8Where=#VAL_12#
+Job8When=Latest
+Job8What=TotGame
+Job8Plus1=#VAL_HOME#
+Job8Minus1=#VAL_AWAY#
+Job8Text1=text21
+
+# Diff för banpar3-4
+Job9Mode=Pari
+Job9Where=#VAL_34#
+Job9When=Latest
+Job9What=TotGame
+Job9Plus1=#VAL_HOME#
+Job9Minus1=#VAL_AWAY#
+Job9Text1=text22
+
+# Diff för banpar5-6
+Job10Mode=Pari
+Job10Where=#VAL_56#
+Job10When=Latest
+Job10What=TotGame
+Job10Plus1=#VAL_HOME#
+Job10Minus1=#VAL_AWAY#
+Job10Text1=text23
+
+; --- Total Diff för aktuell serie ---
+[text1]
+font=Times
+size=28
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=??
+x=220
+y=10
+
+[text2]
+font=Times
+size=28
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=219
+y=9
+
+; --- Lagpoäng Hemma ---
+[text3]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=??
+x=401
+y=230
+[text4]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=400
+y=229
+
+; --- Lagpoäng Borta ---
+[text5]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=??
+x=401
+y=253
+
+[text6]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=400
+y=252
+
+; --- Kägelpoäng Aktuell serie Hemma ---
+[text7]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=??
+x=351
+y=230
+[text8]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=350
+y=229
+
+; --- Kägelpoäng Totalt Hemma ---
+[text9]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=??
+x=301
+y=230
+[text10]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=300
+y=229
+
+; --- Kägelpoäng Aktuell serie Borta ---
+[text11]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=??
+x=351
+y=253
+[text12]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=350
+y=252
+
+; --- Kägelpoäng Totalt Borta ---
+[text13]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=??
+x=301
+y=253
+[text14]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=??
+x=300
+y=252
+
+; --- Lagnamn Hemma ---
+[text15]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=#VAL_HOME#
+x=41
+y=230
+[text16]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_HOME#
+x=40
+y=229
+
+; --- Lagnamn Borta ---
+[text17]
+font=Times
+size=23
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=#VAL_AWAY#
+x=41
+y=253
+[text18]
+font=Times
+size=23
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_AWAY#
+x=40
+y=252
+
+### Begin texts
+; --- Diff ---
+[text19]
+font=Times
+size=28
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=Diff:
+x=161
+y=10
+[text20]
+font=Times
+size=28
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=Diff:
+x=160
+y=9
+#CLIPHERE#
+
+#[JOBS]
+#Job1Mode=Pari / Calculated*
+#Job1Where=AllLanes / #VAL_12#,3,5
+#Job1When=Latest / Completed
+#Job1What=ScrathGame / ScratchAll / TotGame / TotAll 
+#Job1Plus1=aa			= Lagnamn
+#Job1Minus1=bb			= Lagnamn
+#Job1Text1=text1		= Vart skall summan hamna
+#Job1Text2=text2		= Vart skall summan hamna
+# * = Ej klar
+
+[SWAPS]
+Swap1Question=Vad heter hemmalaget?
+Swap1Text=#VAL_HOME#
+Swap1Default=Hjemmehold
+
+Swap2Question=Vad heter bortalaget?
+Swap2Text=#VAL_AWAY#
+Swap2Default=Udehold
+
+Swap3Question=Vad kommer banparet längs till vänster vara?
+Swap3Text=#VAL_12#
+Swap3Default=1,2
+
+Swap4Question=Vad kommer andra banparet vara?
+Swap4Text=#VAL_34#
+Swap4Default=3,4

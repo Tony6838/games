@@ -1,0 +1,70 @@
+<!--
+SG5
+-->
+
+<picture>
+	<file>Empty1920x240.png</file>
+	
+	<!-- Använd ID för att styra vart ytan för protokoll och Header skall få för X-koordinat resp bredd. -->
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>240</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>	
+	
+		<layer_after_1>	
+
+		<!-- Score -->
+		<picture>
+			<file>Empty1920x240.png</file>
+			
+				<rect>
+					<x>0</x>
+					<y>0</y>
+					<w>1920</w>
+					<h>160</h>
+				</rect>			
+				<color_factor>1.0</color_factor>
+				<trans>1</trans>
+				
+				<layer_before_1>
+					<import>Background_IP_SG5.xml</import>		
+				</layer_before_1>					
+				
+				<layer_after_1>	
+					<import>Grid_SG5.xml</import>
+					<import>Score_SG5.xml</import>	
+				</layer_after_1>			
+		</picture>	
+
+		<!-- Spelarnamn etc -->
+		<picture>
+			<file>Empty1920x80.png</file>
+			<!-- Använd ID om något skall visas samt styra eventuell bredd. (vi kan göra flera olika varianter med olika bredder.) -->
+			
+				<rect>
+					<x>0</x>
+					<y>160</y>
+					<w>1920</w>
+					<h>70</h>
+				</rect>	
+				<color_factor>1.0</color_factor>
+				<trans>1</trans>	
+			
+				<layer_after_1>	
+					<import>PlayerInfo_IP.xml</import>
+					<!-- Använd ID för att styra vad som skall visas -->
+				</layer_after_1>
+		</picture>	
+		</layer_after_1>
+
+		<layer_after_2>	
+			<import>Common_Notes.xml</import>
+		</layer_after_2>		
+</picture>					
+					
+
+

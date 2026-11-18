@@ -1,0 +1,30 @@
+<!--
+	===========================================================================================================
+		Halloween - Before
+	===========================================================================================================	
+-->
+
+	<picture>
+		<file>/Theme/HalloweenGraveyard.png</file>
+		<rect>
+			<x>-50</x>
+			<y>700</y>
+			<w>2020</w>
+			<h>400</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>		
+	</picture>
+
+	<picture>
+		<file>/Theme/HalloweenPumpkin.png</file>
+		<rect>
+			<x>1600</x>
+			<y>750</y>
+			<w>650</w>
+			<h>380</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>		
+	</picture>
+

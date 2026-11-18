@@ -1,0 +1,372 @@
+<!--
+	===========================================================================================================
+		Ïnduligan
+	
+		Text1:		Total Diff mellan lagen
+		Text2:		VBS Korpspel (text)
+		Text3:		Pari (text)
+		Text4:		Lagpoäng för hemmalaget
+		Text5:		Lagpoäng för bortalaget
+		Text6:		Pari (värde)
+		Text7:		Namn på hemmalag
+		Text8:		Namn på bortalag
+								
+		Copyright 2026 VBS Bowling AB	
+	===========================================================================================================	
+-->
+
+<layer_after_11>
+	
+	
+	<true_type_text>	
+		<text>Idunligan</text>
+		<rect>
+			<x>200</x>
+			<y>25</y>
+			<w>750</w>
+			<h>70</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<aspect>0.7</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+		</true_type_text>
+
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X110R10.png</file>
+		<rect>
+			<x>1400</x>
+			<y>5</y>
+			<w>200</w>
+			<h>125</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>
+			<true_type_text>	
+				<id>#VBST_JOB_text1#</id>
+				<rect>
+					<x>20</x>
+					<y>20</y>
+					<w>160</w>
+					<h>60</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+				<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>	
+	</picture>			
+</layer_after_11>
+
+<!-- VBS-T Lagnamn och resultat nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>170</y_generate>
+
+	<!-- Hemmalag - Namn -->
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\LU600X110R10.png</file>
+		<rect>
+			<x>150</x>
+			<y>30</y>
+			<w>600</w>
+			<h>100</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>175</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>595</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>
+		<layer_after_1>
+			<true_type_text>	
+				<id>#VBST_JOB_text7#</id>
+				<text>Hemmalag</text>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<rect>
+					<x>25</x>
+					<y>20</y>
+					<w>550</w>
+					<h>60</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<maxsize>0</maxsize>
+				<aspect>0.75</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>2</shadow_factor>
+				<pen_width>1</pen_width>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>	
+		</layer_after_1>		
+	</picture>	
+
+	<!-- Bortalag Namn -->
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\RU600X110R10.png</file>
+		<rect>
+			<x>1170</x>
+			<y>30</y>
+			<w>600</w>
+			<h>110</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>175</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>0</x>
+					<y>5</y>
+					<w>595</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>
+		<layer_after_1>
+			<true_type_text>	
+				<id>#VBST_JOB_text8#</id>
+				<text>Bortalag</text>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color_fill>
+				<color_pen>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_pen>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<rect>
+					<x>25</x>
+					<y>20</y>
+					<w>550</w>
+					<h>60</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<maxsize>0</maxsize>
+				<aspect>0.75</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>2</shadow_factor>
+				<pen_width>1</pen_width>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>	
+		</layer_after_1>		
+	</picture>	
+
+<!-- Hemmalag BP -->	
+<picture>
+	<file>C:\Viking2001\v3gfx\Resource\Objects\B200X210R10.png</file>
+		<rect>
+			<x>750</x>
+			<y>0</y>
+			<w>200</w>
+			<h>165</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>		
+			<true_type_text>	
+				<id>#VBST_JOB_text4#</id>
+				<rect>
+					<x>20</x>
+					<y>25</y>
+					<w>160</w>
+					<h>150</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+				<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+
+		</layer_after_1>	
+	</picture>		
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X210R10.png</file>
+		<rect>
+			<x>970</x>
+			<y>0</y>
+			<w>200</w>
+			<h>165</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>
+			<true_type_text>	
+				<id>#VBST_JOB_text5#</id>
+				<rect>
+					<x>20</x>
+					<y>25</y>
+					<w>160</w>
+					<h>150</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+				<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+				</true_type_text>
+						
+		</layer_after_1>	
+	</picture>		
+
+</bottom_panel_11>	

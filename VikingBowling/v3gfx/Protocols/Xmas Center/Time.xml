@@ -1,0 +1,64 @@
+<!--
+	===========================================================================================================
+		Viking - Utökning med kvarstående tid (för lösspel).
+		Kräver version 3.3.1.0232.						
+	===========================================================================================================	
+-->
+<picture>
+	<id>#IS_OPENPLAY#</id>
+	<file>Empty400x200.png</file>
+	<rect>
+		<x>1705</x>
+		<y>1040</y>		
+		<w>200</w>
+		<h>40</h>
+	</rect>
+	
+	<layer_after_1>
+	<true_type_text>
+		<id>#PLAY_TIME#</id>
+		<text></text>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>0</trans>
+			<red>225</red>
+			<green>225</green>
+			<blue>225</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>	
+		<font>Arial</font>		
+		<fontstyle>normal</fontstyle>			
+		<rect>
+			<x>0</x>
+			<y>20</y>		
+			<w>220</w>
+			<h>160</h>
+		</rect>
+		<align>right</align>
+		<aspect>0.65</aspect>
+		<is_text_rec>1</is_text_rec>		
+	</true_type_text>	
+	<true_type_text>
+		<text>min</text>
+		<rect>
+			<x>250</x>
+			<y>20</y>		
+			<w>150</w>
+			<h>160</h>
+		</rect>
+		<align>left</align>
+		<aspect>0.75</aspect>
+		<is_text_rec>1</is_text_rec>		
+	</true_type_text>		
+	</layer_after_1>
+</picture>

@@ -1,0 +1,226 @@
+
+<!--
+	===========================================================================================================
+		Triangle FHD
+
+	===========================================================================================================	
+-->
+<picture>
+	<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Triangle.png</file>
+	<id>#ANY_PIN_BG#</id>			
+	<rect>
+		<!-- <x>825|825|825|825|1002|386|386|563</x> -->
+		<x>740;740|740|740|740|1060|400|400|740</x>
+		<y>550;280</y>
+		<w>440</w>
+		<h>500</h>
+	</rect>	
+	<color_factor>1.0</color_factor>
+	<trans>1</trans>	
+				
+		<layer_after_1>				
+			<!-- Kägelmarkeringar -->		
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla10 --> 
+			<rect>
+				<x>338</x>
+				<y>225</y>
+				<w>42</w>
+				<h>40</h>				
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla9 --> 
+			<rect>
+				<x>246</x>
+				<y>225</y>
+				<w>42</w>
+				<h>40</h>						
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla8 --> 
+			<rect>
+				<x>152</x>
+				<y>225</y>
+				<w>42</w>
+				<h>40</h>						
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla7 --> 
+			<rect>
+				<x>60</x>
+				<y>225</y>
+				<w>42</w>
+				<h>40</h>					
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla6 --> 
+			<rect>
+				<x>291</x>
+				<y>270</y>
+				<w>42</w>
+				<h>40</h>				
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla5 --> 
+			<rect>
+				<x>199</x>
+				<y>270</y>
+				<w>42</w>
+				<h>40</h>								
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla4 --> 
+			<rect>
+				<x>107</x>
+				<y>270</y>
+				<w>42</w>
+				<h>40</h>						
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla3 --> 
+			<rect>
+				<x>244</x>
+				<y>320</y>
+				<w>46</w>
+				<h>40</h>							
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file>> 			<!-- Kägla2 --> 
+			<rect>
+				<x>150</x>
+				<y>320</y>
+				<w>46</w>
+				<h>40</h>						
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pos60x50.png</file> 			<!-- Kägla1 --> 
+			<rect>
+				<x>196</x>
+				<y>370</y>
+				<w>48</w>
+				<h>40</h>			
+			</rect>	
+			</picture>			
+
+			<!-- Käglor -->
+			<picture> 
+			<id>#ANY_PIN_NUM_10#</id>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla10 --> 
+			<rect>
+				<x>326</x>
+				<y>93</y>
+				<w>66</w>
+				<h>170</h>					
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_NUM_9#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file>			<!-- Kägla9 --> 
+			<rect>
+				<x>234</x>
+				<y>93</y>
+				<w>66</w>
+				<h>170</h>						
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_NUM_8#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla8 --> 
+			<rect>
+				<x>140</x>
+				<y>93</y>
+				<w>66</w>
+				<h>170</h>							
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_NUM_7#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla7 --> 
+			<rect>
+				<x>48</x>
+				<y>93</y>
+				<w>66</w>
+				<h>170</h>					
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_NUM_6#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla6 --> 
+			<rect>
+				<x>277</x>
+				<y>128</y>
+				<w>70</w>
+				<h>180</h>				
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_NUM_5#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla5 --> 
+			<rect>
+				<x>185</x>
+				<y>128</y>
+				<w>70</w>
+				<h>180</h>						
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_NUM_4#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla4 --> 
+			<rect>
+				<x>93</x>
+				<y>128</y>
+				<w>70</w>
+				<h>180</h>			
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_NUM_3#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file>			<!-- Kägla3 --> 
+			<rect>
+				<x>229</x>
+				<y>168</y>
+				<w>76</w>
+				<h>190</h>					
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_NUM_2#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla2 --> 
+			<rect>
+				<x>135</x>
+				<y>168</y>
+				<w>76</w>
+				<h>190</h>						
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_NUM_1#</id>>
+			<file>C:\Viking2001\v3gfx\Resource\Pins_On_Protocol\Triangle_FHD\Pin.png</file> 			<!-- Kägla1 --> 
+			<rect>
+				<x>180</x>
+				<y>208</y>
+				<w>80</w>
+				<h>200</h>			
+			</rect>	
+			</picture>			
+	</layer_after_1>	
+</picture>

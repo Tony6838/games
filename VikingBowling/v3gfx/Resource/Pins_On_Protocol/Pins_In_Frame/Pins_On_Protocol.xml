@@ -1,0 +1,144 @@
+
+<!--
+	===========================================================================================================
+		Käglor på protokoll - Pins In Frame
+		
+		Datum:		20110303
+						
+		Copyright 2011 VBS Bowling AB
+
+		Kägelmarkeringarna justeras vertikalt beroende på antalet spelare och i ruta 1-5, visas dem 
+		under ruta 7 summering. I ruta 6-10, visas dem under ruta 2's summering.
+		OBS! Testprotokoll Viking2001 har använts för ovan information. Övriga protokoll har andra
+		egenskaper..
+	===========================================================================================================	
+-->
+
+<!-- BigPins -->
+<picture>									<!-- Triangeln som visas under/bakom kägelmarkeringarna -->
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\Table.png</file> 
+	<rect>
+		<x>
+		210;
+		305|305|305|305|305|85</x>
+		<y>290;170</y>
+		<w>220</w>
+		<h>140</h>
+	</rect>	
+	
+	<layer_after_1>
+		<picture> 
+		<id>#ANY_PIN_NUM_10#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin10.png</file> 			<!-- Kägla10 --> 
+			<rect>
+				<x>164</x>
+				<y>1</y>
+				<w>31</w>
+				<h>134</h>
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_9#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin09.png</file> 			<!-- Kägla9 --> 
+			<rect>
+				<x>118</x>
+				<y>1</y>
+				<w>31</w>
+				<h>134</h>
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_8#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin08.png</file> 			<!-- Kägla8 -->  
+			<rect>
+				<x>72</x>
+				<y>1</y>
+				<w>31</w>
+				<h>134</h>
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_7#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin07.png</file> 			<!-- Kägla7 --> 
+			<rect>
+				<x>26</x>
+				<y>1</y>
+				<w>31</w>
+				<h>134</h>
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_6#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin06.png</file> 			<!-- Kägla6 --> 
+			<rect>
+				<x>145</x>
+				<y>7</y>
+				<w>33</w>
+				<h>143</h>
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_5#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin05.png</file> 			<!-- Kägla5 --> 
+			<rect>
+				<x>91</x>
+				<y>7</y>
+				<w>33</w>
+				<h>143</h>					
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_4#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin04.png</file> 			<!-- Kägla4 --> 
+			<rect>
+				<x>43</x>
+				<y>7</y>
+				<w>33</w>
+				<h>143</h>					
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_3#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin03.png</file> 			<!-- Kägla3 --> 
+			<rect>
+				<x>120</x>
+				<y>16</y>
+				<w>36</w>
+				<h>150</h>
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_2#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin02.png</file> 			<!-- Kägla2 --> 
+			<rect>
+				<x>65</x>
+				<y>16</y>
+				<w>36</w>
+				<h>150</h>
+			</rect>	
+		</picture>
+
+		<picture> 
+		<id>#ANY_PIN_NUM_1#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Pins_In_Frame\BrunswickPin01.png</file> 			<!-- Kägla1 --> 
+			<rect>
+				<x>91</x>
+				<y>24</y>
+				<w>38</w>
+				<h>160</h>					
+			</rect>	
+		</picture>
+	
+		
+	</layer_after_1>
+</picture>			
+	

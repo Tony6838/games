@@ -1,0 +1,296 @@
+<!--
+	===========================================================================================================
+		Dansk Liga 6 mand
+		
+		Text1:		Diff
+		Text3:		Hemmalagets Lagpoäng (0-32st)
+		Text5:		Bortalagets Lagpoäng (0-32st)
+		Text7:		Hemmalagets Kägelpoäng i aktuell serie
+		Text9:		Hemmalagets Totala kägelpoäng
+		Text11:		Bortalagets Kägelpoäng i aktuell serie
+		Text13:		Bortalagets Totala kägelpoäng
+		Text15:		Namn för hemmalaget
+		Text17:		Namn för bortalaget
+		Text15:		Texten "Diff:"
+		
+		Copyright 2013 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+<layer_after_11>
+	
+	<!-- Total diff mellan lagen -->
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>385</x>
+			<y>20</y>
+			<w>70</w>
+			<h>50</h>
+		</rect>
+	</picture>
+	
+	<true_type_text>	
+		<text>Serie Diff:</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>385</x>
+			<y>2</y>
+			<w>70</w>
+			<h>16</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Diff</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>395</x>
+			<y>25</y>
+			<w>50</w>
+			<h>40</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+
+<!-- Lag 1 -->	
+	<true_type_text>	
+		<id>#VBST_JOB_text15#</id>
+		<text>Hemmalag</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>110</x>
+			<y>10</y>
+			<w>170</w>
+			<h>30</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>0</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<text>Hemmalagets Lagpoäng</text>
+		<align>left</align>	
+		<rect>
+			<x>70</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>	
+	
+<!-- Lag 2 -->
+	<true_type_text>	
+		<id>#VBST_JOB_text17#</id>
+		<text>Bortalag</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>110</x>
+			<y>45</y>
+			<w>170</w>
+			<h>30</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>0</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<text>Bortalagets Lagpoäng</text>
+		<align>left</align>	
+		<rect>
+			<x>70</x>
+			<w>35</w>
+		</rect>
+	</true_type_text>		
+	
+</layer_after_11>
+
+<!-- VBS-T sammanställningar nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>50</y_generate>
+
+<!--- Vita rutor för diffar --->
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>105</x>
+			<y>0</y>
+			<w>90</w>
+			<h>46</h>
+		</rect>
+	</picture>	
+	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>275</x>
+			<y>0</y>
+			<w>90</w>
+			<h>46</h>
+		</rect>
+	</picture>	
+
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>445</x>
+			<y>0</y>
+			<w>90</w>
+			<h>46</h>
+		</rect>
+	</picture>
+	
+	
+	<!-- Diffar för resp banpar -->
+	<true_type_text>	
+		<id>#VBST_JOB_text21#</id> <!-- [text9] text=   from the vbst ontop file -->
+		<rect>
+			<x>110</x>
+			<y>5</y>
+			<w>80</w>
+			<h>35</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>0</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text22#</id>
+		<rect>
+			<x>280</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text23#</id>
+		<rect>
+			<x>450</x>
+		</rect>
+	</true_type_text>
+	
+	
+	
+	
+	
+	
+</bottom_panel_11>	
+
+
+	

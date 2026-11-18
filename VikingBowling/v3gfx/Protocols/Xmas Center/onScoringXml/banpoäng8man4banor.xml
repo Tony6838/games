@@ -1,0 +1,170 @@
+
+<bottom_panel_11>
+	<id>DD</id>
+	<y_generate>210</y_generate>
+
+<!-- Home Team -->
+	<picture>
+	<file>Empty300x300.png</file>
+		<rect>
+			<x>20</x>
+			<y>10</y>
+			<w>190</w>
+			<h>190</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		
+		<layer_after_1>	
+			<!-- Rita ram runt protokollet. -->	
+			<import>MessageBox300x300.xml</import>
+		</layer_after_1>				
+		<layer_after_2>	
+			<picture>
+			<file>#teamLogo_1#</file>
+			<rect>
+				<x>4</x>
+				<y>10</y>
+				<w>292</w>
+				<h>280</h>
+			</rect>
+			<color_factor>1</color_factor>
+			</picture>	
+		</layer_after_2>	
+	</picture>
+
+<!-- Away Team -->
+	<picture>
+	<file>Empty300x300.png</file>
+		<rect>
+			<x>1710</x>
+			<y>10</y>
+			<w>190</w>
+			<h>190</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		
+		<layer_after_1>	
+			<!-- Rita ram runt protokollet. -->	
+			<import>MessageBox300x300.xml</import>
+		</layer_after_1>				
+		<layer_after_2>	
+			<picture>
+			<file>#teamLogo_2#</file>
+			<rect>
+				<x>4</x>
+				<y>10</y>
+				<w>292</w>
+				<h>280</h>
+			</rect>
+			<color_factor>1</color_factor>
+			</picture>	
+		</layer_after_2>	
+	</picture>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<text>Lagpoäng Hemma</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>850</x>
+			<y>5</y>
+			<w>80</w>
+			<h>90</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>right</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Lagnamn Hemma</text>
+		<align>center</align>	
+		<rect>
+			<x>220</x>
+			<y>10</y>
+			<w>600</w>
+			<h>80</h>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+	<text>-</text>
+		<align>center</align>	
+		<rect>
+			<x>940</x>
+			<y>10</y>
+			<w>40</w>
+			<h>80</h>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<text>Lagpoäng Borta</text>
+		<align>left</align>	
+		<rect>
+			<x>990</x>
+			<y>5</y>
+			<w>80</w>
+			<h>90</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<text>Lagnamn Borta</text>
+		<align>center</align>	
+		<rect>
+			<x>1090</x>
+			<y>10</y>
+			<w>600</w>
+			<h>80</h>
+		</rect>
+	</true_type_text>
+	
+	
+	<!-- 4 banpars diffar och kvarstående tid -->
+	<picture>
+	<file>Empty1400x240.png</file>
+		<rect>
+			<x>510</x>
+			<y>100</y>
+			<w>1400</w>
+			<h>100</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>	
+		
+		<layer_after_1>	
+			<!-- Rita ram runt protokollet. -->	
+			<import>onScoringXML\VBST_BanP_4b_Diffar.xml</import>
+		</layer_after_1>				
+		
+	</picture>
+</bottom_panel_11>
+
+

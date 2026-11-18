@@ -1,0 +1,108 @@
+<!--
+	===========================================================================================================
+	2022
+	===========================================================================================================	
+-->
+<protocol>
+	<x_generate>1920</x_generate>
+	<y_generate>1080</y_generate>
+	<y_start>340</y_start>  	<!-- så här högt upp börjar protokoll -->
+	<use_current_player>1</use_current_player>
+	
+	<!-- Bakgrund Start -->
+	<layer_before_1>
+
+		<import>CommonInfo_Practice.xml</import>		
+		
+		<picture>
+			<file>Empty1920x1080.png</file>
+			<color_factor>1.0</color_factor>
+			<image_transparancy>1.0</image_transparancy>
+			<rect>
+				<x>100</x>
+				<y>300</y>
+				<w>1820</w>
+				<h>880</h>
+			</rect>	
+
+			<layer_after_1> 
+				<picture>
+				<file>Laminate.png</file>
+					<rect>			
+						<x>-50</x>
+						<y>400</y>
+						<w>2000</w>
+						<h>700</h>	
+					</rect>	
+				</picture>	
+				<import>pins_practice.xml</import>
+			</layer_after_1>			
+		</picture>		
+	</layer_before_1>	
+	<!-- Bakgrund Slut -->
+
+	
+	<active_player>  
+		<y_pre_addon>3</y_pre_addon> <!-- marginal till ovanstående spelare om inte detta är första spelaren. -->
+		<y_post_addon>3</y_post_addon> <!-- marginal till underliggande spelare (värdena gäller 1-8 spelare)-->
+		<xpos>360</xpos> <!-- marginal till vänster kant av bild-->
+		<y_scale>0.6;0.6;0.6;0.6;0.6;0.58;0.45;0.42</y_scale> <!-- hur mycket skall vi förstora/minska grid.png för de olika spelarantalen-->
+		<!-- <file>Empty1920x240.png</file>	 -->
+		<file>Frame1200x250.png</file>	
+		<layer_before_1>
+			<rectangle_fill>
+				<rect>
+					<x>5</x>
+					<y>10</y>
+					<w>1190</w>
+					<h>230</h>
+				</rect>
+				<color>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color>
+			</rectangle_fill>			
+		</layer_before_1>
+		
+		<layer_after_1>
+			<import>PracticeScore.xml</import>		
+		</layer_after_1>
+	</active_player>
+	
+	<inactive_player>
+		<y_pre_addon>2</y_pre_addon> <!-- marginal till ovanstående spelare om inte detta är första spelaren. -->
+		<y_post_addon>2</y_post_addon> <!-- marginal till underliggande spelare (värdena gäller 1-8 spelare)-->
+		<xpos>360</xpos> <!-- marginal till vänster kant av bild-->
+		<y_scale>0.5;0.5;0.5;0.5;0.5;0.41;0.38;0.32</y_scale> <!-- hur mycket skall vi förstora/minska grid.png för de olika spelarantalen-->
+		<file>Frame1200x250.png</file>	
+		<layer_before_1>
+			<rectangle_fill>
+				<rect>
+					<x>5</x>
+					<y>10</y>
+					<w>1190</w>
+					<h>230</h>
+				</rect>
+				<color>
+					<trans>155</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color>
+			</rectangle_fill>			
+		</layer_before_1>
+		
+		<layer_after_1>
+			<import>PracticeScore.xml</import>		
+		</layer_after_1>
+	</inactive_player>
+
+	<bottom_panel_20>
+		<y_generate>320;270;270;250;230;210;190;170</y_generate>
+		<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+		<import>common_stop_practice.xml</import>	
+	</bottom_panel_20>
+
+</protocol>

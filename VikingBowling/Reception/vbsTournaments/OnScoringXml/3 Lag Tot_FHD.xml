@@ -1,0 +1,253 @@
+<!--
+	===========================================================================================================
+		
+		Text3:		Lag1 totala slagning
+		Text7:		Lag2 totala slagning
+		Text11:		Lag3 totala slagning
+		Text15:		Lag4 totala slagning	
+		
+		Text35:		Namn för Lag1
+		Text37:		Namn för Lag2
+		Text39:		Namn för Lag3
+		Text41:		Namn för Lag4
+		
+	===========================================================================================================	
+-->
+
+<!-- VBS-T Lagnamn och resultat nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>230</y_generate>
+
+		<true_type_text>	
+			<id>#VBST_JOB_text35#</id>
+			<rect>
+				<x>195</x>
+				<y>20</y>
+				<w>380</w>
+				<h>50</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<aspect>0.65</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>1</shadow_factor>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>
+
+		<true_type_text>	
+			<id>#VBST_JOB_text37#</id>
+			<rect>
+				<x>770</x>
+				<y>20</y>
+				<w>380</w>
+				<h>50</h>
+			</rect>
+		</true_type_text>
+
+		<true_type_text>	
+			<id>#VBST_JOB_text39#</id>
+			<rect>
+				<x>1345</x>
+				<y>20</y>
+				<w>380</w>
+				<h>50</h>
+			</rect>
+		</true_type_text>
+			
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200x110R10.png</file>
+		<rect>
+			<x>285</x>
+			<y>100</y>
+			<w>200</w>
+			<h>110</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>	
+			<true_type_text>	
+				<id>#VBST_JOB_text3#</id>
+				<rect>
+					<x>20</x>
+					<y>20</y>
+					<w>160</w>
+					<h>60</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+				<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>	
+	</picture>		
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200x110R10.png</file>
+		<rect>
+			<x>860</x>
+			<y>100</y>
+			<w>200</w>
+			<h>110</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>	
+			<true_type_text>	
+				<id>#VBST_JOB_text7#</id>
+				<rect>
+					<x>20</x>
+					<y>20</y>
+					<w>160</w>
+					<h>60</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+				<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>	
+	</picture>
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200x110R10.png</file>
+		<rect>
+			<x>1435</x>
+			<y>100</y>
+			<w>200</w>
+			<h>110</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>	
+			<true_type_text>	
+				<id>#VBST_JOB_text11#</id>
+				<rect>
+					<x>20</x>
+					<y>20</y>
+					<w>160</w>
+					<h>60</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+				<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.7</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>	
+	</picture>	
+
+</bottom_panel_11>	

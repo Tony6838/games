@@ -1,0 +1,40 @@
+<!--
+	===========================================================================================================
+		Players Practice
+		Copyright 2019 VBS Bowling AB
+		Datum:		20190213
+	===========================================================================================================	
+-->
+
+<!-- Spelformsbeskrivning -->
+<true_type_text>	<!-- Spelarnamnet för aktiv spelare -->
+	<id>#NAME#</id>
+	<font>Arial</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_fill>
+	<rect>
+		<x>40</x>
+		<y>30</y>
+		<w>1230</w>
+		<h>180</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>left</align>
+	<aspect>0.65</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>0</shadow_factor>
+	<pen_width>0</pen_width>
+	<is_text_rec>1</is_text_rec>
+</true_type_text>
+
+<true_type_text>
+	<id>#HCP#</id>
+	<rect>
+		<x>1650</x>
+		<w>240</w>
+	</rect>
+</true_type_text>

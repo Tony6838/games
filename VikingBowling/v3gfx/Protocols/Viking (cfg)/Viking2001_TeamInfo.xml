@@ -1,0 +1,243 @@
+<!--
+	===========================================================================================================
+		Viking2001 Team Info - Visar lagsummor och lagnamn
+		
+		Filnamn:	Viking2001_TeamInfo.xml
+		Datum:		20101210
+						
+		Copyright 2010 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<layer_after_9>
+	<true_type_text>	<!-- Lagnamn -->
+		<id>#LANE_TEAMNAME#</id>
+			<text>Lagnamn</text>
+			<font>Arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<rect>
+				<x>74</x>
+				<y>39;39;27;12;12;12;12;7</y>
+				<w>175</w>
+				<h>26</h>
+			</rect>
+			<fontstyle>bold</fontstyle>
+			<align>left</align>
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>0</pen_width>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>
+</layer_after_9>
+
+
+<bottom_panel_1>	
+	<id>#TFSUM#</id>
+	<y_generate>70</y_generate>
+	<picture>
+		<file>
+		Viking2001_Team_Sums1-5.png;
+		Viking2001_Team_Sums1-5.png;
+		Viking2001_Team_Sums1-5.png;
+		Viking2001_Team_Sums1-5.png;
+		Viking2001_Team_Sums1-5.png;
+		Viking2001_Team_Sums6-8.png;
+		Viking2001_Team_Sums6-8.png;
+		Viking2001_Team_Sums6-8.png
+		</file>
+		<rect>
+			<x>15</x>
+			<y>5</y>
+			<w>610</w>
+			<h>60</h>
+		</rect>
+
+	<layer_before_1>
+		<rectangle_fill>
+			<rect>
+				<x>0</x>
+				<y>1</y>
+				<w>610</w>
+				<h>30</h>
+			</rect>
+			<color>
+				<trans>125</trans>
+				<red>25</red>
+				<green>25</green>
+				<blue>25</blue>
+			</color>
+		</rectangle_fill>
+		<gradient_fill>    <!-- Fältet för lagnamn etc. -->
+			<mode>1</mode>
+			<point1>
+				<x>0</x>
+				<y>0</y>
+				<color>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>10</blue>
+				</color>
+			</point1>
+			<point2>
+				<x>304</x>
+				<y>20</y>
+				<color>
+					<trans>255</trans>
+					<red>255</red>
+					<green>75</green>
+					<blue>0</blue>
+				</color>
+			</point2>
+			<rect>
+				<x>0</x>
+				<y>31</y>
+				<w>610</w>
+				<h>30</h>
+			</rect>			
+		</gradient_fill>
+	</layer_before_1>
+
+	<layer_after_1>
+	<true_type_text>	<!-- Lagnamn -->
+		<id>#LANE_TEAMNAME#</id>
+			<text>Lagnamn</text>
+			<font>Arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<rect>
+				<x>4</x>
+				<y>32</y>
+				<w>175</w>
+				<h>26</h>
+			</rect>
+			<fontstyle>bold</fontstyle>
+			<align>left</align>
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>0</shadow_factor>
+			<pen_width>0</pen_width>
+			<is_text_rec>1</is_text_rec>
+		</true_type_text>
+
+	<true_type_text>	<!-- Totalsummering -->
+		<id>#TFSUM_CFG#</id>
+		<text></text>
+		<rect>
+			<x>1</x>
+			<y>3</y>
+			<w>116;116;116;116;116;105</w>
+			<h>22</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>250</red>
+			<green>250</green>
+			<blue>250</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+	<true_type_text>	<!-- Summa för ruta1 -->
+		<id>#FSUM_CFG_1#</id>
+		<rect>
+			<x>15;15;15;15;15;112</x>
+			<w>0;0;0;0;0;36</w>
+			<h>22</h>
+		</rect>
+	</true_type_text>	
+	<true_type_text>	<!-- Summa för ruta2 -->
+		<id>#FSUM_CFG_2#</id>
+		<rect>
+			<x>73;73;73;73;73;160</x>
+			<w>0;0;0;0;0;36</w>
+			<h>22</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	<!-- Summa för ruta3 -->
+		<id>#FSUM_CFG_3#</id>
+		<rect>
+			<x>117;117;117;117;117;208</x>
+			<w>58;58;58;58;58;36</w>
+			<h>22</h>
+		</rect>
+	</true_type_text>		
+	<true_type_text>	<!-- Summa för ruta4 -->
+		<id>#FSUM_CFG_4#</id>
+		<text></text>
+		<rect>
+			<x>+=58;+=58;+=58;+=58;+=58;+=48</x>
+		</rect>
+	</true_type_text>		
+	<true_type_text>	<!-- Summa för ruta5 -->
+		<id>#FSUM_CFG_5#</id>
+		<text></text>
+		<rect>
+			<x>+=58;+=58;+=58;+=58;+=58;+=48</x>
+		</rect>
+	</true_type_text>		
+	<true_type_text>	<!-- Summa för ruta6 -->
+		<id>#FSUM_CFG_6#</id>
+		<text></text>
+		<rect>
+			<x>+=58;+=58;+=58;+=58;+=58;+=48</x>
+		</rect>
+	</true_type_text>		
+	<true_type_text>	<!-- Summa för ruta7 -->
+		<id>#FSUM_CFG_7#</id>
+		<text></text>
+		<rect>
+			<x>+=58;+=58;+=58;+=58;+=58;+=48</x>
+		</rect>
+	</true_type_text>		
+	<true_type_text>	<!-- Summa för ruta8 -->
+		<id>#FSUM_CFG_8#</id>
+		<text></text>
+		<rect>
+			<x>+=58;+=58;+=58;+=58;+=58;+=48</x>
+		</rect>
+	</true_type_text>		
+	<true_type_text>	<!-- Summa för ruta9 -->
+		<id>#FSUM_CFG_9#</id>
+		<text></text>
+		<rect>
+			<x>+=58;+=58;+=58;+=58;+=58;+=48</x>
+		</rect>
+	</true_type_text>		
+	<true_type_text>	<!-- Summa för ruta10 -->
+		<id>#FSUM_CFG_10#</id>
+		<text></text>
+		<rect>
+			<x>+=58;+=58;+=58;+=58;+=58;+=48</x>
+		</rect>
+	</true_type_text>		
+	</layer_after_1>
+	</picture>	
+</bottom_panel_1>	

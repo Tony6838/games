@@ -1,0 +1,182 @@
+[JOBS]
+Job1Mode=Pari
+Job1Where=AllLanes
+Job1When=Latest
+Job1What=TotAll
+Job1Plus1=#VAL_HOME#
+Job1Text1=text1
+
+Job2Mode=Pari
+Job2Where=AllLanes
+Job2When=Latest
+Job2What=TotAll
+Job2Plus1=#VAL_AWAY#
+Job2Text1=text2
+
+Job3Mode=Pari
+Job3Where=AllLanes
+Job3When=Latest
+Job3What=TotAll
+Job3Plus1=#VAL_AWAY2#
+Job3Text1=text3
+
+Job4Mode=Pari
+Job4Where=AllLanes
+Job4When=Latest
+Job4What=TotAll
+Job4Plus1=#VAL_AWAY3#
+Job4Text1=text4
+
+Job5Mode=Pari
+Job5Where=AllLanes
+Job5When=Latest
+Job5What=TotAll
+Job5Plus1=#VAL_AWAY4#
+Job5Text1=text5
+
+
+
+; ===== TEXTER ===============
+
+; ===== LAG 1 =====
+[text1]
+font=Times
+size=18
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=
+x=41
+y=201
+[text7]
+font=Times
+size=18
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_HOME#
+x=40
+y=200
+
+; ===== LAG 2 =====
+[text2]
+font=Times
+size=18
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=
+x=41
+y=221
+[text8]
+font=Times
+size=18
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_AWAY#
+x=40
+y=220
+
+; ===== LAG 3 =====
+[text3]
+font=Times
+size=18
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=
+x=41
+y=241
+[text9]
+font=Times
+size=18
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_AWAY2#
+x=40
+y=240
+
+; ===== LAG 4 =====
+[text4]
+font=Times
+size=18
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=
+x=41
+y=261
+[text10]
+font=Times
+size=18
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_AWAY3#
+x=40
+y=260
+
+; ===== LAG 5 =====
+[text5]
+font=Times
+size=18
+bold=1
+colorRed=0
+colorGreen=0
+colorBlue=0
+text=
+x=271
+y=201
+[text11]
+font=Times
+size=18
+bold=1
+colorRed=255
+colorGreen=255
+colorBlue=255
+text=#VAL_AWAY4#
+x=270
+y=200
+
+
+#CLIPHERE#
+
+#[JOBS]
+#Job1Mode=Pari / Calculated*
+#Job1Where=AllLanes / #VAL_12#,3,5
+#Job1When=Latest / Completed
+#Job1What=ScrathGame / ScratchAll / TotGame / TotAll 
+#Job1Plus1=aa			= Lagnamn
+#Job1Minus1=bb			= Lagnamn
+#Job1Text1=text1		= Vart skall summan hamna
+#Job1Text2=text2		= Vart skall summan hamna
+# * = Ej klar
+
+[SWAPS]
+Swap1Question=Vad skall första laget heta?
+Swap1Text=#VAL_HOME#
+Swap1Default=Lag1
+Swap2Question=Vad skall andra laget heta?
+Swap2Text=#VAL_AWAY#
+Swap2Default=Lag2
+Swap3Question=Vad skall tredje laget heta?
+Swap3Text=#VAL_AWAY2#
+Swap3Default=Lag3
+Swap4Question=Vad skall fjärde laget heta?
+Swap4Text=#VAL_AWAY3#
+Swap4Default=Lag4
+Swap5Question=Vad skall femte laget heta?
+Swap5Text=#VAL_AWAY4#
+Swap5Default=Lag5
+
+

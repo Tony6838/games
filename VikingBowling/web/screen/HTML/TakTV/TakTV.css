@@ -1,0 +1,508 @@
+/* ---------------------------------------------------------------------------
+   TakTV.css - the page around the scoring sheet.
+
+   The sheet itself is 640x480 in its own coordinate space (x_generate /
+   y_generate in the protocol) and is scaled to whatever the window is, keeping
+   4:3 - the same thing CGdiMON does when it blits the GDI+ bitmap to a lane
+   screen of a different resolution.
+
+   The frame around it - the 95%/5% split, the banner strip, its gradient, the
+   clock, the media and video layers and their z-order - is taken from the XML
+   lane TV's stylesheet (..\..\common\css\TakTV.css plus the variables in
+   defaultSettings.css) so the two screens look the same on a wall of them.
+   Deliberately a copy and not a link: that file is loaded by the screens in
+   production and carries the console's rules too, and the two renderers'
+   clients must not be able to change each other. The tokens below are the ones
+   defaultSettings.css defines, kept by name so a hall that overrides them in
+   customSettings.css - which this page also loads - moves both screens.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --vbsblue: #106ebe;
+
+  --banner_height: 5%;
+  --banner_height_vh: 5vh;
+
+  --banner_text_factor: 1.3;
+  --banner_text_color: rgba(255, 255, 255, 1);
+
+  --banner_color1: rgba(0, 189, 244, 1);
+  --banner_color2: rgba(20, 122, 215, 1);
+
+  /* How big the banner strip is, as a multiple of the strip this screen has
+     always had: 4.6vh inside a bottom 5% that the media area leaves free. Every
+     banner measurement below is multiplied by it, so at 1 each one computes to
+     exactly what it was. TakTV.js sets it from the banner height on the
+     reception's Video3 page (bannerHeight in the payload), as the XML lane TV
+     does, so the two still match on a wall of them. */
+  --banner_scale: 1;
+}
+
+/* The XML screens get this from bootstrap.min.css, which they load and this
+   page deliberately does not. Without it #bottom_content's 0.5vh of padding is
+   added to its 4.6vh height instead of fitting inside it, so the banner strip
+   came out 5.6vh - visibly thicker than the one next to it on the wall. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.main-wrapper {
+  height: 100vh;
+  background-color: black;
+  overflow: hidden;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+#main_content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: calc(100% - 5% * var(--banner_scale));
+  margin: 0;
+  padding: 0;
+  z-index: 2;
+  overflow: hidden;
+}
+
+/* The sheet. Fills the media area; anything drawn over it is #imageFx or
+   #videoFx, which are higher in the stack. */
+#stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+#sheet {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* A page driven by the lane's status keeps its sheet out of sight until the
+   status says the sheet is what the screen shows - see statusDriven in TakTV.js.
+   Visibility, not display: the sheet keeps its layout, so its text is measured
+   and drawn exactly as when it is on show. */
+#stage.awaits-status {
+  visibility: hidden;
+}
+
+/* Sharp edges on the grid PNGs when the sheet is blown up to a TV; the GDI+
+   path used a plain stretch too. */
+#sheet image {
+  image-rendering: auto;
+}
+
+/* The sheet that goes into the file, never on screen. Off to the side rather
+   than display:none: an SVG with no layout measures its text as zero, and the
+   renderer sizes rows and glyph boxes from those measurements. Given a real
+   size for that reason alone - the size the file is written at is
+   v3GfxSaveImagesResX and is decided in TakTV.js, not here. Those measurements
+   come back in viewBox user units, so they do not depend on this size. */
+#sheetForFile {
+  position: absolute;
+  left: -20000px;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  pointer-events: none;
+}
+
+/* The picture layer over the sheet - commercials, the message image, the
+   slow-waiting media, StartConsole. Hidden whenever the sheet is what should
+   be showing, which is what vbsShowSheet does. */
+#imageFx {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  z-index: 4;
+  overflow: hidden;
+  display: block;
+}
+
+#imageFx[hidden] {
+  display: none;
+}
+
+/* Full screen, over everything except the banner: an animation covers the
+   whole lane display exactly as it does on the XML screen. */
+#videoFx {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  opacity: 0%;
+  z-index: 4;
+  object-fit: fill;
+}
+
+#bottom_content {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  padding: calc(0.5vh * var(--banner_scale)) 0.25vw;
+  border-radius: 3px 3px 2px 2px;
+  background: linear-gradient(145deg, var(--banner_color1) 0%, var(--banner_color2) 30%, var(--banner_color2) 100%);
+  height: calc(4.6vh * var(--banner_scale));
+  z-index: 9;
+}
+
+#bannerText {
+  /* Ends where the clock begins: 2% margin each side and the clock, which is
+     eight digits and colons in this same font size - 4em wide - plus a gap.
+     In em, so it grows with the banner. It was 90%, which ran a long line under
+     the clock already, and under most of it once the banner grows. */
+  width: calc(96% - 4.5em);
+  position: relative;
+  left: 2%;
+  top: calc(0.1vh * var(--banner_scale));
+  color: var(--banner_text_color);
+  font-size: calc(3.2vh * var(--banner_scale));
+  line-height: calc(3.2vh * var(--banner_scale));
+  text-align: justify;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#clock {
+  position: fixed;
+  right: 2%;
+  bottom: calc(0.7vh * var(--banner_scale));
+  color: var(--banner_text_color);
+  font-size: calc(3.2vh * var(--banner_scale));
+  font-weight: bolder;
+  line-height: calc(3.2vh * var(--banner_scale));
+  display: inline;
+  z-index: 10;
+}
+
+/* Only ever carries a diagnostic - "waiting for lane data", a parse error.
+   Nothing from the protocol is drawn here. Sits just above the banner strip so
+   it cannot cover the clock. */
+#status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(4.6vh * var(--banner_scale));
+  padding: 4px 8px;
+  color: #ff6a6a;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+  white-space: pre-wrap;
+  z-index: 8;
+}
+
+#status:empty {
+  display: none;
+}
+
+/* Z-index, matching the XML screen
+   main_content:   2
+     sheet:        2
+   imageFx:        4
+   videoFx:        4
+   status:         8
+   banner:         9
+*/
+
+/* ---------------------------------------------------------------------------
+   The six name boxes shown while player names are being typed at the lane.
+
+   Built by vbsnameentry.js, which is where what they are and when they appear
+   is described. Everything here is scoped under #vbsNameEntry so that this
+   stylesheet still cannot change anything the screen already draws - and so a
+   page that also carries the web console's vbs.css keeps its own .playerName.
+
+   Deliberately the same look as the console form these are mirroring
+   (#fillBowlingData in screen\console\TouchConsole.html): a white rounded panel
+   with a heading and the same stack of name fields inside it. The sizes are not
+   the console's - that is a tablet at arm's length and this is a television
+   across a bowling lane - so they are in vh and roughly doubled.
+   --------------------------------------------------------------------------- */
+
+#vbsNameEntry {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+
+  /* The media area only, the same height #main_content occupies (95% at the
+     default banner), so the banner strip and the clock underneath stay visible
+     exactly as in every other state. */
+  height: calc(100% - 5% * var(--banner_scale));
+
+  /* Above #main_content, below #bottom_content. #main_content is positioned
+     with a z-index of its own and is therefore a stacking context, so this one
+     value clears everything inside it - the scoresheet picture, a commercial, a
+     playing animation - whatever their own z-indexes are. */
+  z-index: 6;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Opaque, not the console's translucent .overlay dim. What is underneath is
+     the lane display mirrored as a JPEG - which in this state is the console's
+     own name form - so letting it through only says the same thing twice.
+
+     The fetch under it is deliberately left running: it is how every other
+     console screen still reaches this TV, and it keeps the picture current for
+     the moment these boxes are taken away again. */
+  background: #000;
+}
+
+/* display:flex above wins over the browser's own [hidden] rule, so hiding has
+   to be said again here. */
+#vbsNameEntry[hidden] {
+  display: none;
+}
+
+/* Follows the console's own .popup h2 - same colour, same face, no top margin -
+   at a size that reads from across a lane.
+
+   font-weight is stated rather than left to the browser, for the same reason
+   font-family is on .playerName below: the XML screen loads bootstrap, which
+   resets h2 to 500, and this one does not, so an unstated weight came out
+   regular on one TV and bold on the one next to it on the wall. */
+#vbsNameEntry .popup h2 {
+  margin: 0 0 2vh 0;
+  color: #333;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 4.4vh;
+  font-weight: bold;
+}
+
+#vbsNameEntry .popup {
+  background: #fff;
+  border-radius: 5px;
+  padding: 3vh 3vw;
+  width: 55%;
+}
+
+#vbsNameEntry #nameArea {
+  display: grid;
+
+  /* The heading and then one name box per row, and beside them the bumper
+     column when the console's form has one (.vbsWithBumpers below). The column
+     and its heading are hidden without it, and hidden grid items take no cell,
+     so this is then the single column the panel always had. */
+  grid-template-columns: auto;
+  gap: 1.6vh;
+}
+
+/* The heading is the grid's first cell (vbsnameentry.js): its own margin plus
+   the grid's row gap is the 2vh the heading always had below it. */
+#vbsNameEntry #nameArea h2 {
+  margin-bottom: 0.4vh;
+  align-self: end;
+}
+
+/* The bumper column: as wide as the wider of its heading and its boxes, but
+   never more than 30% of the panel - in a split-screen or wall frame, which is
+   tall and narrow, the Finnish "Antamalla + nousee" would otherwise take the
+   names' width; there its heading wraps instead. The names take the rest. A
+   wider panel, so the names lose less of their width to it. */
+#vbsNameEntry.vbsWithBumpers #nameArea {
+  grid-template-columns: minmax(0, 1fr) fit-content(30%);
+  column-gap: 2.4vw;
+}
+
+#vbsNameEntry.vbsWithBumpers .popup {
+  width: 66%;
+}
+
+#vbsNameEntry .bumpHead,
+#vbsNameEntry .bumpBox {
+  display: none;
+}
+
+/* Over the column, beside the heading: "Rännstaket", or the V3 keyboard
+   form's two lines "Tryck + för" / "rännstaket" - which is how a guest at a
+   Loki lane finds out about the + key. Bottom-aligned with the heading. */
+#vbsNameEntry.vbsWithBumpers .bumpHead {
+  display: block;
+  align-self: end;
+  margin-bottom: 0.4vh;
+  color: #333;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 2.8vh;
+  font-weight: bold;
+  line-height: 1.15;
+  text-align: center;
+}
+
+/* One per name, the same look as the web console's checkbox at the size of a
+   television: white with the name box's border, and when ticked the start
+   button's blue with a white check mark drawn in CSS (no glyph a TV's fonts
+   might lack). */
+#vbsNameEntry.vbsWithBumpers .bumpBox {
+  display: block;
+  position: relative;
+  justify-self: center;
+  align-self: center;
+  width: 5.6vh;
+  height: 5.6vh;
+  box-sizing: border-box;
+  border: 0.35vh solid #767676;
+  border-radius: 0.6vh;
+  background: #fff;
+}
+
+#vbsNameEntry.vbsWithBumpers .bumpBox.bumpOn {
+  background: #337ab7;
+  border-color: #2e6da4;
+}
+
+#vbsNameEntry.vbsWithBumpers .bumpBox.bumpOn::after {
+  content: '';
+  position: absolute;
+  left: 32%;
+  top: 12%;
+  width: 28%;
+  height: 52%;
+  border: solid #fff;
+  border-width: 0 0.7vh 0.7vh 0;
+  transform: rotate(45deg);
+}
+
+#vbsNameEntry .playerName {
+  width: 100%;
+  height: 7vh;
+  font-size: 4vh;
+  padding: 0.2vh 1vw;
+
+  /* Named rather than inherited: the TV pages set a font on body, the console
+     gets this from bootstrap, and a name has to be shaped the same on both. */
+  font-family: Arial, Helvetica, sans-serif;
+  color: #000;
+  background: #fff;
+  border: 1px solid #767676;
+  border-radius: 3px;
+}
+
+/* A television has no focus ring to show and nothing to click, and the browser
+   would otherwise outline the first box on some platforms. */
+#vbsNameEntry .playerName:focus {
+  outline: none;
+}
+
+#vbsNameEntry .playerName::placeholder {
+  color: #999;
+  opacity: 1;
+}
+
+/* The console's cursor, mirrored into the box being typed in: vbsnameentry.js
+   places it at the guest's caret column and restarts the blink when it moves.
+   Wider than a native caret because it is read from across a lane. */
+#vbsNameEntry .nameCaret {
+  position: absolute;
+  width: 0.4vh;
+  min-width: 2px;
+  background: #000;
+  display: none;
+}
+
+#vbsNameEntry .nameCaret.vbsCaretOn {
+  display: block;
+
+  /* 530 ms on, 530 ms off - the blink rate a real Windows caret has. The 50%
+     pair keeps each phase a solid step rather than a fade. */
+  animation: vbsNameCaretBlink 1.06s linear infinite;
+}
+
+@keyframes vbsNameCaretBlink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/* The console's selection, mirrored: a highlight over the focused name's text
+   while the console shows it selected - the replace-on-next-key state. Placed
+   by vbsDrawNameCursor the way the caret is, spanning the text rather than the
+   box; translucent over the black glyphs, the way a browser's own selection
+   looks. No blink - a selection stands still. */
+#vbsNameEntry .nameSel {
+  position: absolute;
+  background: rgba(0, 120, 215, 0.4);
+  display: none;
+}
+
+#vbsNameEntry .nameSel.vbsSelOn {
+  display: block;
+}
+
+/* Under the boxes: the start instruction - the same "Enter 2 gånger för start"
+   the V3 console's form shows on the lane TV picture, in the hall's language -
+   and beside it the mirrored start button. */
+#vbsNameEntry .startRow {
+  margin-top: 2.4vh;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2vw;
+}
+
+#vbsNameEntry .startHint {
+  color: #333;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 3.4vh;
+  font-weight: bold;
+}
+
+/* The same blue as the web console's own primary buttons, with a solid shadow
+   under it so the press below has something to sink into - a flat button's
+   press cannot be read from across a lane. */
+#vbsNameEntry .startBtn {
+  flex: 0 0 auto;
+  padding: 0.9vh 2.4vw;
+  border-radius: 5px;
+  background: #337ab7;
+  border: 1px solid #2e6da4;
+  color: #fff;
+  font-family: Tahoma, Arial, sans-serif;
+  font-size: 3.4vh;
+  font-weight: bold;
+  box-shadow: 0 0.5vh 0 #22527b;
+  transition: transform 0.08s linear, box-shadow 0.08s linear, background 0.08s linear;
+}
+
+/* Highlighted while the V3 console's focus stands on its own start button -
+   the console draws that button highlighted, and Enter there starts the game.
+   A ring rather than a colour change, so it reads as "selected" next to the
+   press below, which is the other thing a blue button could turn into. */
+#vbsNameEntry .startBtn.vbsBtnFocus {
+  background: #3d8fd6;
+  box-shadow: 0 0.5vh 0 #22527b, 0 0 0 0.6vh #f5a623;
+}
+
+/* Pressed while a start is going through, from either console. Sinks onto its
+   shadow and darkens - the ordinary press a real button shows. */
+#vbsNameEntry .startBtn.vbsBtnPressed {
+  background: #23527c;
+  transform: translateY(0.5vh);
+  box-shadow: 0 0 0 #22527b;
+}

@@ -1,0 +1,103 @@
+<!--
+	===========================================================================================================
+	MessageInfo
+	
+	ID	Description
+	19	Inspelning pågår
+	20	Inspelning slut
+	21	Notap Strike utförs
+	22	Serviceknapp tryckt
+	23	Ur sekvens
+	24	Ny serie - Press Space
+	
+	Layer
+	2	Ny serie - Spela klot
+	2	Ny serie - Belgium Odd
+	2	Ny serie - Belgium Even
+	2	10th Frame Reset
+-->
+
+<!-- OK    Inspelning pågår -->
+<bottom_panel_19>
+	<y_generate>320;270;270;250;230;210;190;170</y_generate>
+	<id>#PRACTICE1#</id>
+	<import>common_practice.xml</import>
+</bottom_panel_19>
+
+<!-- OK     Inspelning slut -->
+<bottom_panel_20>
+	<y_generate>320;270;270;250;230;210;190;170</y_generate>
+	<id>#ID_MASKPIC_STOP_PRACTICE#</id>
+	<import>common_stop_practice.xml</import>	
+</bottom_panel_20>
+
+<!-- OK     NoTap reset -->
+<bottom_panel_21>
+	<y_generate>320;270;270;250;230;210;190;170</y_generate>
+	<id>#ID_MASKPIC_STOP_NOTAP#</id>
+	<import>Common_NotapReset.xml</import>		
+</bottom_panel_21>
+
+<!-- OK     Serviceknappen tryckt -->
+<bottom_panel_22>
+	<y_generate>320;270;270;250;230;210;190;170</y_generate>
+	<id>#ID_MASKPIC_SERVICE#</id>
+	<import>Common_Service.xml</import>			
+</bottom_panel_22>
+
+<!-- Ur sekvens -->
+<bottom_panel_23>
+	<y_generate>320;270;270;250;230;210;190;170</y_generate>
+	<id>#ID_MASKPIC_OUT_OF_SEQUENCE#</id>
+	<import>Common_OutOfSequence.xml</import>		
+</bottom_panel_23>
+
+<!-- OK     Press SPACE -->
+<bottom_panel_24>
+	<y_generate>300</y_generate>
+	<id>#ID_MASKPIC_WAITSPACE#</id>	
+	<import>Common_PressSpace.xml</import>	
+</bottom_panel_24>
+
+
+<layer_after_2>
+	<!-- OK   Serviceknappen tryckt -->
+	<picture>
+		<file>Varning.png</file>
+		<id>#ID_MASKPIC_SERVICE#</id>
+		<rect>
+			<x>350</x>
+			<y>100</y>
+			<w>1220</w>
+			<h>980</h>
+		</rect>
+		<trans>1</trans>
+		<layer_after_1>
+			<picture>
+			<file>Tools.png</file>
+			<rect>
+				<x>705</x>
+				<y>800</y>
+				<w>510</w>
+				<h>550</h>
+			</rect>
+			<trans>1</trans>
+		</picture>
+		</layer_after_1>
+		
+	</picture>
+
+	<!-- OK   Spela klot för ny serie -->
+	<import>Common_PlayBall.xml</import>
+
+	<!-- OK   10th frame reset -->
+	<import>Common_10FrameReset.xml</import>
+
+	<!-- OK   Belgium Odd, Tryck 1 för ny serie, 2 för att avsluta  -->
+	<import>Common_Belgium_Odd.xml</import>	
+
+	<!-- OK   Belgium Even, Tryck 9 för ny serie, 0 för att avsluta  -->
+	<import>Common_Belgium_Even.xml</import>
+
+	
+</layer_after_2>

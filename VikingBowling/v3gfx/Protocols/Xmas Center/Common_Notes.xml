@@ -1,0 +1,73 @@
+<!--
+Skrivs ovanför protokoll. Meddelande såsom nästa bana etc.
+-->
+
+		
+	<picture>
+	<file>Empty960x240.png</file>
+	<id>||||||||#NEXT_GAME_LANE#</id>
+	<!-- Använd ID för att styra vart ytan för protokoll och Header skall få för X-koordinat resp bredd. -->
+		<rect>
+			<x>198</x>
+			<y>55</y>
+			<w>716</w>
+			<h>115</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>	
+		<layer_after_1>	
+			<import>MessageBox940x240Attention.xml</import>				
+		</layer_after_1>
+		<layer_after_2>
+			<true_type_text>
+				<id>#NEXT_GAME_LANED#</id>
+				<font>arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_pen>
+					<trans>0</trans>
+					<red>225</red>
+					<green>225</green>
+					<blue>225</blue>
+				</color_pen>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>			
+				<fontstyle>bold</fontstyle>
+				<align>right</align>
+				<aspect>0.75</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>0</shadow_factor>
+				<halo_pen>0</halo_pen>
+				<rect>
+					<x>250</x>
+					<y>50</y>
+					<w>480</w>
+					<h>160</h>
+				</rect>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>
+			
+			<true_type_text>
+			<id>#NEXT_GAME_LANE#</id>
+			<rect>
+				<x>770</x>
+				<y>40</y>
+				<w>100</w>
+				<h>160</h>
+			</rect>
+			<align>center</align>
+			<aspect>0.75</aspect>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_2>		
+	</picture>	
+		
+		

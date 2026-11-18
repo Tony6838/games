@@ -1,0 +1,19 @@
+Ytterram: 6px
+Innerram: 2px
+Avstånd från vänster: 30px
+Varje klotfält: 86px x 86px
+Varje sumfält: 174px x 86px
+Invändigt avstånd mellan text och ram: 10px
+
+Vid 6-8 spelare
+Namnfält och Totalfält: 337 x 86px
+Varje klotfält: 70px x 86px
+Varje sumfält: 142px x 86px
+
+Aktiv spelare:
+#FFFFFF 100%
+Linjär gradient, #facc22 #f83600 #facc22
+
+Inaktiv spelare:
+#FFFFFF 60%
+#FFFFFF 60%

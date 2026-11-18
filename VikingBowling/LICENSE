@@ -1,0 +1,18 @@
+Viking Bowling
+Copyright (c) 1995-2026 VBS Bowling AB. All rights reserved.
+
+This game, its source code, its texts and its graphics are the property of
+VBS Bowling AB. It is built on VBS Bowling AB's Viking Scoring System 4.4 and
+uses that system's scoring rules, game formats, lane TV pages, lane console
+look, splash image, protocol themes and texts, all of which are likewise the
+property of VBS Bowling AB.
+
+The game is made available for training, education and entertainment. No part
+of it may be copied, modified, distributed, sold or used in any other product
+without the prior written permission of VBS Bowling AB.
+
+Third-party components keep their own licences, which permit this use:
+  lib/three/          three.js        MIT License   (lib/three/LICENSE)
+  lib/cannon-es/      cannon-es       MIT License   (lib/cannon-es/LICENSE)
+  web/screen/console/fonts/   Barlow and Barlow Condensed   SIL Open Font License 1.1
+                                   (web/screen/console/fonts/OFL-LICENSE.txt)

@@ -1,0 +1,111 @@
+<!--
+	===========================================================================================================
+		Standard
+	===========================================================================================================	
+-->
+		
+
+<true_type_text>	<!-- Lane number description -->
+	<id>#LANE_NUMBER#</id>
+	<text></text>
+	<font>Arial</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>255</red>
+		<green>255</green>
+		<blue>255</blue>
+	</color_fill>
+	<color_pen>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_pen>
+	<color_shadow>
+		<trans>155</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_shadow>
+	<rect>
+		<x>40</x>
+		<y>30;30;30;30;20;10;10;4</y>
+		<w>100</w>
+		<h>150;150;130;130;100;80;60</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>center</align>
+	<maxsize>0</maxsize>
+	<aspect>0.8</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>1</shadow_factor>
+	<pen_width>1</pen_width>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+
+<true_type_text>	<!-- Aktuell Serie beskrivning -->
+	<id>#GAMED#</id>
+	<text></text>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>1720</x>
+			<y>20</y>
+			<w>100</w>
+			<h>60</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<aspect>0.8</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>0</pen_width>
+		<is_text_rec>1</is_text_rec>		
+</true_type_text>
+
+<true_type_text>	<!-- Aktuell serie -->
+	<id>#GAME#</id>
+	<text></text>
+	<rect>
+		<x>1840</x>
+		<y>20</y>
+		<w>75</w>
+		<h>60</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>left</align>
+	<aspect>0.8</aspect>
+	<is_text_rec>1</is_text_rec>
+</true_type_text>
+
+<true_type_text>	<!-- Player mode -->
+	<id>#GAMEMODE#</id>
+	<text></text>
+	<rect>
+		<x>1720</x>
+		<y>90</y>
+		<w>150</w>
+		<h>40;40;40;40;35;0</h>
+	</rect>
+	<align>left</align>
+	<aspect>0.8</aspect>
+	<is_text_rec>1</is_text_rec>		
+</true_type_text>
+
+<import>Time.xml</import>

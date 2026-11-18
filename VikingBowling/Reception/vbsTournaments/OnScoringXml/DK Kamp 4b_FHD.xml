@@ -1,0 +1,385 @@
+<!--
+	===========================================================================================================
+		Text1:		Diff
+		Text2:		Hemmalagets Totala kägelpoäng
+		Text3:		Bortalagets Totala kägelpoäng		
+		Text4:		Hemmalagets Lagpoäng (0-10st)
+		Text5:		Bortalagets Lagpoäng (0-10st)
+		Text6:		Namn för hemmalaget
+		Text7:		Namn för bortalaget
+	===========================================================================================================	
+-->
+<layer_after_11>
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X210R10.png</file>
+		<rect>
+			<x>1365</x>
+			<y>10</y>
+			<w>200</w>
+			<h>150</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>
+		
+		<layer_after_1>	
+			<true_type_text>	
+				<id>#VBST_JOB_text1#</id>
+				<rect>
+					<x>30</x>
+					<y>30</y>
+					<w>140</w>
+					<h>140</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.5</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>	
+	</picture>
+</layer_after_11>
+
+<!-- VBS-T Lagnamn och resultat nedanför protokollen -->
+<bottom_panel_11>
+	<id>VBS</id>
+	<y_generate>140</y_generate>
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\LU600X110R10.png</file>
+		<rect>
+			<x>45</x>
+			<y>10</y>
+			<w>600</w>
+			<h>110</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>175</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>595</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+	</layer_before_1>
+	<layer_after_1>
+	<true_type_text>	
+		<id>#VBST_JOB_text6#</id>
+		<text>Hemmalag</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>25</x>
+			<y>20</y>
+			<w>550</w>
+			<h>60</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>	
+	</layer_after_1>
+	</picture>	
+	
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\RU600X110R10.png</file>
+		<rect>
+			<x>1275</x>
+			<y>10</y>
+			<w>600</w>
+			<h>110</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<trans>175</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>0</x>
+					<y>5</y>
+					<w>595</w>
+					<h>90</h>
+				</rect>
+			</rectangle_fill>	
+	</layer_before_1>
+	<layer_after_1>
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Bortalag</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>25</x>
+			<y>20</y>
+			<w>550</w>
+			<h>60</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>	
+	</layer_after_1>
+		
+	</picture>	
+	
+	
+<picture>
+	<file>C:\Viking2001\v3gfx\Resource\Objects\B300X210R10.png</file>
+		<rect>
+			<x>620</x>
+			<y>0</y>
+			<w>300</w>
+			<h>135</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>290</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>	
+		
+			<rectangle_fill>
+				<color>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>150</x>
+					<y>15</y>
+					<w>1</w>
+					<h>170</h>
+				</rect>
+			</rectangle_fill>	
+			
+			<true_type_text>	
+			<id>#VBST_JOB_text2#</id>
+			<rect>
+				<x>20</x>
+				<y>60</y>
+				<w>110</w>
+				<h>80</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+			<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<aspect>0.7</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>1</shadow_factor>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+			
+			<true_type_text>	
+				<id>#VBST_JOB_text4#</id>
+				<rect>
+					<x>170</x>
+					<y>30</y>
+					<h>140</h>					
+				</rect>
+			</true_type_text>	
+			
+		</layer_after_1>	
+	</picture>		
+
+	<picture>
+	<file>C:\Viking2001\v3gfx\Resource\Objects\B300X210R10.png</file>
+		<rect>
+			<x>975</x>
+			<y>0</y>
+			<w>300</w>
+			<h>135</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+			
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>290</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>		
+			
+		<layer_after_1>
+
+			<rectangle_fill>
+				<color>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>150</x>
+					<y>15</y>
+					<w>1</w>
+					<h>170</h>
+				</rect>
+			</rectangle_fill>	
+		
+			<true_type_text>	
+			<id>#VBST_JOB_text5#</id>
+			<rect>
+				<x>20</x>
+				<y>30</y>
+				<w>110</w>
+				<h>140</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+			<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<aspect>0.7</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>1</shadow_factor>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+			
+			<true_type_text>	
+			<id>#VBST_JOB_text3#</id>
+			<rect>
+				<x>170</x>
+				<y>60</y>
+				<h>80</h>					
+			</rect>
+			</true_type_text>	
+			
+		</layer_after_1>	
+	</picture>		
+	
+	
+</bottom_panel_11>	

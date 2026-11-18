@@ -1,0 +1,19 @@
+<!--
+	===========================================================================================================					
+		Text1:		Total Diff mellan lagen
+		Text2:		Diff för Banpar 1-2
+		Text3:		Diff för Banpar 3-4
+		Text4:		Diff för Banpar 5-6
+		Text5:		Diff för Banpar 7-8
+		Text6:		Lagpoäng för hemmalaget
+		Text7:		Lagpoäng för bortalaget
+		Text8:		Pari (värde)
+		Text9:		Namn på hemmalag
+		Text10:		Namn på bortalag
+		Text11:		Pari (text)
+								
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+	<import>onScoringXml\SmålandsReservserie.xml</import>

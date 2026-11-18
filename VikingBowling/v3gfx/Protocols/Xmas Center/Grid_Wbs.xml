@@ -1,0 +1,307 @@
+<!--
+
+-->
+
+<!-- Horisontala streck -->
+<rectangle_fill>
+	<rect>
+		<x>20</x>
+		<y>120</y>
+		<w>1880</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+
+<!-- Vertikala streck -->
+
+<rectangle_fill>
+	<rect>
+		<x>95</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>190</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>283</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>380</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>475</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+<rectangle_fill>
+	<rect>
+		<x>570</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>665</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>760</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>855</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>950</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1045</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1140</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1235</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1330</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1425</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1520</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1615</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1710</x>
+		<y>10</y>
+		<w>1</w>
+		<h>220</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1805</x>
+		<y>10</y>
+		<w>1</w>
+		<h>110</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+

@@ -1,0 +1,285 @@
+<!--
+	===========================================================================================================		
+
+	1		Lag1 Ser
+	2		Lag1 Tot
+	3		Lag1 Banpoäng
+	4-6		Lag2
+	7		Lag1 namn	
+	8		Lag2 namn
+								
+	Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<bottom_panel_11>
+	<id>DD</id>
+	<y_generate>210</y_generate>
+
+
+	<picture>
+	<file>Empty1400x200.png</file>
+	<rect>
+		<x>260</x>
+		<y>0</y>
+		<w>1400</w>
+		<h>90</h>
+	</rect>	
+	<color_factor>1.0</color_factor>
+	<trans>1</trans>	
+		
+	<layer_after_1>	
+		<!-- Rita ram runt protokollet. -->	
+		<import>MessageBox1400x200.xml</import>
+			
+		<rectangle_fill>
+			<rect>
+				<x>199</x>
+				<y>35</y>
+				<w>2</w>
+				<h>130</h>
+			</rect>
+			<color>
+				<trans>155</trans>
+				<red>100</red>
+				<green>100</green>
+				<blue>100</blue>
+			</color>	
+		</rectangle_fill>
+			
+		<rectangle_fill>
+			<rect>
+				<x>999</x>
+				<y>35</y>
+				<w>2</w>
+				<h>130</h>
+			</rect>
+			<color>
+				<trans>155</trans>
+				<red>100</red>
+				<green>100</green>
+				<blue>100</blue>
+			</color>	
+		</rectangle_fill>
+		
+		<rectangle_fill>
+			<rect>
+				<x>1199</x>
+				<y>35</y>
+				<w>2</w>
+				<h>130</h>
+			</rect>
+			<color>
+				<trans>155</trans>
+				<red>100</red>
+				<green>100</green>
+				<blue>100</blue>
+			</color>	
+		</rectangle_fill>
+			
+		</layer_after_1>	
+		<layer_after_2>	
+		<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<rect>
+			<x>20</x>
+			<y>35</y>
+			<w>160</w>
+			<h>130</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+		<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+		</true_type_text>
+
+		<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<rect>
+			<x>220</x>
+			<y>40</y>
+			<w>760</w>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<is_text_rec>1</is_text_rec>
+		<align>left</align>
+		<aspect>0.5</aspect>
+		</true_type_text>
+
+		<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<rect>
+			<x>1020</x>
+			<y>35</y>
+			<w>160</w>
+			<h>130</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<is_text_rec>0</is_text_rec>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		</true_type_text>
+		
+		<true_type_text>	
+		<id>#VBST_JOB_text2#</id>
+		<rect>
+			<x>1220</x>
+			<w>160</w>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<is_text_rec>0</is_text_rec>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		</true_type_text>
+		</layer_after_2>					
+	</picture>
+
+	<picture>
+	<file>Empty1400x200.png</file>
+	<rect>
+		<x>260</x>
+		<y>100</y>
+		<w>1400</w>
+		<h>90</h>
+	</rect>	
+	<color_factor>1.0</color_factor>
+	<trans>1</trans>	
+		
+	<layer_after_1>	
+		<!-- Rita ram runt protokollet. -->	
+		<import>MessageBox1400x200.xml</import>
+			
+		<rectangle_fill>
+			<rect>
+				<x>199</x>
+				<y>35</y>
+				<w>2</w>
+				<h>130</h>
+			</rect>
+			<color>
+				<trans>155</trans>
+				<red>100</red>
+				<green>100</green>
+				<blue>100</blue>
+			</color>	
+		</rectangle_fill>
+			
+		<rectangle_fill>
+			<rect>
+				<x>999</x>
+				<y>35</y>
+				<w>2</w>
+				<h>130</h>
+			</rect>
+			<color>
+				<trans>155</trans>
+				<red>100</red>
+				<green>100</green>
+				<blue>100</blue>
+			</color>	
+		</rectangle_fill>
+		
+		<rectangle_fill>
+			<rect>
+				<x>1199</x>
+				<y>35</y>
+				<w>2</w>
+				<h>130</h>
+			</rect>
+			<color>
+				<trans>155</trans>
+				<red>100</red>
+				<green>100</green>
+				<blue>100</blue>
+			</color>	
+		</rectangle_fill>
+			
+		</layer_after_1>	
+		<layer_after_2>	
+		<true_type_text>	
+		<id>#VBST_JOB_text6#</id>
+		<rect>
+			<x>20</x>
+			<y>35</y>
+			<w>160</w>
+			<h>130</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+		<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+		</true_type_text>
+
+		<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<rect>
+			<x>220</x>
+			<y>40</y>
+			<w>760</w>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<is_text_rec>1</is_text_rec>
+		<align>left</align>
+		<aspect>0.5</aspect>
+		</true_type_text>
+
+		<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<rect>
+			<x>1020</x>
+			<y>35</y>
+			<w>160</w>
+			<h>130</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<is_text_rec>0</is_text_rec>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		</true_type_text>
+		
+		<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<rect>
+			<x>1220</x>
+			<w>160</w>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<is_text_rec>0</is_text_rec>
+		<align>center</align>
+		<aspect>0.5</aspect>
+		</true_type_text>
+		</layer_after_2>					
+	</picture>
+
+	
+	
+</bottom_panel_11>

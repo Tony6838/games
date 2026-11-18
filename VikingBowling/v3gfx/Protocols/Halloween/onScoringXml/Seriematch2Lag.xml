@@ -1,0 +1,198 @@
+<!--
+	===========================================================================================================
+		Seriematch 2 Lag
+		Filen testas med protkollet Viking.
+						
+		Text1:		Total Diff
+		Text3:		Hemmalagets totala slagning
+		Text5:		Bortalagets totala slagning
+		Text7:		Namn på hemmalag
+		Text9:		Namn på bortalag
+								
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<bottom_panel_11>
+	<id>DD</id>
+	<y_generate>210</y_generate>
+
+<!-- Home Team -->
+	<picture>
+	<file>Empty300x300.png</file>
+		<rect>
+			<x>20</x>
+			<y>10</y>
+			<w>190</w>
+			<h>190</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		<layer_after_1>	
+			<!-- Rita ram runt protokollet. -->	
+
+		</layer_after_1>				
+		<layer_after_2>	
+			<picture>
+			<file>#teamLogo_1#</file>
+			<rect>
+				<x>4</x>
+				<y>10</y>
+				<w>292</w>
+				<h>280</h>
+			</rect>
+			<color_factor>1</color_factor>
+			</picture>	
+		</layer_after_2>	
+	</picture>
+
+<!-- Away Team -->
+	<picture>
+	<file>Empty300x300.png</file>
+		<rect>
+			<x>1710</x>
+			<y>10</y>
+			<w>190</w>
+			<h>190</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		<layer_after_1>	
+			<!-- Rita ram runt protokollet. -->	
+
+		</layer_after_1>				
+		<layer_after_2>	
+			<picture>
+			<file>#teamLogo_2#</file>
+			<rect>
+				<x>4</x>
+				<y>10</y>
+				<w>292</w>
+				<h>280</h>
+			</rect>
+			<color_factor>1</color_factor>
+			</picture>	
+		</layer_after_2>	
+	</picture>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Lagnamn Hemma</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>300</x>
+			<y>10</y>
+			<w>700</w>
+			<h>90</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<text>Totalpoäng Hemma</text>
+		<align>center</align>
+		<rect>
+			<x>1050</x>
+			<w>200</w>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<text>Lagnamn Borta</text>
+		<align>left</align>		
+		<rect>
+			<x>300</x>
+			<y>110</y>
+			<w>700</w>
+			<h>90</h>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<text>Totalpoäng Borta</text>
+		<align>center</align>	
+		<rect>
+			<x>1050</x>
+			<w>200</w>
+		</rect>
+	</true_type_text>
+
+	
+	
+	<!-- Diffar tid -->	
+	<picture>
+	<file>Empty300x300.png</file>
+		<rect>
+			<x>1420</x>
+			<y>35</y>
+			<w>200</w>
+			<h>140</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		
+		<layer_after_1>	
+			<!-- Rita ram runt protokollet. -->	
+			<import>MessageBox300x300.xml</import>
+		</layer_after_1>				
+		<layer_after_2>	
+			<true_type_text>	
+			<id>#VBST_JOB_text1#</id>
+			<rect>
+				<x>30</x>
+				<y>50</y>
+				<w>240</w>
+				<h>200</h>
+			</rect>
+			<color_fill>
+				<trans>255</trans>
+			<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<aspect>0.5</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>1</shadow_factor>
+			<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_2>	
+	</picture>				
+</bottom_panel_11>
+
+

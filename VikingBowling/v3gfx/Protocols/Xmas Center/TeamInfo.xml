@@ -1,0 +1,232 @@
+<!--
+	===========================================================================================================
+	Lagnamn
+	Bansummor
+	===========================================================================================================	
+-->
+
+<layer_after_3>
+<true_type_text>	<!-- Lane number description -->
+	<id>#LANE_TEAMNAME#</id>
+	<text>Lagnamn</text>
+	<font>Arial</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>255</red>
+		<green>255</green>
+		<blue>255</blue>
+	</color_fill>
+	<color_pen>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_pen>
+	<color_shadow>
+		<trans>155</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_shadow>
+	<rect>
+		<x>240</x>
+		<y>30;30;30;30;20;10;10;4</y>
+		<w>1000</w>
+		<h>110;110;90;90;70;50;45</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>left</align>
+	<maxsize>0</maxsize>
+	<aspect>0.8</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>1</shadow_factor>
+	<pen_width>1</pen_width>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+</layer_after_3>
+
+
+<bottom_panel_1>	
+	<id>#TFSUM#</id>
+	<y_generate>160;160;160;140;125;120;100;80</y_generate>
+	
+	<picture>
+		<file>Empty1920x240.png</file>
+		<rect>
+			<x>90</x>
+			<y>5</y>
+			<w>1740</w>
+			<h>150;150;150;135;120;115;95;75</h>
+		</rect>
+	
+	<layer_before_1>
+		<rectangle_fill>
+			<rect>
+				<x>0</x>
+				<y>10</y>
+				<w>1920</w>
+				<h>220</h>
+			</rect>
+			<color>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+			</color>	
+		</rectangle_fill>		
+	</layer_before_1>
+	
+	<layer_after_1>
+		<import>Frame_Team.xml</import>	
+					
+		<picture>
+		<file>Empty1920x240.png</file>
+		<rect>
+			<x>0</x>
+			<y>10</y>
+			<w>1920</w>
+			<h>230</h>
+		</rect>
+			<layer_after_1>
+			<!-- Importera det som skall visas -->
+
+				<import>Grid_Team.xml</import>	
+				
+			</layer_after_1>	
+			
+			<layer_after_2>
+				<true_type_text>
+				<id>#LANE_TEAMNAME#</id>
+						<text>Lagnamn</text>
+						<font>Arial</font>
+						<color_fill>
+							<trans>255</trans>
+							<red>0</red>
+							<green>0</green>
+							<blue>0</blue>
+						</color_fill>
+						<rect>
+							<x>20</x>
+							<y>140</y>
+							<w>1200</w>
+							<h>70</h>
+						</rect>
+						<fontstyle>bold</fontstyle>
+						<align>left</align>
+						<aspect>0.75</aspect>
+						<halo_factor>0</halo_factor>
+						<shadow_factor>0</shadow_factor>
+						<pen_width>0</pen_width>
+						<is_text_rec>1</is_text_rec>
+					</true_type_text>
+					
+					<true_type_text>	<!-- TOT Beskrivning -->	
+						<id>#TOTD#</id>
+						<text>TOT</text>
+						<rect>
+							<x>1400</x>
+							<w>125</w>
+						</rect>
+						<aspect>0.75</aspect>
+						<is_text_rec>0</is_text_rec>
+					</true_type_text>
+					<true_type_text>	<!-- TOT värde -->
+						<id>#TFSUM#</id>
+						<rect>
+							<x>1575</x>
+							<w>325</w>
+						</rect>
+						<aspect>0.75</aspect>
+						<is_text_rec>0</is_text_rec>
+					</true_type_text>		
+
+		<true_type_text>	<!-- Summa för ruta1 -->
+			<id>#FSUM1#</id>
+			<color_fill>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_fill>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<aspect>0.75</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>1</shadow_factor>
+			<is_text_rec>0</is_text_rec>		
+			<rect>
+		<x>27</x>
+		<y>25</y>
+		<w>142</w>
+		<h>80</h>
+			</rect>
+		</true_type_text>	
+	
+		<true_type_text>	<!-- Summa för ruta2 -->
+			<id>#FSUM2#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta3 -->
+			<id>#FSUM3#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+			<text></text>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta4 -->
+			<id>#FSUM4#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta5 -->
+			<id>#FSUM5#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta6 -->
+			<id>#FSUM6#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta7 -->
+			<id>#FSUM7#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta8 -->
+			<id>#FSUM8#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta9 -->
+			<id>#FSUM9#</id>
+			<rect>
+				<x>+=182</x>
+			</rect>
+		</true_type_text>		
+		<true_type_text>	<!-- Summa för ruta10 -->
+			<id>#FSUM10#</id>
+			<rect>
+				<x>+=182</x>
+				<w>213</w>	
+			</rect>
+		</true_type_text>				
+			</layer_after_2>
+		</picture>
+	</layer_after_1>	
+
+		</picture>
+</bottom_panel_1>	

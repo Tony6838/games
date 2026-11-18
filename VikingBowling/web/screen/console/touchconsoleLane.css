@@ -1,0 +1,2305 @@
+/* touchconsoleLane.css - utseendet för en bana: touchconsoleLane.html, som TouchConsole.html
+ * och TouchConsole2.html visar i en ram per bana.
+ *
+ * Två delar som tidigare var två filer. Del 2 står efter del 1 och tar över där de skiljer
+ * sig, så ordningen ska behållas.
+ *
+ * Byggs från touchconsoleLane.template.css med build_css.py (mallens ikonmakron blir
+ * inbäddade SVG-bilder) - ändra i mallen, inte här.
+ *
+ * DEL 1 - GRUNDEN (hette tidigare touchconsoleNew.css): dialogerna och grundstilen.
+ *
+ *
+ * Fristående: vbs.css och bootstrap.min.css laddas inte av den nya sidan, så inget här
+ * påverkar TouchConsole.html, kiosken eller någon annan skärm.
+ *
+ * Mekanik som MÅSTE vara kvar (skripten bygger på den):
+ *   .overlay är display:none och visas med :target eller jQuery show() -> display:block.
+ *   Den får därför inte bli flex/grid, då skulle show() sätta fel display.
+ *   Knappar som skripten döljer med style.visibility = "hidden" klappas ihop här med
+ *   attributväljare, så att knappraden inte får hål.
+ *
+ * Storlekar i rem. Roten skalar med skärmen: ca 16 px på 1280x800, 11 px på 800x600 och
+ * 23 px på 1920x1080, så samma layout fungerar på alla paneler som finns ute idag.
+ */
+
+:root {
+  --bg: #0A1322;
+  --surface: #111D31;
+  --surface2: #17263F;
+  --raised: #1D2E4C;
+  --line: #24375A;
+  --lineSoft: #1C2C47;
+  --text: #EEF2F8;
+  --muted: #9AA8BF;
+  --dim: #7F8DA6;
+  --gold: #E2B550;
+  --goldHover: #ECC46A;
+  --goldInk: #1A1306;
+  --blue: #2F86E0;
+  --blueDeep: #15325A;
+  --red: #E5484D;
+  --redText: #FF8A8D;
+  --font: Barlow, "Segoe UI", Roboto, system-ui, sans-serif;
+  --fontCond: "Barlow Condensed", "Segoe UI Semibold", "Roboto Condensed", Barlow, sans-serif;
+
+  /* Panelens synliga yta, samma som vbs.css (mm som %) */
+  --screenX: 222%;
+  --screenY: 139%;
+  --cutX: 217%;
+  --cutY: 136%;
+
+  /* Knappradens höjd under spel. Poängbilden görs lika mycket lägre, så att hela bilden
+     syns ovanför raden. */
+  --dockH: 4.9rem;
+}
+
+html {
+  position: relative;
+  min-height: 100%;
+  font-size: clamp(11px, calc(0.9vw + 0.55vh), 24px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  height: 100%;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: #000;
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button, input, select { font-family: inherit; }
+button { cursor: pointer; }
+a { color: var(--gold); }
+
+.main-wrapper {
+  position: absolute;
+  top:    calc((var(--screenY) - var(--cutY)) / 2);
+  left:   calc((var(--screenX) - var(--cutX)) / 4);
+  height: calc(100% - calc((var(--screenY) - var(--cutY)) / 2));
+  width:  calc(100% - calc((var(--screenX) - var(--cutX)) / 2));
+  background: #000;
+  overflow: hidden;
+}
+
+#main_content { width: 100%; height: 100%; margin: 0; padding: 0; }
+
+/* Utan spel (reklam, info, stängd bana): bilden fyller ytan precis som i TouchConsole.html. */
+img.scoring-img-full-size,
+#videoFx {
+  height: calc(100% - calc((var(--screenY) - var(--cutY)) / 2));
+  width: 100%;
+  display: block;
+  overflow: hidden;
+}
+
+/* Under spel: bilden slutar ovanför knappraden och fyller hela ytan där (sträcks, som i
+   TouchConsole.html) - inga svarta kanter. vbsPlaying sätts av touchconsoleLane.js när
+   skripten visar knappraden. */
+body.vbsPlaying img.scoring-img-full-size,
+body.vbsPlaying #videoFx {
+  height: calc(100% - calc((var(--screenY) - var(--cutY)) / 2) - var(--dockH));
+  object-fit: fill;
+}
+
+/* ------------------------------------------------------------------ overlay / dialog */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 7, 14, 0.78);
+  display: none;
+  z-index: 9;
+  overflow-y: auto;
+}
+.overlay:target { display: block; }
+
+.popup {
+  position: relative;
+  width: min(92%, 62rem);
+  margin: 4vh auto;
+  padding: 1.75rem 2rem;
+  border-radius: 1.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--text);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.5);
+}
+.popup.narrow { width: min(92%, 40rem); }
+.popup.wide   { width: min(96%, 74rem); }
+
+.popup h2 {
+  margin: 0 4rem 1.25rem 0;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+}
+.popup h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.form-group { margin-bottom: 1.25rem; }
+
+.popup .close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 0.9rem;
+  background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18'/%3E%3Cpath d='m6 6 12 12'/%3E%3C/svg%3E") center / 1.6rem no-repeat;
+  border: 1px solid var(--line);
+  color: transparent;
+  font-size: 0;
+  text-decoration: none;
+  overflow: hidden;
+}
+.popup .close:active { background-color: var(--raised); }
+
+.dialogButtons,
+.changePlayerButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+.flexSpacer { flex-grow: 1; }
+
+.helptext { font-size: 1.1rem; line-height: 1.45; color: var(--muted); }
+
+/* ------------------------------------------------------------------ knappar */
+
+.generalButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 4rem;
+  padding: 0 1.6rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 1.25rem var(--font);
+  text-decoration: none;
+  white-space: nowrap;
+  text-shadow: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.generalButton:active { background: var(--raised); }
+.generalButton:disabled { opacity: 0.4; cursor: default; }
+
+.generalButton.dark2 {
+  background: transparent;
+  color: var(--text);
+}
+
+.generalButton.danger {
+  background: transparent;
+  border: 2px solid var(--red);
+  color: var(--redText);
+}
+.generalButton.danger:active { background: rgba(229, 72, 77, 0.15); }
+
+/* Dialogernas huvudknapp */
+#changescoresubmitbutton,
+#changePlayerInfoSubmitButton,
+#saveMovePlaysubmitbutton,
+#startMovePlaysubmitbutton,
+#callPersonalsubmitbutton,
+#AMRchangeActiveSaveButton,
+#startTraning {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--goldInk);
+  font-weight: 700;
+  padding: 0 2.4rem;
+}
+#changescoresubmitbutton:active,
+#changePlayerInfoSubmitButton:active,
+#saveMovePlaysubmitbutton:active,
+#startMovePlaysubmitbutton:active,
+#callPersonalsubmitbutton:active,
+#AMRchangeActiveSaveButton:active,
+#startTraning:active { background: var(--goldHover); }
+
+select {
+  height: 3.75rem;
+  min-width: 14rem;
+  max-width: 100%;
+  padding: 0 3rem 0 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA8BF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 1rem center / 1.3rem no-repeat;
+  color: var(--text);
+  font: 600 1.3rem var(--font);
+  -webkit-appearance: none;
+  appearance: none;
+}
+select option { background: var(--surface); color: var(--text); }
+
+input[type=text] {
+  height: 3.5rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: var(--bg);
+  color: var(--text);
+  font: 600 1.4rem var(--font);
+  padding: 0 1rem;
+}
+input[type=text]:focus { outline: 2px solid var(--gold); outline-offset: 0; border-color: transparent; }
+input::placeholder { color: var(--dim); font-weight: 500; }
+
+/* ================================================================== STARTA SPEL */
+
+#fillBowlingData { background: var(--bg); }
+
+#fillBowlingData .popup.startScreen {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.startHeader {
+  flex-shrink: 0;
+  height: 5.5rem;
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--lineSoft);
+}
+#customlogo { height: 2.5rem; width: auto; }
+
+.laneChip {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding: 0.5rem 1.1rem;
+  border-radius: 0.9rem;
+  background: var(--surface2);
+  border: 1px solid var(--line);
+}
+.laneLabel {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.laneNo { font: 700 2.5rem/1 var(--fontCond); color: var(--gold); }
+
+.welcome { flex-grow: 1; display: flex; flex-direction: column; min-width: 0; }
+.welcomeTitle { font-size: 1.75rem; font-weight: 700; line-height: 1.15; }
+.welcomeSub { font-size: 1.1rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.headerButton {
+  height: 3.5rem;
+  padding: 0 1.4rem 0 3.4rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--line);
+  background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9'/%3E%3Cpath d='M10.3 21a1.94 1.94 0 0 0 3.4 0'/%3E%3C/svg%3E") 1.1rem center / 1.5rem no-repeat;
+  color: var(--text);
+  font: 600 1.25rem var(--font);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+.headerButton:active { background-color: var(--raised); }
+.headerButton.isHidden { display: none; }
+
+#startBowlingForm { flex-grow: 1; min-height: 0; display: flex; }
+
+#bowlingStartForm {
+  flex-grow: 1;
+  margin: 0;
+  padding: 1.75rem 2rem;
+  display: flex;
+  gap: 1.75rem;
+  min-height: 0;
+}
+
+.playersCol { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.9rem; }
+.sectionHead { display: flex; align-items: center; justify-content: space-between; }
+.sectionLabel,
+.popup h2.sectionLabel {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.sectionCount { font-size: 1.1rem; color: var(--muted); }
+
+#nameArea {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+}
+
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 1.1rem;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  min-width: 0;
+  min-height: 6.25rem;
+}
+.nameRow:focus-within { border-color: var(--gold); }
+
+.nameNo {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--text);
+  font: 700 1.4rem var(--fontCond);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nameRow:focus-within .nameNo { background: var(--gold); color: var(--goldInk); }
+
+#nameArea .playerName {
+  flex-grow: 1;
+  min-width: 0;
+  width: auto;
+  height: 3.5rem;
+  border: none;
+  border-radius: 0.75rem;
+  background: var(--bg);
+  font-size: 1.6rem;
+}
+#nameArea .playerName:focus { outline: none; }
+#nameArea .playerName::placeholder { font-size: 1.3rem; }
+
+/* Tom rad: streckad, som en plats att fylla */
+.nameRow:has(.playerName:placeholder-shown) { background: #0E1829; border-style: dashed; }
+.nameRow:has(.playerName:placeholder-shown):focus-within { border-style: solid; }
+.nameRow:has(.playerName:placeholder-shown) .nameNo { background: transparent; border: 2px solid var(--line); color: var(--dim); }
+.nameRow:has(.playerName:placeholder-shown) .playerName { background: transparent; }
+.nameRow:has(.playerName:placeholder-shown) .bumpToggle { opacity: 0.45; }
+
+/* Bumpers: en riktig kryssruta i en etikett, ritad som en knapp med text */
+.bumpToggle {
+  position: relative;
+  flex-shrink: 0;
+  height: 3.5rem;
+  display: flex;
+  align-items: center;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0 0.9rem 0 2.9rem;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA8BF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4v16'/%3E%3Cpath d='M21 4v16'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E") 0.8rem center / 1.5rem no-repeat;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.bumpToggle .playerBump {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.bumpToggle:has(.playerBump:checked) {
+  background: var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4v16'/%3E%3Cpath d='M21 4v16'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E") 0.8rem center / 1.5rem no-repeat;
+  border-color: var(--blue);
+  color: #FFF;
+}
+.bumpToggle:has(.playerBump:focus-visible) { outline: 2px solid var(--gold); }
+
+.hint {
+  margin: 0.4rem 0 0;
+  padding-left: 2rem;
+  font-size: 1.05rem;
+  color: var(--muted);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA8BF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E") left center / 1.3rem no-repeat;
+}
+
+/* Spelsätt + start */
+.modeCol {
+  width: clamp(15rem, 30%, 23.75rem);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.modeCard {
+  padding: 1.4rem;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--lineSoft);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.quickModes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.quickMode {
+  min-height: 3.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font: 600 1.1rem var(--font);
+  line-height: 1.1;
+}
+.quickMode.isSelected { border: 2px solid var(--gold); background: var(--surface2); }
+.quickMode.isHidden { display: none; }
+.quickMode:active { background: var(--raised); }
+
+#otherBowling,
+#otherBowlingTraining {
+  min-height: 3.25rem;
+  border: 0;
+  background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E2B550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") right 1.1rem center / 1.25rem no-repeat;
+  color: var(--gold);
+  font-size: 1.2rem;
+  padding: 0 2.6rem 0 1.25rem;
+}
+
+#fillBowlingData .bottomButtons { margin-top: auto; display: flex; }
+
+/* Startknappen. Innehållet är bara text - startBowling.js skickar dess innerHTML som
+   spelsätt - så pilen är en bakgrund. */
+#startBowling {
+  width: 100%;
+  min-height: 6.5rem;
+  padding: 0 4.5rem 0 1.75rem;
+  border-radius: 1.4rem;
+  border: 0;
+  background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231A1306' stroke='none'%3E%3Cpath d='M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z'/%3E%3C/svg%3E") right 1.6rem center / 2.6rem no-repeat;
+  color: var(--goldInk);
+  font: 700 clamp(1.4rem, 2.2vw, 2.1rem)/1.05 var(--fontCond);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+}
+#startBowling:active { background-color: var(--goldHover); }
+#startBowling:disabled {
+  opacity: 1;
+  background-color: var(--surface2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237F8DA6' stroke='none'%3E%3Cpath d='M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z'/%3E%3C/svg%3E");
+  color: var(--dim);
+}
+
+/* ================================================================== VÄLJ SPELSÄTT */
+
+#otherBowlingForm { background: var(--bg); }
+#otherBowlingForm .popup.gameSelect {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  margin: 0;
+  padding: 0 2rem 1.75rem;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.dialogHead {
+  height: 5.5rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 0 -2rem 1.75rem;
+  padding: 0 2rem;
+  border-bottom: 1px solid var(--lineSoft);
+}
+.dialogHead h2 { margin: 0; }
+#otherBowlingForm .popup .close.backLink {
+  position: static;
+  flex-shrink: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E");
+}
+
+.gameGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.gameType,
+.gameTypeGroup {
+  position: relative;
+  min-height: 12.25rem;
+  padding: 1.4rem;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  border: 2px solid var(--lineSoft);
+  color: var(--text);
+  font: 700 1.6rem/1.15 var(--font);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.gameType:active { background: var(--surface2); }
+.gameType.isSelected { background: var(--surface2); border-color: var(--gold); }
+
+/* Ikonen överst i rutan */
+.gameType::before {
+  content: "";
+  position: absolute;
+  top: 1.4rem;
+  left: 1.4rem;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: center / contain no-repeat;
+  font: 700 2.5rem/1 var(--fontCond);
+  color: var(--blue);
+}
+#gameType10Pin::before     { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232F86E0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Ccircle cx='10' cy='9' r='1.2' fill='%232F86E0'/%3E%3Ccircle cx='14' cy='9' r='1.2' fill='%232F86E0'/%3E%3Ccircle cx='12' cy='12.5' r='1.2' fill='%232F86E0'/%3E%3C/svg%3E"); }
+#gameTypeMini::before      { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232F86E0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='6'/%3E%3Ccircle cx='11' cy='11.5' r='0.9' fill='%232F86E0'/%3E%3Ccircle cx='13.5' cy='11.5' r='0.9' fill='%232F86E0'/%3E%3C/svg%3E"); }
+#gameTypeGSXTrain::before  { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232F86E0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Ccircle cx='12' cy='12' r='5'/%3E%3Ccircle cx='12' cy='12' r='1.2' fill='%232F86E0'/%3E%3C/svg%3E"); }
+#gameTypeAmr::before       { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232F86E0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16'/%3E%3Cpath d='M17 4v16'/%3E%3Cpath d='M3 9h8'/%3E%3Cpath d='M13 15h8'/%3E%3C/svg%3E"); }
+#gameType369::before       { content: "3·6·9"; width: auto; height: auto; }
+#gameType10thFrame::before { content: "10"; width: auto; height: auto; }
+#gameType10Pin.isSelected::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23E2B550' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Ccircle cx='10' cy='9' r='1.2' fill='%23E2B550'/%3E%3Ccircle cx='14' cy='9' r='1.2' fill='%23E2B550'/%3E%3Ccircle cx='12' cy='12.5' r='1.2' fill='%23E2B550'/%3E%3C/svg%3E"); }
+
+/* "Vald" i hörnet */
+.gameType.isSelected::after {
+  content: "";
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231A1306' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 1.2rem no-repeat;
+}
+
+.gameTypeGroup { justify-content: space-between; }
+.gameTypeGroup .gameTypeMulti { font: 700 1.6rem/1.15 var(--font); }
+.multi {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+.gameTypeSub {
+  height: 3.25rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  font: 700 1.4rem var(--fontCond);
+}
+.gameTypeSub:active { background: var(--raised); }
+.gameTypeSub.isSelected { background: var(--gold); border-color: var(--gold); color: var(--goldInk); }
+
+/* Rutor som hallen har stängt av (ConfigGameType) tar ingen plats */
+.gameType[style*="visibility: hidden"],
+.gameTypeGroup[style*="visibility: hidden"] { display: none; }
+
+#startMovePlayDivision { margin-top: 1rem; }
+#startMovePlayButton {
+  display: flex;
+  align-items: center;
+  min-height: 4.5rem;
+  padding: 0 1.5rem 0 4.25rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--lineSoft);
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA8BF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 12a9 9 0 1 0 3-6.7'/%3E%3Cpath d='M3 4v5h5'/%3E%3C/svg%3E") 1.4rem center / 1.9rem no-repeat;
+  color: var(--text);
+  font: 600 1.3rem var(--font);
+  text-decoration: none;
+}
+#startMovePlayButton:active { background-color: var(--surface2); }
+#startMovePlayButton[style*="visibility: hidden"] { display: none; }
+
+#otherBowlingForm .dialogButtons { margin-top: auto; padding-top: 1.5rem; }
+
+/* ================================================================== GSX-TRÄNING */
+
+#fillTrainingData .popup { width: min(94%, 66rem); }
+#fillTrainingData .topButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0 4.5rem 1.5rem 0;
+}
+.trainingBody { display: flex; gap: 2rem; align-items: flex-start; }
+
+#trainingFormLeft {
+  flex-grow: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem 1rem;
+  align-items: center;
+}
+#trainingFormLeft > div:empty { display: none; }
+#trainingFormLeft .playerName { width: 100%; }
+#trainingFormLeft select { width: 100%; min-width: 0; }
+
+#trainingFormRight {
+  width: 14rem;
+  flex-shrink: 0;
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  background: var(--bg);
+}
+.practice_pin { margin: 0; display: flex; justify-content: center; gap: 0.35rem; }
+.pinrow { margin: 0; }
+#trainingFormRight input[type=checkbox] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.6rem;
+  height: 2.4rem;
+  margin: 0;
+  background: url(../common/img/unchecked_Pin.png) center / 100% 100% no-repeat;
+  cursor: pointer;
+}
+#trainingFormRight input[type=checkbox]:checked { background-image: url(../common/img/checked_Pin.png); }
+#trainingFormRight input[type=checkbox]:disabled { opacity: 0.3; }
+#trainingFormRight br { display: block; content: ""; margin-top: 0.75rem; }
+
+/* ================================================================== ÄNDRA SPELARE */
+
+.playerGrid {
+  display: grid;
+  grid-template-columns: 9% 54% 9% 7% 7% 9%;   /* Aktiv | Namn | Bumper | Upp | Ner | Ta bort */
+  column-gap: 1%;
+  align-items: center;
+  width: 100%;
+}
+.playerGrid > * { min-width: 0; }
+
+.playerGridHead { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.playerGridHead > label { margin: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.9rem; letter-spacing: 0; }
+.playerGridHead > .colName { text-align: left; padding-left: 0.5rem; }
+.playerGridHead > .colPosition { grid-column: span 2; }
+
+#playerNameList { display: flex; flex-direction: column; gap: 0.5rem; }
+.playerRow {
+  padding: 0.5rem 0;
+  border-radius: 0.9rem;
+  background: var(--bg);
+}
+.playerRow > .radioActiv {
+  justify-self: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0;
+  accent-color: var(--gold);
+}
+.playerRow > .Spelarnamn { width: 100%; height: 3.25rem; font-size: 1.35rem; }
+.playerRow > .checkboxBump {
+  justify-self: center;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 3.25rem;
+  height: 3.25rem;
+  margin: 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239AA8BF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4v16'/%3E%3Cpath d='M21 4v16'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E") center / 1.6rem no-repeat;
+  cursor: pointer;
+}
+.playerRow > .checkboxBump:checked { background: var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FFFFFF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4v16'/%3E%3Cpath d='M21 4v16'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E") center / 1.6rem no-repeat; border-color: var(--blue); }
+
+.playerRow > .btnUp,
+.playerRow > .btnDown,
+.playerRow > .btnRemove {
+  width: 100%;
+  max-width: 3.25rem;
+  height: 3.25rem;
+  margin: 0;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  color: transparent;
+  font-size: 0;
+  justify-self: center;
+}
+.playerRow > .btnUp     { background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m18 15-6-6-6 6'/%3E%3C/svg%3E") center / 1.4rem no-repeat; justify-self: end; }
+.playerRow > .btnDown   { background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") center / 1.4rem no-repeat; justify-self: start; }
+.playerRow > .btnRemove { background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FF8A8D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h18'/%3E%3Cpath d='M8 6V4h8v2'/%3E%3Cpath d='M19 6l-1 14H6L5 6'/%3E%3C/svg%3E") center / 1.4rem no-repeat; border-color: var(--red); }
+
+#AMRchangeActivePlayerButton[style*="visibility: hidden"] { display: none; }
+
+/* AMR */
+.amrTable { width: 100%; border-collapse: collapse; }
+.amrTable th { vertical-align: top; padding: 0.5rem; font-weight: 400; text-align: center; }
+.amrTable input[type=text] { width: 70% !important; margin: 0.3rem !important; }
+.amrTable .radio-img { height: 2.5rem; vertical-align: middle; cursor: pointer; }
+
+/* Byt in reserv */
+.reserveGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.reserveGrid select { width: 100%; }
+
+/* Flytta spel: rubriken och banknapparna byggs av saveMoveGame.js */
+#targetLanes h3 { color: var(--text); font-size: 1.4rem; margin-bottom: 1rem; }
+#targetLanes #theTarget { color: var(--gold) !important; font: 700 2.2rem var(--fontCond) !important; margin-left: 0.4rem; }
+#targetLanes .generalButton {
+  min-width: 5rem;
+  min-height: 4rem;
+  margin: 0 0.5rem 0.5rem 0 !important;
+  font: 700 1.6rem var(--fontCond);
+}
+
+/* Service. resetCallPersonalForm() (TouchConsole.js) sätter rubrikens färg till svart
+   inline, vilket passade den vita dialogen i vbs.css men inte den mörka här. */
+#serviceTitle { color: var(--text) !important; }
+/* Service */
+.serviceWait { display: inline-block; font-size: 1.4rem; font-weight: 600; color: var(--gold); }
+.serviceWait[hidden] { display: none; }
+@keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }
+.blinking { animation: blink 1.2s infinite; }
+
+/* Reset/Set */
+.pinTable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.25rem 0;
+  border-radius: 1.25rem;
+  background: var(--bg);
+}
+.pinRow { display: flex; gap: 1.1rem; }
+.bowlingpin[type=checkbox] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 3.25rem;
+  height: 4.25rem;
+  margin: 0;
+  background: url(../common/img/noPin.png) center / contain no-repeat;
+  cursor: pointer;
+}
+.bowlingpin[type=checkbox]:checked { background-image: url(../common/img/checked_PinBig.png); }
+
+/* ================================================================== KORRIGERA */
+
+#playerlistforchange select { min-width: 18rem; }
+
+.scoreWrap { overflow-x: auto; }
+.scoretable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0.25rem;
+  table-layout: fixed;
+}
+#headRow th {
+  height: 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--dim);
+  text-align: center;
+  border: 0;
+}
+/* correctScore.js färgar cellerna med inline backgroundColor white (spelat slag) och
+   lightgray (inget slag) och läser tillbaka just "lightgray". De värdena får vara kvar -
+   här målas de bara om. */
+#scorerow td {
+  height: 4.5rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background-color: var(--bg) !important;
+  color: var(--text);
+  font: 700 2rem var(--fontCond);
+  text-align: center;
+}
+#scorerow td[style*="white"] { background-color: var(--surface2) !important; cursor: pointer; }
+#scorerow td:focus { outline: none; }
+#scorerow td.focusedTabelCell {
+  background-color: var(--gold) !important;
+  color: var(--goldInk);
+  animation: none;
+}
+
+#correctButtons {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+#correctButtons .correct {
+  width: auto;
+  min-height: 5rem;
+  padding: 0;
+  margin: 0;
+  border-radius: 1rem;
+  font: 700 2.2rem var(--fontCond);
+}
+#correctButtons .correct.special { background: var(--blueDeep); border-color: var(--blue); }
+#correctButtons .correct:disabled { opacity: 0.25; }
+
+/* Kundens meny */
+.customFrame { width: 100%; height: 70vh; border: 0; border-radius: 1rem; background: #fff; }
+
+/* WEIQ */
+#weiqform { background: linear-gradient(110deg, #e53872 10%, #862797 90%); color: #FFF; padding: 1rem; border-radius: 1rem; font-size: 1.4rem; }
+#weiqImage { border: 1px solid #333; background: #000; margin-bottom: 1rem; }
+
+/* ================================================================== KNAPPRADEN UNDER SPEL */
+
+footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc((var(--screenY) - var(--cutY)) / 2);
+  height: var(--dockH);
+  padding: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--lineSoft);
+  overflow: hidden;
+  display: none;   /* ingen knapprad (och inget blått fält över reklamen) utan spel */
+}
+body.vbsPlaying footer { display: block; }
+
+.lanebuttons, .lanebuttons p { height: 100%; margin: 0; }
+.lanebuttons p {
+  container-type: inline-size;
+  display: flex;
+  align-items: stretch;
+  padding: 0.4rem 1.25rem 0.45rem;
+}
+
+/* Knapparna delar på bredden: fullbredd 7.75rem, men de krymper - med ikon och text - när
+   många är framme samtidigt (SPACE, Byt in reserv, Avsluta inspelning, kundknappen) eller
+   panelen är smal, så att alla alltid ryms på en rad. */
+.onGoingGameButton {
+  flex: 0 1 7.75rem;
+  min-width: 0;
+  margin: 0 min(0.6rem, 0.6cqw) 0 0;
+  padding: 1.9rem 0.2rem 0;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  overflow-wrap: break-word;
+  border-radius: 0.85rem;
+  border: 1px solid var(--line);
+  background: var(--surface2) center 0.4rem / min(1.35rem, 60%) auto no-repeat;
+  color: var(--text);
+  font: 600 clamp(0.55rem, 1.1cqw, 0.85rem)/1 var(--font);
+  text-align: center;
+  text-decoration: none;
+  text-shadow: none;
+  overflow: hidden;
+  display: block;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.onGoingGameButton:active { background-color: var(--raised); }
+
+/* Ordningen i raden: spelfunktioner till vänster, Service och Avsluta längst till höger */
+#onGoingMiniLogo        { order: 0; }
+#changePlayerButton     { order: 1; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M19 8v6'/%3E%3Cpath d='M22 11h-6'/%3E%3C/svg%3E"); }
+#changeScoreButton      { order: 2; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 20h9'/%3E%3Cpath d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z'/%3E%3C/svg%3E"); }
+#VBSTchangePlayerButton { order: 3; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 4v16'/%3E%3Cpath d='m3 8 4-4 4 4'/%3E%3Cpath d='M17 20V4'/%3E%3Cpath d='m21 16-4 4-4-4'/%3E%3C/svg%3E"); }
+#saveMovePlayButton     { order: 4; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14'/%3E%3Cpath d='m13 6 6 6-6 6'/%3E%3Cpath d='M5 5v14'/%3E%3C/svg%3E"); }
+#pinSetterButton        { order: 5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='6' cy='6' r='1.6'/%3E%3Ccircle cx='12' cy='6' r='1.6'/%3E%3Ccircle cx='18' cy='6' r='1.6'/%3E%3Ccircle cx='9' cy='12' r='1.6'/%3E%3Ccircle cx='15' cy='12' r='1.6'/%3E%3Ccircle cx='12' cy='18' r='1.6'/%3E%3C/svg%3E"); }
+#customButton           { order: 6; background: var(--surface2) url(../common/img/customButton.png) center / contain no-repeat; background-origin: content-box; padding: 0.35rem; }
+/* Beställ (Terminalinställningar, Kimsoft): beside the hall's own button, a shopping bag */
+#orderWidgetButton      { order: 6; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z'/%3E%3Cpath d='M3 6h18'/%3E%3Cpath d='M16 10a4 4 0 0 1-8 0'/%3E%3C/svg%3E"); }
+#finishPractice         { order: 7; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 22V4'/%3E%3Cpath d='M4 4h13l-2 4 2 4H4'/%3E%3C/svg%3E"); }
+#pressSpace             { order: 8; background: var(--gold) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231A1306' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 19V5'/%3E%3Cpath d='m5 12 7-7 7 7'/%3E%3C/svg%3E") center 0.4rem / min(1.35rem, 60%) auto no-repeat; border-color: var(--gold); color: var(--goldInk); font-weight: 700; animation: spacePulse 1.2s infinite; }
+.dockSpacer             { order: 9; flex-grow: 1; }
+#callPersonalButton     { order: 10; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9'/%3E%3Cpath d='M10.3 21a1.94 1.94 0 0 0 3.4 0'/%3E%3C/svg%3E"); }
+#stopBowlingbutton      { order: 11; margin-right: 0; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23FF8A8D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='5' width='14' height='14' rx='2'/%3E%3C/svg%3E") center 0.4rem / min(1.35rem, 60%) auto no-repeat; border: 2px solid var(--red); color: var(--redText); }
+
+@keyframes spacePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(226, 181, 80, 0.7); }
+  50%      { box-shadow: 0 0 0 0.6rem rgba(226, 181, 80, 0); }
+}
+
+#onGoingMiniLogo,
+.dockSpacer {
+  border: 0;
+  background: transparent;
+  padding: 0;
+}
+#onGoingMiniLogo { flex: 0 1 4.75rem; min-width: 2rem; display: flex; align-items: center; justify-content: center; margin-right: 1rem; }
+#onGoingMiniLogo img { width: min(2.6rem, 100%); height: auto; }
+.dockSpacer { flex: 1 1 0; min-width: 0; margin: 0; pointer-events: none; }
+
+/* Knappar som skripten har dolt tar ingen plats. Tre av dem är dolda tills skriptet
+   uttryckligen visar dem (som i vbs.css), resten tills skriptet döljer dem. Hopklappning
+   med bredd i stället för display:none, eftersom jQuery show() annars skulle ge dem
+   display:inline. */
+#VBSTchangePlayerButton,
+#saveMovePlayButton,
+#orderWidgetButton,
+#pressSpace { visibility: hidden; }
+
+.lanebuttons .onGoingGameButton[style*="visibility: hidden"],
+#VBSTchangePlayerButton:not([style*="visibility: visible"]),
+#saveMovePlayButton:not([style*="visibility: visible"]),
+#orderWidgetButton:not([style*="visibility: visible"]),
+#pressSpace:not([style*="visibility: visible"]) {
+  flex: 0 0 0 !important;
+  min-width: 0 !important;
+  width: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+/* Smala paneler (800x600 och stående): Bumpers blir en ikonknapp så att namnet får plats.
+   Texten finns kvar för skärmläsare. */
+@media screen and (max-width: 1000px) {
+  .bumpToggle { width: 3.5rem; padding: 0; background-position: center; }
+  .bumpToggle:has(.playerBump:checked) { background-position: center; }
+  .bumpText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .nameRow { gap: 0.6rem; padding: 0.7rem; }
+  .nameNo { width: 2.25rem; height: 2.25rem; font-size: 1.2rem; }
+}
+
+/* ================================================================== BANPAR
+
+   ?pair=1 - sidan ligger i en iframe i TouchConsole2.html, en per bana i paret.
+   touchconsoleLane.js sätter vbsPair på body och banans egna värden på <html>:
+     --lane       banans färg (udda bana guld, jämn bana blå om inget annat anges)
+     --laneLabel  "Bana 7" (en CSS-sträng, för content:)
+     --laneNo     "7"
+   Banans färg tar över alla accenter som annars är guld, och bannumret skrivs ut där man
+   gör något: på startknappen, i varje dialogrubrik och först i knappraden. Allt med
+   pseudo-element, så att ingen text som skripten läser eller skriver ändras - startknappens
+   innerHTML är spelsättet som skickas till servern. */
+
+body.vbsPair { --gold: var(--lane); --goldHover: var(--lane); --laneInk: #10151F; }
+
+/* Ram runt hela banans yta, under dialogerna (overlay har z-index 9). */
+body.vbsPair::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  border: 4px solid var(--lane);
+  pointer-events: none;
+  z-index: 8;
+}
+
+/* Startbilden: skalet visar logotypen, här visas banan */
+body.vbsPair #customlogo { display: none; }
+body.vbsPair .laneChip { background: var(--lane); border-color: var(--lane); }
+body.vbsPair .laneChip .laneLabel,
+body.vbsPair .laneChip .laneNo { color: var(--laneInk); }
+body.vbsPair #fillBowlingData .popup.startScreen { border: 4px solid var(--lane); }
+
+body.vbsPair #startBowling {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+body.vbsPair #startBowling::before {
+  content: var(--laneLabel);
+  display: block;
+  margin-bottom: 0.25rem;
+  font: 700 1rem var(--font);
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+/* Dialogrubriker: "Korrigera · Bana 7" */
+body.vbsPair .popup h2:not(.sectionLabel)::after {
+  content: "\00a0\00b7\00a0" var(--laneLabel);
+  color: var(--lane);
+}
+
+/* Knappraden börjar med bannumret i stället för logotypen */
+body.vbsPair #onGoingMiniLogo {
+  background: var(--lane);
+  border-radius: 0.85rem;
+  flex-direction: column;
+}
+body.vbsPair #onGoingMiniLogo img { display: none; }
+body.vbsPair #onGoingMiniLogo::after {
+  content: var(--laneNo);
+  font: 700 2.4rem/1 var(--fontCond);
+  color: var(--laneInk);
+}
+
+/* ================================================================== SKÄRMTANGENTBORDET
+
+   vbskeyboard.js sätter vbskb-open på body när tangentbordet är uppe, och det är
+   --vbskb-height högt (vbskeyboard.css). Sidan gör plats för det i stället för att låta
+   tangentbordet lyfta dialogen - startbilden börjar i skärmens överkant och kan inte lyftas
+   alls. touchconsoleLane.js stänger av tangentbordets egen lyftning och rullar fram fältet
+   som skrivs i. */
+
+/* Startbilden slutar ovanför tangentbordet; spelarlistan rullar inom den ytan. */
+body.vbskb-open #fillBowlingData .popup.startScreen { bottom: var(--vbskb-height); }
+body.vbskb-open .playersCol {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0.5rem;
+}
+body.vbskb-open #nameArea { flex-shrink: 0; }
+body.vbskb-open .startHeader { height: 4.25rem; }
+body.vbskb-open .welcomeSub,
+body.vbskb-open .playersCol .hint { display: none; }
+body.vbskb-open #bowlingStartForm { padding-top: 1rem; padding-bottom: 1rem; }
+body.vbskb-open .nameRow { min-height: 4.75rem; }
+body.vbskb-open .modeCol { overflow-y: auto; }
+body.vbskb-open #startBowling { min-height: 4.5rem; }
+
+/* Övriga dialoger: utrymme under dialogen motsvarande tangentbordet, så att även nedersta
+   fältet kan rullas upp ovanför det. */
+body.vbskb-open .overlay:not(#fillBowlingData) { padding-bottom: var(--vbskb-height); }
+
+/* Fältet som skrivs i syns tydligt även när det ligger nära tangentbordet. */
+body.vbskb-open .overlay input[type=text]:focus { outline: 3px solid var(--gold); }
+
+/* ================================================================== STÅENDE SKÄRM */
+
+@media screen and (orientation: portrait) {
+  html { font-size: clamp(11px, calc(1.3vw + 0.35vh), 24px); }
+
+  .welcomeSub { display: none; }
+
+  #bowlingStartForm { flex-direction: column; gap: 1.25rem; }
+  .modeCol { width: auto; flex-grow: 1; }
+  .nameRow { min-height: 5.5rem; }
+  .modeCard { padding: 1rem; }
+
+  .gameGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gameType, .gameTypeGroup { min-height: 9.5rem; }
+
+  .trainingBody { flex-direction: column; align-items: stretch; }
+  #trainingFormRight { width: auto; }
+
+  #correctButtons { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+
+  /* Två rader knappar i stående läge */
+  :root { --dockH: 8.25rem; }
+  .lanebuttons p { flex-wrap: wrap; align-content: space-between; row-gap: 0.5rem; }
+  .onGoingGameButton { height: 3.6rem; }
+  .dockSpacer { flex-grow: 0; }
+  #callPersonalButton { margin-left: auto; }
+}
+
+
+/* DEL 2 - BANANS LAYOUT (hette tidigare touchconsoleRev2Lane.css).
+ *
+ * Står efter del 1, som står för dialogerna och grundstilen, och vinner därför; det här är
+ * namnifyllningen och knappraden enligt skisserna R1-R4.
+ *
+ * Två lägen, satta som klass på <body> av skalet:
+ *   rev2Full    banan har hela skärmen (en bana per tablet, eller bara en bana igång)
+ *   rev2Column  banan är en av två kolumner (båda banorna igång på en banpars-tablet)
+ * och vbsPlaying (touchconsoleLane.js) när banan spelar.
+ *
+ * Storlek: 1rem = 24 px på en 1920 bred skärm. Skalet sätter rotens font-size på sidan så att
+ * en kolumn får samma storlek på allt som helskärmsläget, fast den bara är halva bredden.
+ * --lane är banans färg, satt av touchconsoleLane.js.
+ */
+
+:root {
+  /* Skalet ritar hela skärmen; ingen egen marginal för panelens kant här. */
+  --screenX: 100%;
+  --screenY: 100%;
+  --cutX: 100%;
+  --cutY: 100%;
+  --lane: #E2B550;
+  --laneInk: #10151F;
+  --dockH: 4.9rem;
+  /* Barlow ligger lokalt (fonts/barlow.css); reserverna om filerna ändå saknas */
+  --font: Barlow, Roboto, "Segoe UI", system-ui, sans-serif;
+  --fontCond: "Barlow Condensed", "Roboto Condensed", sans-serif-condensed, "Arial Narrow", sans-serif;
+}
+
+html { font-size: min(1.25vw, 2vh); }
+html, body { background: var(--bg); }
+
+/* Del 1 har en ram runt sidan i banparsläget; här ritas ramarna nedan i stället */
+body.vbsPair::after { display: none; }
+
+/* ---------------------------------------------------------------- yta: band, bild, knapprad */
+
+.main-wrapper {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.playBand {
+  display: none;
+  flex-shrink: 0;
+  height: 4rem;
+  align-items: center;
+  justify-content: center;
+  background: var(--lane);
+  color: var(--laneInk);
+  font: 700 2.35rem/1 var(--fontCond);
+  letter-spacing: 0.02em;
+}
+
+/* Del 1 färgar .laneNo guld (bannummerrutan där); här står numret i bandet */
+.laneBand .laneNo,
+.playBand .laneNo { color: inherit; font: inherit; }
+
+#main_content { flex: 1 1 auto; min-height: 0; height: auto; position: relative; }
+
+img.scoring-img-full-size,
+#videoFx,
+body.vbsPlaying img.scoring-img-full-size,
+body.vbsPlaying #videoFx {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+footer {
+  position: static;
+  flex-shrink: 0;
+  height: var(--dockH);
+}
+
+/* ---------------------------------------------------------------- namnifyllning, gemensamt */
+
+.laneBand {
+  flex-shrink: 0;
+  height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--lane);
+  color: var(--laneInk);
+  font: 700 2.35rem/1 var(--fontCond);
+  letter-spacing: 0.02em;
+}
+
+#fillBowlingData .popup.startScreen {
+  border: 0.25rem solid var(--lane);
+  border-radius: 1.17rem;
+  overflow: hidden;
+  background: #0E1829;
+}
+
+#bowlingStartForm { padding: 1.33rem 1.42rem; gap: 1.5rem; }
+
+.sectionLabel,
+.popup h2.sectionLabel { font-size: 1.08rem; }
+.sectionCount { font-size: 1rem; }
+
+.nameRow,
+body.vbskb-open .nameRow {
+  min-height: 0;
+  height: 4.33rem;
+  padding: 0 0.67rem;
+  gap: 0.67rem;
+  border-radius: 0.83rem;
+}
+.nameNo { width: 2.5rem; height: 2.5rem; font-size: 1.25rem; }
+.nameRow:focus-within .nameNo,
+.nameRow:not(:has(.playerName:placeholder-shown)) .nameNo { background: var(--lane); color: var(--laneInk); border: 0; }
+.nameRow:focus-within { border-color: var(--lane); }
+
+#nameArea .playerName { height: 3rem; font-size: 1.5rem; }
+#nameArea .playerName::placeholder { font-size: 1.25rem; }
+
+.bumpToggle { height: 3rem; font-size: 0.92rem; }
+
+/* HCP: handikapp per serie, valfritt (startBowling.js skickar det som hcp<n> bredvid player<n>).
+   Rubriken står i rutan ovanför siffrorna, så att en ifylld ruta fortfarande säger vad talet
+   är. Tre siffror, 0-300 (adjustHcp). */
+.hcpBox {
+  flex-shrink: 0;
+  width: 3.75rem;
+  height: 3rem;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  overflow: hidden;
+  cursor: text;
+}
+.hcpText {
+  flex-shrink: 0;
+  padding-top: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--muted);
+  -webkit-user-select: none;
+  user-select: none;
+}
+#nameArea .playerHcp {
+  flex-grow: 1;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  font: 600 1.4rem/1 var(--font);
+  text-align: center;
+}
+#nameArea .playerHcp:focus { outline: none; }
+.hcpBox:focus-within { border-color: var(--lane); box-shadow: inset 0 0 0 1px var(--lane); }
+.nameRow:has(.playerName:placeholder-shown) .hcpBox { background: transparent; opacity: 0.45; }
+.nameRow:has(.playerName:placeholder-shown):focus-within .hcpBox { opacity: 1; }
+
+/* Namnet behåller sin bredd bredvid HCP-rutan: där raden är smal (två kolumner bredvid
+   spelsätten, 4:3) blir Bumpers en ikonknapp som på de smala panelerna (max-width: 1000px
+   ovan). Texten finns kvar för skärmläsare. */
+#nameArea .nameRow { container-type: inline-size; }
+@container (max-width: 28rem) {
+  .bumpToggle { width: 3.5rem; padding: 0; background-position: center; }
+  .bumpToggle:has(.playerBump:checked) { background-position: center; }
+  .bumpText {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+.hint { font-size: 1rem; }
+
+/* Spelsätt */
+.modeCard { padding: 1.17rem; border-radius: 1rem; gap: 0.75rem; }
+.quickMode { min-height: 3.17rem; font-size: 1.08rem; border-radius: 0.67rem; }
+.quickMode.isSelected { border-color: var(--lane); }
+#otherBowling { min-height: 3.17rem; font-size: 1.08rem; color: var(--lane); }
+
+.modeRow { display: none; }
+.modeName { flex-grow: 1; font-size: 1.25rem; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.changeModeLink {
+  flex-shrink: 0;
+  height: 3rem;
+  padding: 0 2.4rem 0 1.1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") right 0.9rem center / 1.1rem no-repeat;
+  color: var(--text);
+  font: 600 1.08rem var(--font);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+}
+
+/* Startknappen. Den riktiga #startBowling är dold - dess innerHTML är spelsättet som skickas. */
+#startBowling { display: none !important; }
+
+.rev2Start {
+  width: 100%;
+  min-height: 6.25rem;
+  padding: 0 4.5rem 0 1.5rem;
+  border-radius: 1.17rem;
+  border: 0;
+  background: var(--lane) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310151F' stroke='none'%3E%3Cpath d='M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z'/%3E%3C/svg%3E") right 1.5rem center / 2.6rem no-repeat;
+  color: var(--laneInk);
+  text-align: left;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.rev2Start:active { filter: brightness(1.08); }
+.rev2StartText { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
+.rev2StartLabel { font: 700 2.17rem/1 var(--fontCond); letter-spacing: 0.02em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rev2StartSub { font: 600 1.08rem var(--font); opacity: 0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rev2Start:disabled {
+  background-color: var(--surface2);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%237F8DA6' stroke='none'%3E%3Cpath d='M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z'/%3E%3C/svg%3E");
+  color: var(--dim);
+  cursor: default;
+}
+
+/* ---------------------------------------------------------------- helskärm (R1, R2) */
+
+body.rev2Full #fillBowlingData .popup.startScreen {
+  inset: 0 1.67rem 1.5rem;
+}
+body.rev2Full .modeCol { width: 24rem; }
+
+/* Knappraden börjar med hjälmen även i banparsläget, som på en bana. del 1 ritar
+   bannumret i den rutan (body.vbsPair #onGoingMiniLogo), men under spel står numret redan i
+   protokollbilden. I kolumnerna syns rutan inte alls (se nedan). */
+body.vbsPair #onGoingMiniLogo {
+  background: transparent;
+  border-radius: 0;
+  flex-direction: row;
+}
+body.vbsPair #onGoingMiniLogo img { display: block; }
+body.vbsPair #onGoingMiniLogo::after { content: none; }
+
+/* ---------------------------------------------------------------- kolumn (R3, R4) */
+
+body.rev2Column #fillBowlingData { background: transparent; }
+body.rev2Column #fillBowlingData .popup.startScreen { inset: 0; }
+body.rev2Column #bowlingStartForm { flex-direction: column; padding: 0.92rem 1.08rem 1.08rem; gap: 0.5rem; }
+body.rev2Column .playersCol { flex-grow: 0; gap: 0.5rem; }
+body.rev2Column .sectionHead,
+body.rev2Column .playersCol .hint { display: none; }
+body.rev2Column #nameArea { grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }
+body.rev2Column .nameRow { height: 3.75rem; }
+body.rev2Column .modeCol { width: auto; flex-grow: 1; gap: 0.75rem; }
+body.rev2Column .modeCard { display: none; }
+body.rev2Column .modeRow { display: flex; align-items: center; gap: 0.67rem; padding: 0.25rem 0.25rem 0; }
+body.rev2Column .rev2Start { min-height: 5.33rem; }
+body.rev2Column .rev2StartLabel { font-size: 2.08rem; }
+
+/* Ram och rundade hörn runt hela kolumnen, också under spel */
+body.rev2Column .main-wrapper { border-radius: 1.17rem; overflow: hidden; }
+body.rev2Column::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  border: 0.25rem solid var(--lane);
+  border-radius: 1.17rem;
+  pointer-events: none;
+  z-index: 8;
+}
+
+/* Under spel i en kolumn: bannamn överst, bilden fyller hela ytan mellan bandet och knapparna
+   (sträcks som i TouchConsole.html, inga svarta kanter) */
+body.rev2Column.vbsPlaying .playBand { display: flex; }
+
+/* Dialoger i en kolumn: kolumnen är högre än bred, så del 1:s stående-regler gäller
+   (knappsatsen i Korrigera fem per rad). Tätare så att allt ryms utan att rulla. */
+/* Samma luft ovanför och under rubriken som på hela skärmen, så att krysset (1.25rem från
+   kanten, 3.5rem stort) aldrig når ner i innehållet; sidorna är smalare. */
+/* Under rutan bara lite luft (del 1 har 4vh): Reset/Set rullade annars några pixlar. */
+body.rev2Column .popup { margin-top: 1.5vh; margin-bottom: 0.75rem; padding: 1.75rem 1.5rem 1.25rem; }
+body.rev2Column .form-group { margin-bottom: 0.75rem; }
+body.rev2Column #correctButtons { gap: 0.4rem; margin-top: 0.75rem; }
+body.rev2Column #correctButtons .correct { min-height: 3.75rem; }
+body.rev2Column #scorerow td { height: 3.5rem; font-size: 1.6rem; }
+body.rev2Column .dialogButtons,
+body.rev2Column .changePlayerButtons { margin-top: 1rem; }
+
+/* Välj spelsätt i en kolumn: två rutor per rad */
+body.rev2Column .gameGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Knapparna under spel i en kolumn: alla synliga, fyra per rad. Service ligger i skalets
+   rubrik (gemensam för båda banorna) och banans nummer står i bandet ovanför bilden. */
+body.rev2Column footer {
+  height: auto;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+body.rev2Column .lanebuttons p {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  padding: 0.75rem 0.92rem 0.92rem;
+}
+body.rev2Column #onGoingMiniLogo,
+body.rev2Column .dockSpacer,
+body.rev2Column #callPersonalButton { display: none !important; }
+
+body.rev2Column .onGoingGameButton {
+  width: auto;
+  height: 4.67rem;
+  margin: 0;
+  padding: 2.55rem 0.3rem 0;
+  border-radius: 0.75rem;
+  background-position: center 0.75rem;
+  background-size: 1.5rem auto;
+  font-size: 0.92rem;
+  line-height: 1.05;
+}
+body.rev2Column #customButton { padding: 0.4rem; background-size: contain; background-position: center; }
+
+body.rev2Column .lanebuttons .onGoingGameButton[style*="visibility: hidden"],
+body.rev2Column #VBSTchangePlayerButton:not([style*="visibility: visible"]),
+body.rev2Column #saveMovePlayButton:not([style*="visibility: visible"]),
+body.rev2Column #orderWidgetButton:not([style*="visibility: visible"]),
+body.rev2Column #pressSpace:not([style*="visibility: visible"]) { display: none !important; }
+
+/* ================================================================== GSX-TRÄNING
+ *
+ * Ett kort per spelare (G1/G2 i skisserna): namn, Egna käglor / Färdigt program, käglorna som
+ * sifferknappar 1 · 2 3 · 4 5 6 · 7 8 9 10 och en liten triangel som visar valet. Korten byggs
+ * av buildGsx() i touchconsoleLane.js och skriver till originalfälten i .gsxHiddenFields,
+ * som startBowling.js läser - så det som skickas till servern är detsamma som förut.
+ */
+
+#fillTrainingData { background: var(--bg); }
+#fillTrainingData .popup.gsxScreen {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+}
+body.rev2Full #fillTrainingData .popup.gsxScreen { inset: 0 1.67rem 1.5rem; }
+body.rev2Column #fillTrainingData { background: transparent; }
+body.vbskb-open #fillTrainingData .popup.gsxScreen { bottom: var(--vbskb-height); }
+
+#startTrainingForm { flex-grow: 1; min-height: 0; display: flex; flex-direction: column; }
+#startTraning { display: none !important; }
+
+.gsxBody { flex-grow: 1; min-height: 0; display: flex; gap: 1.25rem; padding: 1.08rem 1.25rem; }
+.gsxMain { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.67rem; overflow-y: auto; overscroll-behavior: contain; }
+.gsxHead { display: flex; align-items: center; gap: 0.83rem; }
+.gsxTitle { flex-grow: 1; font-size: 1.5rem; font-weight: 700; }
+.gsxHint { font-size: 0.92rem; color: var(--muted); }
+.gsxColumnOnly { display: none; }
+
+#gsxCards { flex-grow: 1; display: flex; flex-direction: column; gap: 0.67rem; }
+
+.gsxCard {
+  flex: 1 1 0;
+  min-height: 8rem;
+  display: flex;
+  gap: 0.83rem;
+  padding: 0.75rem 0.83rem;
+  border-radius: 0.92rem;
+  border: 2px solid var(--line);
+  background: var(--surface);
+}
+.gsxCard.isEmpty { border-style: dashed; background: transparent; }
+.gsxCard:focus-within { border-color: var(--lane); border-style: solid; }
+.gsxCardMain { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.58rem; }
+
+.gsxRow1 { display: flex; align-items: center; gap: 0.67rem; }
+.gsxCard:not(.isEmpty) .nameNo,
+.gsxCard:focus-within .nameNo { background: var(--lane); color: var(--laneInk); border: 0; }
+.gsxCard.isEmpty .nameNo { background: transparent; border: 2px solid var(--line); color: var(--dim); }
+.gsxRow1 .playerName {
+  flex-grow: 1;
+  min-width: 0;
+  width: auto;
+  height: 2.83rem;
+  margin: 0;
+  border: 0;
+  border-radius: 0.58rem;
+  background: var(--bg);
+  font-size: 1.42rem;
+  padding: 0 0.83rem;
+}
+.gsxRow1 .playerName:focus { outline: none; }
+.gsxRow1 .playerName::placeholder { font-size: 1.2rem; }
+
+.gsxSeg { flex-shrink: 0; display: flex; padding: 0.2rem; border-radius: 0.67rem; background: var(--bg); border: 1px solid var(--line); }
+.gsxSeg button {
+  height: 2.58rem;
+  padding: 0 0.92rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.92rem var(--font);
+  white-space: nowrap;
+}
+.gsxSeg button.isOn { background: var(--lane); color: var(--laneInk); }
+.gsxSeg button[hidden] { display: none; }
+
+.gsxPins { display: flex; align-items: center; gap: 0.33rem; }
+.gsxPin {
+  width: 2.92rem;
+  height: 3rem;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 0.58rem;
+  border: 2px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  font: 700 1.42rem var(--fontCond);
+}
+.gsxPin.groupEnd { margin-right: 0.58rem; }
+.gsxPin.isOn { background: var(--lane); border-color: var(--lane); color: var(--laneInk); }
+.gsxPin:disabled { opacity: 0.35; }
+.gsxCard.isEmpty .gsxPin:not(.isOn) { color: var(--dim); }
+.gsxPinsSpacer { flex-grow: 1; min-width: 0.4rem; }
+.gsxSmall {
+  flex-shrink: 0;
+  height: 3rem;
+  padding: 0 0.83rem;
+  border-radius: 0.58rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: 600 0.92rem var(--font);
+}
+
+.gsxProgRow { display: none; align-items: center; gap: 0.5rem; }
+.gsxCard[data-mode="prog"] .gsxProgRow { display: flex; }
+.gsxCard[data-mode="prog"] .gsxPins { display: none; }
+.gsxProgName {
+  flex-grow: 1;
+  min-width: 0;
+  height: 3rem;
+  padding: 0 0.83rem;
+  border-radius: 0.58rem;
+  border: 2px solid var(--lane);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: 0.58rem;
+  font: 600 1.08rem var(--font);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.gsxProgName .lbl { flex-shrink: 0; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.gsxProgName .val { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.gsxChoose {
+  flex-shrink: 0;
+  height: 3rem;
+  padding: 0 2.2rem 0 0.92rem;
+  border-radius: 0.58rem;
+  border: 1px solid var(--line);
+  background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") right 0.75rem center / 1rem no-repeat;
+  color: var(--text);
+  font: 600 1rem var(--font);
+  white-space: nowrap;
+}
+
+.gsxPreview {
+  width: 6.25rem;
+  flex-shrink: 0;
+  border-radius: 0.67rem;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.33rem;
+}
+.gsxPreview .row { display: flex; gap: 0.42rem; }
+.gsxPreview .dot { width: 0.92rem; height: 0.92rem; border-radius: 50%; border: 2px solid #3A4E73; }
+.gsxPreview .dot.isOn { background: var(--lane); border-color: var(--lane); }
+.gsxCard[data-mode="prog"] .gsxPreview { opacity: 0.25; }
+
+.gsxAside { width: 20.83rem; flex-shrink: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.gsxHelp { padding: 1rem; border-radius: 0.92rem; background: var(--surface); border: 1px solid var(--lineSoft); display: flex; flex-direction: column; gap: 0.5rem; }
+.gsxHelpText { font-size: 1rem; line-height: 1.35; }
+#otherBowlingTraining { min-height: 3.17rem; font-size: 1.08rem; color: var(--lane); }
+.gsxAside .bottomButtons { margin-top: auto; display: flex; }
+
+/* GSX i en kolumn: tätare, inget sidofält och ingen triangel */
+body.rev2Column .gsxBody { flex-direction: column; padding: 0.92rem 1.08rem 1.08rem; gap: 0.67rem; }
+body.rev2Column .gsxAside { width: auto; }
+body.rev2Column .gsxHelp,
+body.rev2Column #otherBowlingTraining,
+body.rev2Column .gsxPreview,
+body.rev2Column .gsxPinAll,
+body.rev2Column .gsxHint { display: none; }
+body.rev2Column .gsxColumnOnly { display: flex; }
+body.rev2Column #gsxCards { flex-grow: 0; }
+body.rev2Column .gsxCard { flex: 0 0 auto; min-height: 0; }
+body.rev2Column .gsxPin { width: 2.42rem; height: 2.67rem; font-size: 1.25rem; }
+body.rev2Column .gsxPin.groupEnd { margin-right: 0.42rem; }
+body.rev2Column .gsxSeg button { padding: 0 0.67rem; font-size: 0.83rem; }
+
+/* Lista med färdiga program */
+.gsxProgramOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(3, 7, 14, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gsxProgramOverlay[hidden] { display: none; }
+/* Ram, rubrik och kryss med samma mått som de andra dialogerna (del 1 .popup) */
+.gsxProgramBox {
+  position: relative;
+  width: min(94vw, 65rem);
+  height: min(92vh, 43.33rem);
+  padding: 1.75rem 2rem;
+  border-radius: 1.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 1.67rem 5rem rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 1.17rem;
+}
+.gsxProgramHead { display: flex; align-items: center; gap: 1rem; padding-right: 4.25rem; }
+.gsxProgramHeadText { flex-grow: 1; min-width: 0; display: flex; flex-direction: column; }
+.gsxProgramHeadText h2 { margin: 0; font-size: 1.9rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#gsxProgramSub { font-size: 1.08rem; color: var(--muted); }
+.gsxProgramClose {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex-shrink: 0;
+  border-radius: 0.83rem;
+  border: 1px solid var(--line);
+  background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18'/%3E%3Cpath d='m6 6 12 12'/%3E%3C/svg%3E") center / 1.6rem no-repeat;
+}
+.gsxProgramListWrap { position: relative; flex-grow: 1; min-height: 0; }
+.gsxProgramListWrap::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3.75rem;
+  background: linear-gradient(to bottom, rgba(17, 29, 49, 0), var(--surface));
+  pointer-events: none;
+}
+.gsxProgramList {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0 2.5rem 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 4.33rem;
+  gap: 0.67rem;
+  align-content: start;
+}
+.gsxProgramList button {
+  min-width: 0;
+  padding: 0 0.92rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 1.17rem var(--font);
+  display: flex;
+  align-items: center;
+  gap: 0.67rem;
+  text-align: left;
+}
+.gsxProgramList .no {
+  flex-shrink: 0;
+  min-width: 1.83rem;
+  height: 1.83rem;
+  padding: 0 0.33rem;
+  border-radius: 0.92rem;
+  background: var(--bg);
+  color: var(--muted);
+  font: 700 1rem var(--fontCond);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gsxProgramList .name { flex-grow: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gsxProgramList button.isOn { background: var(--lane); border-color: var(--lane); color: var(--laneInk); }
+.gsxProgramList button.isOn .no { background: rgba(16, 21, 31, 0.15); color: var(--laneInk); }
+.gsxProgramFoot { display: flex; align-items: center; gap: 0.75rem; }
+/* Samma mått som de andra dialogernas knappar (del 1 .generalButton) */
+.gsxFootButton {
+  height: 4rem;
+  padding: 0 1.6rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 1.25rem var(--font);
+}
+body.rev2Column .gsxProgramBox { padding: 1.75rem 1.5rem 1.25rem; }
+body.rev2Column .gsxProgramList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* ================================================================== SKRIVLÄGE
+
+   När ett tangentbord är uppe visas bara det man skriver i: spelsätt, Starta, rubriker och
+   tips göms, och namnen rullar ovanför tangentbordet. Starta kommer tillbaka när tangentbordet
+   stängs (Klar). touchconsoleLane.js sätter klasserna:
+     kbOpen   - något tangentbord är uppe
+     kbSystem - Androids tangentbord (skalet märker det på att sidan blivit lägre); då visas
+                listen #rev2KbBar med Föregående / Nästa / Klar längst ner i ramen. Bara när
+                vbskeyboard.js står åt sidan (?keyboard=0, eller en för gammal WebView)
+   vbskb-open sätts av vbskeyboard.js (Windows, och Android när det går); det tangentbordet
+   ligger inne i ramen och är --vbskb-height högt. Androids ligger utanför ramen, som redan
+   har krympt. */
+
+:root { --kbInset: 0px; --kbBarH: 0px; }
+body.vbskb-open { --kbInset: var(--vbskb-height); }
+body.kbSystem { --kbBarH: 4.5rem; }
+
+html body.kbOpen #fillBowlingData .popup.startScreen,
+html body.kbOpen #fillTrainingData .popup.gsxScreen { bottom: calc(var(--kbInset) + var(--kbBarH)); }
+html body.kbOpen.rev2Full #fillBowlingData .popup.startScreen,
+html body.kbOpen.rev2Full #fillTrainingData .popup.gsxScreen { bottom: calc(var(--kbInset) + var(--kbBarH) + 0.5rem); }
+
+body.kbOpen .laneBand { height: 3rem; font-size: 1.75rem; }
+body.kbOpen .modeCol,
+body.kbOpen .gsxAside,
+body.kbOpen .gsxHead,
+body.kbOpen .sectionHead,
+body.kbOpen .playersCol .hint { display: none; }
+body.kbOpen #bowlingStartForm { padding-top: 0.83rem; padding-bottom: 0.83rem; }
+body.kbOpen .playersCol {
+  flex-grow: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 0.5rem;
+}
+body.kbOpen #nameArea { flex-shrink: 0; }
+body.kbOpen .gsxCard { flex: 0 0 auto; }
+
+/* Övriga dialoger (Ändra spelare m.fl.) rullar redan; lämna plats för listen under dem. */
+body.kbSystem .overlay:not(#fillBowlingData):not(#fillTrainingData) { padding-bottom: var(--kbBarH); }
+
+.rev2KbBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  height: var(--kbBarH);
+  box-sizing: border-box;
+  padding: 0 0.83rem;
+  display: flex;
+  align-items: center;
+  gap: 0.67rem;
+  background: var(--surface);
+  border-top: 1px solid var(--line);
+}
+.rev2KbBar[hidden] { display: none; }
+.kbLane {
+  flex-grow: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 700 1.67rem/1 var(--fontCond);
+  color: var(--text);              /* banans namn i vitt som övrig text */
+}
+.rev2KbBar button {
+  flex-shrink: 0;
+  height: 3.33rem;
+  padding: 0 1.25rem;
+  border-radius: 0.83rem;
+  border: 1px solid var(--line);
+  background-color: var(--surface2);
+  color: var(--text);
+  font: 600 1.25rem var(--font);
+  white-space: nowrap;
+}
+.rev2KbBar .kbPrev { padding-left: 2.67rem; background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m15 18-6-6 6-6'/%3E%3C/svg%3E") 0.83rem center / 1.42rem no-repeat; }
+.rev2KbBar .kbNext { padding-right: 2.67rem; background: var(--surface2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23EEF2F8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 18 6-6-6-6'/%3E%3C/svg%3E") right 0.83rem center / 1.42rem no-repeat; }
+.rev2KbBar .kbDone {
+  min-width: 8rem;
+  padding-left: 2.83rem;
+  border-color: var(--lane);
+  background: var(--lane) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310151F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") 0.92rem center / 1.42rem no-repeat;
+  color: var(--laneInk);
+}
+.rev2KbBar button:disabled { opacity: 0.35; }
+
+/* ================================================================== RESET/SET
+
+   Käglorna som runda sifferknappar i triangeln, som GSX-träningens sifferknappar (P1 i
+   designytan). Kryssrutorna är originalets pin1-pin10, osynliga ovanpå sina siffror; den som är
+   ikryssad (står) får banans färg. Originalets två knappar är dolda och korten trycker på dem
+   (touchconsoleLane.js, setupPins). */
+
+#pinResetSubmitbutton,
+#pinSetSubmitbutton { display: none !important; }
+
+/* Samma ram, rubrik och kryss som de andra dialogerna (del 1 .popup) - bara
+   bredden är egen. */
+#pinSetter .popup.pinPopup { width: min(94%, 51.67rem); }
+
+.pinBody { display: grid; grid-template-columns: minmax(0, 1fr) 18.33rem; gap: 1.33rem; }
+
+.pinPanel {
+  min-width: 0;
+  border-radius: 1.08rem;
+  background: var(--bg);
+  padding: 1.17rem 1.33rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pinHead { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; }
+.pinCount { font: 700 1.25rem/1 var(--fontCond); white-space: nowrap; }
+
+#pinSetter .pinTable { padding: 0.25rem 0; gap: 0.92rem; background: none; border-radius: 0; }
+#pinSetter .pinRow { gap: 1.25rem; }
+
+.pinBtn { position: relative; display: block; width: 4.33rem; height: 4.33rem; margin: 0; cursor: pointer; }
+.pinBtn input.bowlingpin[type=checkbox] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  background: none;
+  cursor: pointer;
+}
+.pinBtn span {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 0.13rem solid #2C4166;
+  color: var(--dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 1.83rem/1 var(--fontCond);
+  pointer-events: none;
+}
+.pinBtn input:checked + span { background: var(--lane); border-color: var(--lane); color: var(--laneInk); }
+.pinBtn input:focus-visible + span { outline: 3px solid var(--text); outline-offset: 3px; }
+.pinBtn input:disabled + span { opacity: 0.4; }
+
+.pinFoot { display: flex; align-items: center; gap: 0.5rem; }
+.pinHint { flex-grow: 1; min-width: 0; font-size: 0.92rem; line-height: 1.25; color: var(--muted); }
+.pinSmall {
+  flex-shrink: 0;
+  height: 2.67rem;
+  padding: 0 1rem;
+  border-radius: 0.67rem;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  font: 600 1rem var(--font);
+  cursor: pointer;
+}
+.pinSmall:active { background: var(--raised); }
+
+.pinActions { min-width: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+.pinAction {
+  min-height: 8.17rem;
+  border-radius: 1.08rem;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  padding: 1.08rem 1.17rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-align: left;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.pinAction:active { background: var(--raised); }
+.pinAction.isPrimary { background: var(--lane); border-color: var(--lane); color: var(--laneInk); }
+.pinAction.isPrimary:active { filter: brightness(0.92); }
+
+.pinIcon { width: 3.5rem; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0.25rem; }
+.pinIcon .row { display: flex; gap: 0.25rem; }
+.pinIcon .dot { width: 0.58rem; height: 0.58rem; box-sizing: border-box; border-radius: 50%; background: var(--text); }
+.pinAction.isPrimary .pinIcon .dot { background: transparent; border: 2px solid rgba(16, 21, 31, 0.45); }
+.pinAction.isPrimary .pinIcon .dot.isOn { background: var(--laneInk); border-color: var(--laneInk); }
+
+.pinActionText { min-width: 0; display: flex; flex-direction: column; gap: 0.25rem; }
+.pinActionTitle { font: 700 1.42rem/1.1 var(--font); }
+.pinActionSub { font-size: 0.92rem; line-height: 1.3; color: var(--muted); }
+.pinAction.isPrimary .pinActionSub { color: inherit; opacity: 0.8; font-weight: 600; }
+
+#pinSetter .pinCancel { width: 100%; min-height: 3.33rem; }
+
+/* I en kolumn: käglorna överst, de två korten bredvid varandra under, Avbryt längst ner */
+body.rev2Column #pinSetter .popup.pinPopup { width: 94%; }
+body.rev2Column .pinBody { grid-template-columns: minmax(0, 1fr); gap: 0.92rem; }
+body.rev2Column .pinPanel { padding: 0.92rem 1.08rem 1rem; gap: 0.75rem; }
+body.rev2Column #pinSetter .pinTable { gap: 0.67rem; }
+body.rev2Column #pinSetter .pinRow { gap: 1rem; }
+body.rev2Column .pinBtn { width: 3.83rem; height: 3.83rem; }
+body.rev2Column .pinBtn span { font-size: 1.67rem; }
+body.rev2Column .pinActions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.58rem; }
+body.rev2Column .pinActions .flexSpacer { display: none; }
+body.rev2Column .pinAction { min-height: 5.5rem; padding: 0.83rem 1rem; }
+body.rev2Column .pinIcon { display: none; }
+body.rev2Column .pinActionTitle { font-size: 1.25rem; }
+body.rev2Column #pinSetter .pinCancel { grid-column: 1 / -1; }
+
+/* ================================================================== VÄLJ SPEL, TÄTARE
+
+   Lägre kort med ikonen till vänster om namnet i stället för ovanför, så att alla spelsätt,
+   Starta flyttat spel och Avbryt ryms utan att rulla - också i en kolumn. Färgerna är kvar
+   som de var (del 1). */
+#otherBowlingForm .gameGrid { gap: 0.75rem; }
+#otherBowlingForm .gameType {
+  min-height: 6rem;
+  padding: 0.9rem 3.4rem 0.9rem 5rem;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+#otherBowlingForm .gameType::before {
+  top: 50%;
+  left: 1.2rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  transform: translateY(-50%);
+  font-size: 1.75rem;
+}
+#otherBowlingForm #gameType369::before,
+#otherBowlingForm #gameType10thFrame::before { width: auto; height: auto; }
+#otherBowlingForm .gameType.isSelected::after {
+  top: 50%;
+  right: 1rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  transform: translateY(-50%);
+  background-size: 1.05rem;
+}
+#otherBowlingForm .gameTypeGroup {
+  min-height: 6rem;
+  padding: 0.9rem 1.2rem;
+  gap: 0.6rem;
+}
+#otherBowlingForm .gameTypeGroup .gameTypeMulti { font-size: 1.5rem; }
+#otherBowlingForm .gameTypeSub { height: 2.75rem; font-size: 1.3rem; }
+#otherBowlingForm #startMovePlayDivision { margin-top: 0.75rem; }
+#otherBowlingForm #startMovePlayButton { min-height: 4rem; }
+
+/* I en kolumn: lägre rubrik och mindre luft runt om */
+body.rev2Column #otherBowlingForm .popup.gameSelect { padding: 0 1.08rem 1.08rem; }
+body.rev2Column #otherBowlingForm .dialogHead { height: 4.5rem; margin: 0 -1.08rem 1rem; padding: 0 1.08rem; }
+body.rev2Column #otherBowlingForm .gameGrid { gap: 0.58rem; }
+body.rev2Column #otherBowlingForm .gameType { min-height: 5.25rem; font-size: 1.33rem; padding-left: 4.6rem; }
+body.rev2Column #otherBowlingForm .gameType::before { left: 1rem; }
+body.rev2Column #otherBowlingForm .gameTypeGroup { min-height: 5.25rem; padding: 0.75rem 1rem; }
+body.rev2Column #otherBowlingForm .gameTypeGroup .gameTypeMulti { font-size: 1.33rem; }
+body.rev2Column #otherBowlingForm .gameTypeSub { height: 2.5rem; font-size: 1.17rem; }
+body.rev2Column #otherBowlingForm .dialogButtons { padding-top: 0.75rem; margin-top: auto; }
+
+/* ================================================================== FLYTTA SPEL
+
+   Banorna som runda sifferknappar, samma som käglorna i Reset/Set; den valda får banans färg.
+   saveMoveGame.js skriver en rubrik med den valda banan i stor röd text (#theTarget) - den
+   göms, #theTarget finns kvar eftersom det är därifrån flytten läser banan. #moveText visar
+   valet i stället (touchconsoleLane.js, syncMove). */
+#saveMovePlay .popup.movePopup { width: min(94%, 46rem); }
+.moveText { margin: 0 0 1.17rem; font: 600 1.33rem/1.3 var(--font); color: var(--text); }
+.moveText .moveLane { color: var(--lane); font-weight: 700; }
+#targetLanes h3 { display: none; }
+#saveMovePlay #targetLanes { display: flex; flex-wrap: wrap; gap: 1rem; margin: 0; }
+#saveMovePlay #targetLanes .generalButton {
+  width: 4.33rem;
+  height: 4.33rem;
+  min-width: 0;
+  min-height: 0;
+  margin: 0 !important;
+  padding: 0;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 0.13rem solid #2C4166;
+  background: transparent;
+  color: var(--text);
+  font: 700 1.83rem/1 var(--fontCond);
+}
+#saveMovePlay #targetLanes .generalButton:active { background: var(--surface2); }
+#saveMovePlay #targetLanes .generalButton.isSelected {
+  background: var(--lane);
+  border-color: var(--lane);
+  color: var(--laneInk);
+}
+body.rev2Column #saveMovePlay .popup.movePopup { width: 94%; }
+/* fyra per rad i en kolumn, så att en slavs åtta banor blir två jämna rader */
+body.rev2Column #saveMovePlay #targetLanes { display: grid; grid-template-columns: repeat(4, 4.33rem); gap: 0.83rem 1rem; }
+
+/* Byt in reserv: Byt ut/in är dialogens huvudknapp, inte en farlig åtgärd - samma utseende som
+   Spara, Flytta och de andra dialogernas huvudknappar (var röd kant förut). */
+#changePlayersubmitbutton {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--goldInk);
+  font-weight: 700;
+  padding: 0 2.4rem;
+}
+#changePlayersubmitbutton:active { background: var(--goldHover); }
+
+/* Ändra spelare i en kolumn: bara rubrikerna Aktiv och Spelarnamn - Bumpers, Position och
+   Ta bort har ikoner och får inte plats. Är ordet för Aktiv för långt för sin smala kolumn
+   (finska "Aktiivinen") får det ta Spelarnamns plats; namnen står ju i fälten under.
+   longActive sätts av touchconsoleLane.js (syncPlayerHead). */
+body.rev2Column .playerGridHead .colBump,
+body.rev2Column .playerGridHead .colPosition,
+body.rev2Column .playerGridHead .colRemove { visibility: hidden; }
+body.rev2Column .playerGridHead.longActive .colName { visibility: hidden; }
+body.rev2Column .playerGridHead.longActive .colActive { overflow: visible; text-align: left; }
+
+/* GSX: Starta-knappens text är längre på finska och tyska ("Käynnistä harjoitus", "Training
+   starten") än vad den smala kolumnen bredvid korten rymmer - den får gå på två rader i stället
+   för att klippas med "…". */
+#gsxStart .rev2StartLabel { font-size: 1.92rem; white-space: normal; text-wrap: balance; line-height: 1.02; overflow: visible; }
+
+/* ================================================================== SPRÅKVAL
+
+   En knapp med flagga och språkets namn till höger i banans band (startbilden, GSX, bandet
+   ovanför poängbilden i en kolumn) och, under spel på hela skärmen, i knappraden före Service.
+   Den öppnar #rev2LangDialog. Byggs och styrs av touchconsoleLane.js (Språk). */
+
+.laneBand, .playBand { position: relative; }
+
+.langChip {
+  position: absolute;
+  right: 0.67rem;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 2.67rem;
+  padding: 0 1.9rem 0 0.5rem;
+  border-radius: 0.67rem;
+  border: 2px solid rgba(16, 21, 31, 0.25);
+  background: rgba(16, 21, 31, 0.12) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310151F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 0.45rem center / 1.1rem no-repeat;
+  color: var(--laneInk);
+  font: 700 1.08rem/1 var(--font);
+  letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+}
+.langChip:active { background-color: rgba(16, 21, 31, 0.22); }
+.langChip .langFlag { width: 1.83rem; height: 1.15rem; }
+
+.langFlag { display: inline-flex; flex-shrink: 0; }
+.langFlag svg { width: 100%; height: 100%; display: block; border-radius: 0.17rem; box-shadow: 0 0 0 1px rgba(16, 21, 31, 0.3); }
+
+/* Knappraden, hela skärmen: flaggan i stället för ikonen, namnet under */
+#rev2LangDock {
+  order: 9;
+  padding: 0.4rem 0.2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  cursor: pointer;
+}
+#rev2LangDock .langFlag { width: min(1.75rem, 60%); height: 1.1rem; }
+body.rev2Column #rev2LangDock { display: none !important; }
+
+/* Dialogen */
+.langOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgba(3, 7, 14, 0.78);
+  overflow-y: auto;
+}
+.langOverlay[hidden] { display: none; }
+.popup.langPopup { width: min(94%, 46rem); }
+body.rev2Column .popup.langPopup { width: 94%; }
+.langList { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; }
+.langTile {
+  position: relative;
+  height: 7rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: var(--surface2);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  font: 700 1.33rem/1 var(--font);
+  cursor: pointer;
+}
+.langTile:active { background: var(--raised); }
+.langTile .langFlag { width: 4rem; height: 2.5rem; }
+.langTile .langFlag svg { border-radius: 0.25rem; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25); }
+.langTile.isOn { border: 0.17rem solid var(--lane); background: var(--raised); }
+.langTile.isOn::after {
+  content: "";
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.67rem;
+  height: 1.67rem;
+  border-radius: 50%;
+  background: var(--lane) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310151F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 1rem no-repeat;
+}
+.langHall { position: absolute; bottom: 0.4rem; left: 0; right: 0; text-align: center; font: 500 0.75rem/1 var(--font); color: var(--muted); }
+.langTile:has(.langHall) { justify-content: flex-start; padding-top: 1.2rem; }
+
+/* ========================================================================== BYT IN RESERV
+   Hjälptexten kommer ur språkfilen (reserve.infoOk / reserve.infoLocked) med \n som radbrytning. */
+#changePlayerInfo { white-space: pre-line; }
+
+/* ========================================================================== ÄNDRA SPELARE
+   Amerikanskt spel (isAMR i TouchConsole.js): radioknapparna för aktiv spelare är dolda - den
+   väljs med Ändra aktiv spelare - så Aktiv-kolumnen tas bort och namnet får platsen.
+   Klassen isAMR sätts på #changeactive av touchconsoleLane.js (syncPlayerHead). */
+#changeactive.isAMR .playerGrid { grid-template-columns: 3.25rem 0 minmax(0, 1fr) 5.5rem 5rem; }
+#changeactive.isAMR .playerGrid > .colActive,
+#changeactive.isAMR .playerRow > .radioActiv { width: 0; overflow: hidden; border-width: 0; box-shadow: none; }
+
+/* I en kolumn (banpar) ska sex spelare och knapparna rymmas utan att Spara hamnar under kanten,
+   också vid amerikanskt spel där Ändra aktiv spelare ger en rad knappar till. */
+body.rev2Column #changeactive .popup { margin-top: 0.75rem; margin-bottom: 0.25rem; }
+body.rev2Column #changeactive #playerNameList { gap: 0.35rem; }
+body.rev2Column #changeactive .form-group { margin-bottom: 0.5rem; }
+
+/* ========================================================================== STÅENDE SKÄRM
+   del 1 lägger knappraden på två rader i stående läge, men :root här ovan sätter
+   om --dockH till en rad. Två rader: 2 x 3.9rem + 0.5rem mellan + 0.85rem kant (3.9rem så att
+   en text på två rader, "Ersatz einwechseln", ryms under ikonen). */
+@media screen and (orientation: portrait) {
+  :root { --dockH: 9.2rem; }
+  .onGoingGameButton { height: 3.9rem; }
+}
+
+/* ========================================================================== BANANS NAMN I RUBRIKER
+   "Korrigera · Bana 8": banans namn står i vitt som resten av rubriken (del 1 ger
+   det banans färg). Banans färg används för band, ram och det man trycker på. */
+body.vbsPair .popup h2:not(.sectionLabel)::after { color: var(--text); }
+
+/* ========================================================================== AKTIV SPELARE OCH BUMPERS
+   Ändra spelare: Aktiv som en diskret ring som fylls med banans färg när spelaren är vald
+   (webbläsarens radioknapp var en vit fylld cirkel - ljusast i dialogen fast den betydde "inte
+   vald"). Påslagna Bumpers i banans färg som allt annat som är valt, på startbilden och i Ändra
+   spelare (del 1 hade blått). */
+.playerRow > .radioActiv {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  /* Träffytan är lika stor som radens andra knappar (3.25rem); ringen som syns är 2rem - den
+     genomskinliga kanten är en del av knappen men syns inte. */
+  width: 3.25rem;
+  height: 3.25rem;
+  margin: 0;
+  justify-self: center;
+  border: 0.625rem solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--dim);
+  cursor: pointer;
+}
+.playerRow > .radioActiv:checked {
+  box-shadow: inset 0 0 0 2px var(--lane);
+  background: radial-gradient(circle, var(--lane) 0 40%, transparent 44%) padding-box;
+}
+.playerRow > .radioActiv:focus-visible { outline: 2px solid var(--lane); outline-offset: -0.4rem; }
+
+.bumpToggle:has(.playerBump:checked) {
+  background-color: var(--lane);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310151F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4v16'/%3E%3Cpath d='M21 4v16'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E");
+  border-color: var(--lane);
+  color: var(--laneInk);
+}
+.playerRow > .checkboxBump:checked {
+  background-color: var(--lane);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2310151F' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4v16'/%3E%3Cpath d='M21 4v16'/%3E%3Ccircle cx='12' cy='12' r='4'/%3E%3C/svg%3E");
+  border-color: var(--lane);
+}
+
+/* ========================================================================== KORRIGERA
+   Specialtangenterna (– X / F) ser ut som siffrorna; del 1 gav dem blå bakgrund,
+   så att de såg markerade ut. Aktiva tangenter är ljusa, inaktiva nedtonade som förut. Den valda
+   rutan markeras direkt när poängen har laddats (syncCorrect i touchconsoleLane.js). */
+#correctButtons .correct.special { background: var(--surface2); border-color: var(--line); }
+#correctButtons .correct.special:active { background: var(--raised); }
+
+/* ========================================================================== ÄNDRA SPELARE – DRA FÖR ATT ÄNDRA ORDNING
+   Ett handtag längst till vänster på varje rad (läggs till av touchconsoleLane.js,
+   setupPlayerDrag) ersätter pilarna upp/ned: håll i handtaget och dra raden dit den ska stå.
+   Pilarna från TouchConsole.js finns kvar i sidan men visas inte. Spara läser raderna uppifrån
+   och ned som förut. Kolumner: handtag | aktiv | namn | bumpers | ta bort. */
+#changeactive .playerGrid { grid-template-columns: 3.25rem 5.25rem minmax(0, 1fr) 5.5rem 5rem; column-gap: 0.5rem; }
+#changeactive .playerRow { padding: 0.5rem; }
+#changeactive .playerGridHead { padding: 0 0.5rem; }
+#changeactive .playerRow > .btnUp,
+#changeactive .playerRow > .btnDown,
+#changeactive .playerGridHead > .colPosition { display: none; }
+#changeactive .playerRow > .btnRemove { justify-self: center; }
+body.rev2Column #changeactive .playerRow { padding: 0.3rem 0.5rem; }
+
+.dragHandle {
+  width: 3.25rem;
+  height: 3.25rem;
+  margin: 0;
+  padding: 0;
+  justify-self: center;
+  border: 0;
+  border-radius: 0.75rem;
+  background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239AA8BF' stroke='none'%3E%3Ccircle cx='9' cy='6' r='1.7'/%3E%3Ccircle cx='15' cy='6' r='1.7'/%3E%3Ccircle cx='9' cy='12' r='1.7'/%3E%3Ccircle cx='15' cy='12' r='1.7'/%3E%3Ccircle cx='9' cy='18' r='1.7'/%3E%3Ccircle cx='15' cy='18' r='1.7'/%3E%3C/svg%3E") center / 1.6rem no-repeat;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.dragHandle:active { background-color: var(--surface2); }
+
+#playerNameList { position: relative; }
+#playerNameList .playerRow.isDragging {
+  position: absolute;
+  left: -0.25rem;
+  right: -0.25rem;
+  z-index: 3;
+  background: var(--raised);
+  box-shadow: 0 1.4rem 2.8rem rgba(0, 0, 0, 0.6);
+  outline: 2px solid var(--lane);
+}
+#playerNameList .playerRow.isDragging .dragHandle { background-color: var(--lane); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2310151F' stroke='none'%3E%3Ccircle cx='9' cy='6' r='1.7'/%3E%3Ccircle cx='15' cy='6' r='1.7'/%3E%3Ccircle cx='9' cy='12' r='1.7'/%3E%3Ccircle cx='15' cy='12' r='1.7'/%3E%3Ccircle cx='9' cy='18' r='1.7'/%3E%3Ccircle cx='15' cy='18' r='1.7'/%3E%3C/svg%3E"); cursor: grabbing; }
+.dropSlot {
+  box-sizing: border-box;
+  border: 2px dashed var(--lane);
+  border-radius: 0.9rem;
+  background: rgba(226, 181, 80, 0.07);
+}
+
+.dragHint { margin: 0.75rem 0 0; display: flex; align-items: center; gap: 0.6rem; color: var(--muted); font-size: 1.05rem; line-height: 1.3; }
+.dragHint::before { content: ""; width: 1.5rem; height: 1.5rem; flex-shrink: 0; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%239AA8BF' stroke='none'%3E%3Ccircle cx='9' cy='6' r='1.7'/%3E%3Ccircle cx='15' cy='6' r='1.7'/%3E%3Ccircle cx='9' cy='12' r='1.7'/%3E%3Ccircle cx='15' cy='12' r='1.7'/%3E%3Ccircle cx='9' cy='18' r='1.7'/%3E%3Ccircle cx='15' cy='18' r='1.7'/%3E%3C/svg%3E") center / 1.5rem no-repeat; }
+body.rev2Column .dragHint { margin-top: 0.5rem; font-size: 0.95rem; }
+/* Får tipset inte plats ens med tätare rader (amerikanskt spel i en kolumn) döljs det hellre än
+   att Spara hamnar under kanten - syncPlayerFit i touchconsoleLane.js. */
+#changeactive.noDragHint .dragHint { display: none; }
+
+/* Sju eller åtta spelare (receptionen kan starta med åtta, Lägg till spelare tillåter åtta): tätare
+   rader när alla och Spara annars inte ryms utan att dialogen rullar. Klassen manyPlayers sätts av
+   touchconsoleLane.js (syncPlayerFit), bara när det behövs - på en stor eller stående skärm
+   har raderna vanlig höjd. "body" ger samma vikt som kolumnlägets regler ovan. */
+body #changeactive.manyPlayers #playerNameList { gap: 0.25rem; }
+body #changeactive.manyPlayers .playerRow { padding-top: 0.15rem; padding-bottom: 0.15rem; }
+#changeactive.manyPlayers .playerRow > .Spelarnamn { height: 2.5rem; font-size: 1.2rem; }
+#changeactive.manyPlayers .playerRow > .checkboxBump,
+#changeactive.manyPlayers .playerRow > .btnRemove,
+#changeactive.manyPlayers .playerRow > .dragHandle { height: 2.5rem; }
+#changeactive.manyPlayers .playerRow > .radioActiv { width: 2.5rem; height: 2.5rem; border-width: 0.375rem; }
+
+/* Ändra aktiv spelare (amerikanskt spel, båda banornas spelare): namnet får bredden bredvid pilen
+   i stället för 70 %, och med sju eller åtta spelare på en bana blir raderna tätare om Spara
+   annars inte ryms (klassen manyPlayers sätts av syncPlayerFit). */
+.amrTable input[type=text] { width: calc(100% - 3.75rem) !important; }
+#AMRchangeActiveSection.manyPlayers .amrTable th { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+#AMRchangeActiveSection.manyPlayers .amrTable input[type=text] { height: 2.5rem; font-size: 1.2rem; margin: 0.15rem 0.3rem !important; }
+#AMRchangeActiveSection.manyPlayers .amrTable .radio-img { height: 2rem; }

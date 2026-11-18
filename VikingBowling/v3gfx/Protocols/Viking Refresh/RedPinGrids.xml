@@ -1,0 +1,211 @@
+<picture>
+	<id>#FRAME_RED_PIN_MISS_1#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>36</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+	<trans>1</trans>
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_1#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>36</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+	<trans>1</trans>
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_2#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>212</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_2#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>212</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_3#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>388</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_3#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>388</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_4#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>564</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_4#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>564</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_5#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>740</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_5#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>740</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_6#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>916</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_6#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>916</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_7#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>1092</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_7#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>1092</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_8#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>1268</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_8#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>1268</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_9#</id>
+	<file>RedPin172x86Enabled.png</file>
+	<rect>
+		<x>1444</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_9#</id>
+	<file>RedPin172x86Strike.png</file>
+	<rect>
+		<x>1444</x>
+		<y>6</y>
+		<w>172</w>
+		<h>86</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#FRAME_RED_PIN_MISS_10#</id>
+	<file>RedPin86x86Enabled.png</file>
+	<rect>
+		<x>1620</x>
+		<y>6</y>
+		<w>86</w>
+		<h>86</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#FRAME_RED_PIN_STRIKE_10#</id>
+	<file>RedPin86x86Strike.png</file>
+	<rect>
+		<x>1620</x>
+		<y>6</y>
+		<w>86</w>
+		<h>86</h>
+	</rect>	
+</picture>

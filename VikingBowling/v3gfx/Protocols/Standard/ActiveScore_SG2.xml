@@ -1,0 +1,343 @@
+<!--
+
+Row0:		0
+Row1:		80
+Row2:		160
+Row3:		240
+
+-->
+
+<!-- Header -->
+<true_type_text>
+	<text>9</text>
+	<font>Arial</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>255</red>
+		<green>255</green>
+		<blue>255</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>	
+	<rect>
+		<x>480</x>
+		<y>15</y>
+		<w>384</w>
+		<h>50</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>center</align>
+	<aspect>0.9</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>1</shadow_factor>
+	<halo_pen>0</halo_pen>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+
+<true_type_text>	
+	<text>10</text>
+	<rect>
+		<x>+=384</x>
+		<w>576</w>
+	</rect>
+</true_type_text>	
+
+<!-- Horisontala streck -->
+<rectangle_fill>
+	<rect>
+		<x>500</x>
+		<y>155</y>
+		<w>920</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>500</x>
+		<y>235</y>
+		<w>920</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>150</red>
+	<green>150</green>
+	<blue>150</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Vertikala streck -->
+<rectangle_fill>
+	<rect>
+		<x>672</x>
+		<y>85</y>
+		<w>1</w>
+		<h>70</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>864</x>
+		<y>85</y>
+		<w>1</w>
+		<h>140</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- -->
+<rectangle_fill>
+	<rect>
+		<x>1056</x>
+		<y>85</y>
+		<w>1</w>
+		<h>70</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+<rectangle_fill>
+	<rect>
+		<x>1248</x>
+		<y>85</y>
+		<w>1</w>
+		<h>70</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+
+<!-- Score -->
+<true_type_text>	<!-- Klot 17 -->
+	<id>#THROW17#</id>
+	<font>bowler</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>	
+	<rect>
+		<x>490</x>
+		<y>80</y>
+		<w>172</w>
+		<h>70</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>center</align>
+	<aspect>0.9</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>0</shadow_factor>
+	<halo_pen>0</halo_pen>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+	
+<true_type_text>	<!-- Klot 18 -->
+	<id>#THROW18#</id>
+	<rect>
+		<x>+=192</x>
+	</rect>
+</true_type_text>		
+<true_type_text>	<!-- Klot 19 -->
+	<id>#THROW19#</id>
+	<rect>
+		<x>+=192</x>
+	</rect>
+</true_type_text>		
+<true_type_text>	<!-- Klot 20 -->
+	<id>#THROW20#</id>
+	<rect>
+		<x>+=192</x>
+	</rect>
+</true_type_text>		
+<true_type_text>	<!-- Klot 21 -->
+	<id>#THROW21#</id>
+	<rect>
+		<x>+=192</x>
+	</rect>
+</true_type_text>		
+
+
+<true_type_text>	<!-- Summa för ruta8 -->
+	<id>#SUM_HCP_9#</id>
+	<rect>
+		<x>490</x>
+		<y>160</y>
+		<w>364</w>
+		<h>70</h>
+	</rect>
+</true_type_text>			
+<true_type_text>	<!-- Summa för ruta10 -->
+	<id>#SUM_HCP_10#</id>
+	<rect>
+		<x>+=384</x>
+		<w>556</w>	
+	</rect>
+</true_type_text>		
+
+
+<!-- Spelarnamnet för aktiv spelare -->
+
+	<picture>
+	<file>#PLAYER_STATUS#</file>
+		<rect>
+			<x>470</x>
+			<y>80</y>
+			<w>30</w>
+			<h>150</h>
+		</rect>	
+		<color_factor>1</color_factor>
+		<trans>1</trans>
+	</picture>
+
+<true_type_text>
+	<id>#NAME#</id>		
+	<rect>
+		<x>500</x>
+		<y>245</y>
+		<w>650</w>
+		<h>60</h>
+	</rect>	
+	<font>arial</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>		
+	<fontstyle>bold</fontstyle>
+	<align>left</align>
+	<aspect>0.75</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>0</shadow_factor>
+	<halo_pen>0</halo_pen>
+	<is_text_rec>1</is_text_rec>		
+</true_type_text>		
+
+<!-- HCP Beskrivning 	
+<true_type_text>	
+	<id>#HCPD#</id>
+	<rect>
+		<x>1020</x>
+		<y>245</y>
+		<w>70</w>
+		<h>60</h>
+	</rect>
+	<aspect>0.65</aspect>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+-->	
+<!-- HCP värde 	
+<true_type_text>
+	<id>#HCP#</id>
+	<rect>
+		<x>1100</x>
+		<y>245</y>
+		<w>80</w>
+		<h>60</h>
+	</rect>
+	<aspect>0.65</aspect>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+-->	
+<!-- SER Beskrivning		
+<true_type_text>
+	<id>#SCRD#</id>
+	<text>SER</text>
+	<rect>
+		<x>1230</x>
+		<y>245</y>
+		<w>70</w>
+		<h>60</h>
+	</rect>
+	<aspect>0.65</aspect>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+ -->
+<!-- SER värde	
+<true_type_text>
+	<id>#SCR#</id>
+	<text>44</text>
+	<rect>
+		<x>1300</x>
+		<y>245</y>
+		<w>150</w>
+		<h>60</h>
+	</rect>
+	<aspect>0.75</aspect>
+	<align>left</align>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>	
+ -->	
+<true_type_text>	<!-- Total Beskrivning -->
+	<id>#TOTD#</id>
+	<text>TOT</text>
+	<rect>
+		<x>1200</x>
+		<y>245</y>
+		<w>65</w>
+		<h>60</h>
+	</rect>
+	<align>left</align>
+	<aspect>0.65</aspect>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>		
+<true_type_text>	<!-- Total värde -->
+	<id>#TOT#</id>
+	<text>44</text>			
+	<rect>
+		<x>1280</x>
+		<y>245</y>
+		<w>140</w>
+		<h>60</h>
+	</rect>
+	<aspect>0.65</aspect>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+
+
+		

@@ -1,0 +1,156 @@
+<!--
+
+Row1:		10
+Row2:		80
+Row3:		150
+
+Columns:	60 + 1800 + 60 => X=70 W=1780 => 85px/throw => 85px x 21 = 1785px  => X=60+12,5 => X=72
+
+-->
+
+<!-- Horisontala streck -->
+<rectangle_fill>
+	<rect>
+		<x>15</x>
+		<y>125</y>
+		<w>200</w>
+		<h>1</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<!-- Vertikala streck -->
+<rectangle_fill>
+	<rect>
+		<x>115</x>
+		<y>20</y>
+		<w>1</w>
+		<h>105</h>
+	</rect>
+	<color>
+	<trans>255</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>245</x>
+		<y>40</y>
+		<w>1</w>
+		<h>170</h>
+	</rect>
+	<color>
+	<trans>155</trans>
+	<red>100</red>
+	<green>100</green>
+	<blue>100</blue>
+	</color>	
+</rectangle_fill>
+
+
+<!-- Score -->
+
+<true_type_text>	<!-- Klot 1 -->
+	<id>#THROW1#</id>
+	<font>bowler</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>	
+	<rect>
+		<x>25</x>
+		<y>20</y>
+		<w>80</w>
+		<h>90</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>center</align>
+	<aspect>0.9</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>0</shadow_factor>
+	<halo_pen>0</halo_pen>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+<true_type_text>	<!-- Klot 2 -->
+	<id>#THROW2#</id>
+	<rect>
+		<x>+=100</x>
+	</rect>
+</true_type_text>
+
+<!-- Spelarnamnet för aktiv spelare -->
+<true_type_text>
+	<id>#NAME#</id>		
+	<rect>
+		<x>280</x>
+		<y>60</y>
+		<w>900</w>
+		<h>130</h>
+	</rect>	
+	<font>arial</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>		
+	<fontstyle>bold</fontstyle>
+	<align>left</align>
+	<aspect>0.65</aspect>
+	<halo_factor>0</halo_factor>
+	<shadow_factor>0</shadow_factor>
+	<halo_pen>0</halo_pen>
+	<is_text_rec>1</is_text_rec>		
+</true_type_text>		
+
+
+<!-- HCP Beskrivning -->		
+<true_type_text>	
+	<id>#HCPD#</id>
+	<rect>
+		<x>25</x>
+		<y>145</y>
+		<w>70</w>
+		<h>60</h>
+	</rect>
+	<aspect>0.65</aspect>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+
+<!-- HCP värde -->		
+<true_type_text>
+	<id>#HCP#</id>
+	<rect>
+		<x>125</x>
+		<y>145</y>
+		<w>88</w>
+		<h>60</h>
+	</rect>
+	<aspect>0.65</aspect>
+	<is_text_rec>0</is_text_rec>
+</true_type_text>
+
+
+		

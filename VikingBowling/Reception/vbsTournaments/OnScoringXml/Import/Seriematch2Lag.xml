@@ -1,0 +1,16 @@
+<!--
+	===========================================================================================================
+		Seriematch
+		Filen testas med protkollet Viking.
+						
+		Text1:		Total Diff
+		Text3:		Hemmalagets totala slagning
+		Text5:		Bortalagets totala slagning
+		Text7:		Namn på hemmalag
+		Text9:		Namn på bortalag
+								
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+	<import>onScoringXml\Seriematch2Lag.xml</import>

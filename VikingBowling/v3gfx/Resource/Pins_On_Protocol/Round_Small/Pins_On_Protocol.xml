@@ -1,0 +1,337 @@
+
+<!--
+	===========================================================================================================
+		Käglor på protokoll - Round Small
+		
+		Filnamn:	Round_Small.xml
+		Datum:		20101105
+						
+		Copyright 2010 VBS Bowling AB
+
+		Kägelmarkeringarna är centrerade i höjdled och i ruta 1-5, visas dem under ruta 9 summering.
+		I ruta 6-10, visas dem under ruta 2's summering 
+		
+		Filen använder sig utav #ANY_PIN_xx#, dvs. vi återanvänder bilden "BigPin.png" för samtliga positioner.
+				
+	===========================================================================================================	
+-->
+
+<!-- Kägla 7..10 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file>
+	<rect>
+		<x>380|380|380|380|380|198</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>		
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>414|414|414|414|414|232</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>448|448|448|448|448|266</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>482|482|482|482|482|300</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<!-- Kägla 4..6 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>397|397|397|397|397|215</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>431|431|431|431|431|249</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>465|465|465|465|465|283</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<!-- Kägla 2..3 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>414|414|414|414|414|232</x>
+		<y>256</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>448|448|448|448|448|266</x>
+		<y>256</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+<!-- Kägla 1 -->
+<picture>
+	<id>#ANY_PIN_BG#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Gray.png</file> 
+	<rect>
+		<x>431|431|431|431|431|249</x>
+		<y>284</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+
+<!-- Kvarstående käglor -->
+<!-- Kägla 7..10 -->
+<picture>
+	<id>#ANY_PIN_NUM_7#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file>
+	<rect>
+		<x>380|380|380|380|380|198</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>		
+<picture>
+	<id>#ANY_RED_PIN_NUM_7#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file>
+	<rect>
+		<x>380|380|380|380|380|198</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#ANY_PIN_NUM_8#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>414|414|414|414|414|232</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_8#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>414|414|414|414|414|232</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+
+<picture>
+	<id>#ANY_PIN_NUM_9#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>448|448|448|448|448|266</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_9#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>448|448|448|448|448|266</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+
+<picture>
+	<id>#ANY_PIN_NUM_10#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>482|482|482|482|482|300</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_10#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>482|482|482|482|482|300</x>
+		<y>200</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+
+<!-- Kägla 4..6 -->
+<picture>
+	<id>#ANY_PIN_NUM_4#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>397|397|397|397|397|215</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_4#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>397|397|397|397|397|215</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+
+<picture>
+	<id>#ANY_PIN_NUM_5#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>431|431|431|431|431|249</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_5#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>431|431|431|431|431|249</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+
+<picture>
+	<id>#ANY_PIN_NUM_6#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>465|465|465|465|465|283</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_6#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>465|465|465|465|465|283</x>
+		<y>228</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+
+<!-- Kägla 2..3 -->
+<picture>
+	<id>#ANY_PIN_NUM_2#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>414|414|414|414|414|232</x>
+		<y>256</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+<picture>
+	<id>#ANY_RED_PIN_NUM_2#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>414|414|414|414|414|232</x>
+		<y>256</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>	
+
+<picture>
+	<id>#ANY_PIN_NUM_3#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>448|448|448|448|448|266</x>
+		<y>256</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#ANY_RED_PIN_NUM_3#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>448|448|448|448|448|266</x>
+		<y>256</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+
+<!-- Kägla 1 -->
+<picture>
+	<id>#ANY_PIN_NUM_1#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_White.png</file> 
+	<rect>
+		<x>431|431|431|431|431|249</x>
+		<y>284</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>
+<picture>
+	<id>#ANY_RED_PIN_NUM_1#</id>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Round_Small\Round_Red.png</file> 
+	<rect>
+		<x>431|431|431|431|431|249</x>
+		<y>284</y>
+		<w>30</w>
+		<h>30</h>
+	</rect>	
+</picture>

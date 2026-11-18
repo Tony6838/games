@@ -1,0 +1,312 @@
+<!--
+	===========================================================================================================
+		Viking2001 Refresh
+		Copyright 2023 VBS Bowling AB		
+	===========================================================================================================	
+-->
+
+<rectangle_fill>
+	<rect>
+		<x>475</x>
+		<y>92</y>
+		<w>969</w>
+		<h>2</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+
+<rectangle_fill>
+	<rect>
+		<x>561</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>649</x>
+		<y>6</y>
+		<w>2</w>
+		<h>174</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>737</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>825</x>
+		<y>6</y>
+		<w>2</w>
+		<h>174</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>913</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1001</x>
+		<y>6</y>
+		<w>2</w>
+		<h>174</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1089</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1177</x>
+		<y>6</y>
+		<w>2</w>
+		<h>174</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1265</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1353</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+
+
+
+
+<true_type_text>
+	<id>#THROW11#</id>
+	<font>bowler</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>
+	<rect>
+		<x>485</x>
+		<y>16</y>
+		<w>66</w>
+		<h>66</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>center</align>
+	<is_text_rec>0</is_text_rec>			
+	<aspect>0.85</aspect>
+	<halo_factor>0</halo_factor>
+	<halo_pen>0</halo_pen>
+</true_type_text>	
+<true_type_text>
+	<id>#THROW12#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW13#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW14#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW15#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW16#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW17#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW18#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW19#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW20#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW21#</id>
+	<rect>
+		<x>+=88</x>
+	</rect>
+</true_type_text>		
+
+<true_type_text>
+	<id>#SUM_HCP_6#</id>
+	<rect>
+		<x>485</x>
+		<y>104</y>
+		<w>154</w>
+		<h>66</h>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#SUM_HCP_7#</id>
+	<rect>
+		<x>+=176</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#SUM_HCP_8#</id>
+	<rect>
+		<x>+=176</x>	
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#SUM_HCP_9#</id>
+	<rect>
+		<x>+=176</x>	
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#SUM_HCP_10#</id>
+	<rect>
+		<x>+=176</x>>
+		<w>246</w>	
+	</rect>
+</true_type_text>		
+
+<picture>
+<file>#PLAYER_STATUS#</file>
+	<rect>
+		<x>476</x>
+		<y>6</y>
+		<w>968</w>
+		<h>174</h>
+	</rect>	
+	<color_factor>1</color_factor>
+	<trans>1</trans>
+</picture>		

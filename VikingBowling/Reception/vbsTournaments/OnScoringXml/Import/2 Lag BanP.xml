@@ -1,0 +1,21 @@
+<!--
+	===========================================================================================================
+						
+		Text1:		Total Diff mellan lagen
+		Text2:		Kägelpoäng för hemmalaget för aktuell serie
+		Text3:		Kägelpoäng för bortalaget för aktuell serie
+		Text4:		Banpoäng för hemmalaget
+		Text5:		Banpoäng för bortalaget
+		Text6:		Total kägelpoäng för hemmalaget
+		Text7:		Total kägelpoäng för bortalaget		
+		Text8:		Namn på hemmalag
+		Text9:		Namn på bortalag
+		Text10:		Pari värde
+		Text11:		Total Diff mellan lagen (alla serier)
+		
+		Copyright 2020 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<import>onScoringXml\2 Lag BanP.xml</import>

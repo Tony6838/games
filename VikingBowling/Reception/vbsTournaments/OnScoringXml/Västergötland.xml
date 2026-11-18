@@ -1,0 +1,233 @@
+<!--
+	===========================================================================================================
+		Viking - Västergötland
+		Filen testas med protkollet Viking.
+		
+		Filnamn:	Västergötland.xml
+		Datum:		20110615
+						
+		Text1:		Lag Diff Total
+		Text2:		Diff för Banpar 1-2
+		Text3:		Diff för Banpar 3-4
+		Text4:		Lagpoäng för hemmalaget
+		Text5:		Lagpoäng för bortalaget
+		Text6:		Namn på hemmalag
+		Text7:		Namn på bortalag
+								
+		Copyright 2012 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+<layer_after_11>
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<text>Lagpoäng Hemma</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>100</x>
+			<y>10;10;5;2</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>right</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text6#</id>
+		<text>Lagnamn Hemma</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>10;10;5;2</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text5#</id>
+		<text>Lagpoäng Borta</text>
+		<align>right</align>	
+		<rect>
+			<x>100</x>
+			<y>40;40;35;20</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Lagnamn Borta</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>40;40;35;20</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+</layer_after_11>
+
+
+<!-- VBS-T banparsdiffar nedanför protokollen -->
+<bottom_panel_11>
+	<id>DD</id>
+	<y_generate>120;120;120;120;90;90;72;72</y_generate>
+	
+	<!--- Vita rutor för diffar --->
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>85</x>
+			<y>30</y>
+			<w>110</w>
+			<h>85;85;85;85;55;55;40;40</h>
+		</rect>
+	</picture>	
+	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>265</x>
+			<y>30</y>
+			<w>110</w>
+			<h>85;85;85;85;55;55;40;40</h>
+		</rect>
+	</picture>	
+
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>445</x>
+			<y>30</y>
+			<w>110</w>
+			<h>85;85;85;85;55;55;40;40</h>
+		</rect>
+	</picture>
+	
+	
+	<!-- Diffar för resp banpar -->
+	
+	<true_type_text>	
+		<text>Diff 1-2</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>95</x>
+			<y>10;10;10;10;5;5;5;5</y>
+			<w>90</w>
+			<h>20;20;20;20</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	
+	<true_type_text>	
+		<text>Total Diff</text>
+		<rect>
+			<x>275</x>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<text>Diff 3-4</text>
+		<rect>
+			<x>455</x>
+		</rect>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id> <!-- [text9] text=   from the vbst ontop file -->
+		<rect>
+			<x>95</x>
+			<y>45;45;45;45;40;40;40;40</y>
+			<w>90</w>
+			<h>55;55;55;55;35;35;20;20</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2;2;2;2;2;2;1;1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<rect>
+			<x>275</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<rect>
+			<x>455</x>
+		</rect>
+	</true_type_text>
+	
+	
+</bottom_panel_11>	
+
+
+	

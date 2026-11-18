@@ -1,0 +1,428 @@
+<layer_before_11>
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\Gray1920x1080_75.png</file>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>2160</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+	</picture>
+</layer_before_11>
+
+
+<layer_after_11>
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<text>Lagnamn1</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>330</x>
+			<y>10</y>
+			<w>790</w>
+			<h>80</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>left</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text6#</id>
+		<text>20</text>
+		<aspect>0.75</aspect>	
+		<align>right</align>			
+		<rect>
+			<x>240</x>				
+			<w>50</w>				
+		</rect>
+	</true_type_text>	
+
+	<true_type_text>	
+		<id>#VBST_JOB_text10#</id>
+		<text>Lagnamn2</text>
+		<aspect>0.75</aspect>		
+		<align>left</align>	
+		<rect>
+			<x>330</x>
+			<y>100</y>
+			<w>790</w>
+			<h>80</h>
+		</rect>
+	</true_type_text>	
+
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>20</text>
+		<aspect>0.75</aspect>	
+		<align>right</align>					
+		<rect>
+			<x>240</x>				
+			<w>50</w>				
+		</rect>
+	</true_type_text>				
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X210R10.png</file>
+		<rect>
+			<x>1365</x>
+			<y>10</y>
+			<w>200</w>
+			<h>150</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>
+		
+		<layer_after_1>	
+			<true_type_text>	
+				<id>#VBST_JOB_text1#</id>
+				<rect>
+					<x>30</x>
+					<y>30</y>
+					<w>140</w>
+					<h>140</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.5</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+		</layer_after_1>	
+	</picture>
+	
+	<!-- Logo -->
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X210R10.png</file>
+		<rect>
+			<x>30</x>
+			<y>1020</y>
+			<w>250</w>
+			<h>250</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>
+		
+		<layer_after_1>	
+			<picture>
+			<file>#teamLogo_1#</file>
+			<rect>
+				<x>15</x>
+				<y>15</y>
+				<w>170</w>
+				<h>170</h>
+			</rect>
+			<color_factor>1</color_factor>
+			</picture>	
+		</layer_after_1>	
+	</picture>	
+
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B200X210R10.png</file>
+		<rect>
+			<x>1640</x>
+			<y>1020</y>
+			<w>250</w>
+			<h>250</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>190</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>
+		
+		<layer_after_1>	
+			<picture>
+			<file>#teamLogo_2#</file>
+			<rect>
+				<x>15</x>
+				<y>15</y>
+				<w>170</w>
+				<h>170</h>
+			</rect>
+			<color_factor>1</color_factor>
+			</picture>	
+		</layer_after_1>	
+	</picture>
+
+</layer_after_11>
+
+
+<bottom_panel_11>
+	<id>DD</id>
+	<y_generate>210</y_generate>
+
+	<!-- diffar och kvarstående tid -->		
+	<picture>
+		<file>C:\Viking2001\v3gfx\Resource\Objects\B1200X210R10.png</file>
+		<rect>
+			<x>510</x>
+			<y>0</y>
+			<w>900</w>
+			<h>150</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1.0</trans>	
+		
+		<layer_before_1>
+			<rectangle_fill>
+				<color>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+					<trans>255</trans>
+				</color>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>1190</w>
+					<h>190</h>
+				</rect>
+			</rectangle_fill>	
+		</layer_before_1>
+		
+		<layer_after_1>	
+			<rectangle_fill>
+				<color>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>300</x>
+					<y>25</y>
+					<w>1</w>
+					<h>150</h>
+				</rect>
+			</rectangle_fill>	
+
+			<rectangle_fill>
+				<color>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>600</x>
+					<y>25</y>
+					<w>1</w>
+					<h>150</h>
+				</rect>
+			</rectangle_fill>	
+
+			<rectangle_fill>
+				<color>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color>
+				<rect>
+					<x>900</x>
+					<y>25</y>
+					<w>1</w>
+					<h>150</h>
+				</rect>
+			</rectangle_fill>	
+			
+			<true_type_text>	
+				<id>#VBST_JOB_text2#</id>
+				<rect>
+					<x>75</x>
+					<y>30</y>
+					<w>150</w>
+					<h>140</h>
+				</rect>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>155</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.6</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>1</shadow_factor>
+				<is_text_rec>0</is_text_rec>
+			</true_type_text>
+
+			<true_type_text>	
+				<id>#VBST_JOB_text3#</id>
+				<rect>
+					<x>+=300</x>
+				</rect>
+			</true_type_text>
+
+			<true_type_text>	
+				<id>#VBST_JOB_text4#</id>
+				<rect>
+					<x>+=300</x>
+				</rect>
+			</true_type_text>
+
+			<true_type_text>	
+				<id>#VBST_JOB_text5#</id>
+				<rect>
+					<x>+=300</x>
+				</rect>
+			</true_type_text>	
+		</layer_after_1>	
+	</picture>
+	
+	<!--  Kvarstående tid för matchen och Pari -->	
+	
+	<true_type_text>
+		<text>Tid kvar:</text>
+		<rect>
+			<x>565</x>
+			<y>158</y>		
+			<w>210</w>
+			<h>50</h>
+		</rect>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<fontstyle>bold</fontstyle>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>1</shadow_factor>
+			<is_text_rec>1</is_text_rec>
+		<align>left</align>
+		<aspect>0.75</aspect>
+		<is_text_rec>1</is_text_rec>		
+	</true_type_text>	
+
+	<true_type_text>
+		<id>#PLAY_TIME#</id>
+		<text></text>
+		<rect>
+			<x>780</x>
+		</rect>
+		<aspect>0.75</aspect>
+		<align>left</align>
+		<is_text_rec>1</is_text_rec>		
+	</true_type_text>
+	
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<rect>
+			<x>1150</x>
+			<w>100</w>
+		</rect>
+	<align>right</align>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<align>right</align>
+		<rect>
+			<x>1260</x>
+			<w>100</w>
+		</rect>
+	</true_type_text>	
+
+</bottom_panel_11>

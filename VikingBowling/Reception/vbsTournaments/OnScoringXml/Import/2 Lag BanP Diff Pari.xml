@@ -1,0 +1,23 @@
+<!--
+	===========================================================================================================
+		Filen testas med protkollet Viking.
+		
+		Datum:		20150612
+						
+		Text1:		Total Diff mellan lagen
+		Text2:		Kägelpoäng för hemmalaget för aktuell serie
+		Text3:		Kägelpoäng för bortalaget för aktuell serie
+		Text4:		Banpoäng för hemmalaget
+		Text5:		Banpoäng för bortalaget
+		Text6:		Total kägelpoäng för hemmalaget
+		Text7:		Total kägelpoäng för bortalaget		
+		Text8:		Namn på hemmalag
+		Text9:		Namn på bortalag
+		Text10:		Pari värde
+		
+		Copyright 2015 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<import>onScoringXml\2 Lag BanP Diff Pari.xml</import>

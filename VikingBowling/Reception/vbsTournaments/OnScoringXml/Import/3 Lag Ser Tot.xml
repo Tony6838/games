@@ -1,0 +1,24 @@
+<!--
+	===========================================================================================================
+		Filen testas med protkollet Viking.
+		
+		Datum:		20170905
+						
+		Text1:		Kägelpoäng för lag1 för aktuell serie
+		Text2:		Kägelpoäng för lag2 för aktuell serie
+		Text3:		Kägelpoäng för lag3 för aktuell serie
+		Text4:		Banpoäng för hemmalaget
+		Text5:		Banpoäng för bortalaget
+		Text6:		Total kägelpoäng för lag1
+		Text7:		Total kägelpoäng för lag2		
+		Text8:		Total kägelpoäng för lag3	
+		Text9:		Namn för lag1
+		Text10:		Namn för lag2
+		Text11:		Namn för lag3
+		
+		Copyright 2017 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+	<import>onScoringXml\3 Lag Ser Tot.xml</import>

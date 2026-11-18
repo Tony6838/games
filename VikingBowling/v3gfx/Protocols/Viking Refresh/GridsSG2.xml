@@ -1,0 +1,167 @@
+<!--
+	===========================================================================================================
+		Viking2001 Refresh
+		Copyright 2023 VBS Bowling AB		
+	===========================================================================================================	
+-->
+
+
+<rectangle_fill>
+	<rect>
+		<x>475</x>
+		<y>92</y>
+		<w>969</w>
+		<h>2</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+
+<rectangle_fill>
+	<rect>
+		<x>670</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>865</x>
+		<y>6</y>
+		<w>2</w>
+		<h>174</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1060</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+<rectangle_fill>
+	<rect>
+		<x>1255</x>
+		<y>6</y>
+		<w>2</w>
+		<h>87</h>
+	</rect>
+	<color>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color>	
+</rectangle_fill>
+
+
+
+<true_type_text>
+	<id>#THROW17#</id>
+	<font>bowler</font>
+	<color_fill>
+		<trans>255</trans>
+		<red>0</red>
+		<green>0</green>
+		<blue>0</blue>
+	</color_fill>
+	<color_pen>
+		<trans>0</trans>
+		<red>225</red>
+		<green>225</green>
+		<blue>225</blue>
+	</color_pen>
+	<rect>
+		<x>485</x>
+		<y>16</y>
+		<w>175</w>
+		<h>66</h>
+	</rect>
+	<fontstyle>bold</fontstyle>
+	<align>center</align>
+	<is_text_rec>0</is_text_rec>			
+	<aspect>0.85</aspect>
+	<halo_factor>0</halo_factor>
+	<halo_pen>0</halo_pen>
+</true_type_text>	
+<true_type_text>
+	<id>#THROW18#</id>
+	<rect>
+		<x>+=195</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW19#</id>
+	<rect>
+		<x>+=195</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW20#</id>
+	<rect>
+		<x>+=195</x>
+	</rect>
+</true_type_text>		
+<true_type_text>
+	<id>#THROW21#</id>
+	<rect>
+		<x>+=195</x>
+	</rect>
+</true_type_text>		
+
+<true_type_text>
+	<id>#SUM_HCP_9#</id>
+	<rect>
+		<x>485</x>
+		<y>104</y>
+		<w>368</w>
+		<h>66</h>
+	</rect>
+</true_type_text>				
+<true_type_text>
+	<id>#SUM_HCP_10#</id>
+	<rect>
+		<x>+=390</x>>
+		<w>563</w>	
+	</rect>
+</true_type_text>		
+
+<picture>
+<file>#PLAYER_STATUS#</file>
+	<rect>
+		<x>476</x>
+		<y>6</y>
+		<w>968</w>
+		<h>172</h>
+	</rect>	
+	<color_factor>1</color_factor>
+	<trans>1</trans>
+</picture>		

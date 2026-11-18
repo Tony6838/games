@@ -1,0 +1,89 @@
+<!--
+	===========================================================================================================
+		Halloween - After
+	===========================================================================================================	
+-->
+
+	<picture>
+		<file>/Theme/HalloweenHouse2.png</file>
+		<rect>
+			<x>-175</x>
+			<y>-50</y>
+			<w>247</w>
+			<h>830</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>		
+	</picture>
+
+	<picture>
+		<file>/Theme/CobWeb.png</file>
+		<rect>
+			<x>1500;1500;1500;1500;1550</x>
+			<y>-150;-150;-150;-150;-205</y>
+			<w>500</w>
+			<h>614</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>0.5</trans>		
+	</picture>
+	
+	<picture>
+		<file>/Theme/HalloweenText.png</file>
+		<rect>
+			<x>360</x>
+			<y>880;880;980;60;40;990;990;1000</y>
+			<w>1200</w>
+			<h>195;195;100;120;110;90;90;80</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>		
+	</picture>
+	
+	<picture>
+		<file>/Theme/HalloweenGhost.png</file>
+		<rect>
+			<x>1800;1780;1810;1840</x>
+			<y>270;480</y>
+			<w>184</w>
+			<h>353</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>0.5</trans>		
+	</picture>
+	
+	<picture>
+		<file>/Theme/Bat1.png</file>
+		<rect>
+			<x>600</x>
+			<y>10;-30;-70;-110;-70</y>
+			<w>350;350;350;350;260;230;0</w>
+			<h>320;320;320;320;230;200;0</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>		
+	</picture>
+	
+	<picture>
+		<file>/Theme/Bat2.png</file>
+		<rect>
+			<x>100;100;100;75;-80;-70</x>
+			<y>0;0;0;-50;-10;10</y>
+			<w>290;290;290;290;250;150</w>
+			<h>250;250;250;250;210;140</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>		
+	</picture>
+	
+	<picture>
+		<file>/Theme/Bat1.png</file>
+		<rect>
+			<x>1100;1100;1100;1100;1300</x>
+			<y>0;0;0;0;0;0;-35</y>
+			<w>190;190;190;190;110</w>
+			<h>150;150;150;150;80</h>
+		</rect>	
+		<color_factor>1.0</color_factor>
+		<trans>1</trans>		
+	</picture>

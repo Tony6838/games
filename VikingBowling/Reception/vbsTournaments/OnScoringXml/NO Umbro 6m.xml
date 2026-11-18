@@ -1,0 +1,245 @@
+<!--
+	===========================================================================================================
+		Viking - Lag 6m AM 3s BP
+		Filen testas med protkollet Viking.
+		
+		Filnamn:	Lag 6m AM 3s BP MR.xml
+		Datum:		20130913
+						
+		Text1:		Total Diff mellan lagen
+		Text2:		Diff för Banpar 1-2
+		Text3:		Diff för Banpar 3-4
+		Text4:		Diff för Banpar 5-6
+		Text5:
+		Text6:		Lagpoäng för hemmalaget
+		Text7:		Lagpoäng för bortalaget
+		Text8:		Pari (värde)
+		Text9:		Namn på hemmalag
+		Text10:		Namn på bortalag
+		Text11:		Pari (text)
+								
+		Copyright 2013 VBS Bowling AB
+			
+	===========================================================================================================	
+-->
+
+<!-- VBS-T texter -->
+<layer_after_11>
+	<true_type_text>	
+		<id>#VBST_JOB_text6#</id>
+		<text>Lagpoäng Hemma</text>
+		<font>Arial</font>
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<color_pen>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_pen>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<rect>
+			<x>100</x>
+			<y>10;10;5;2</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+		<fontstyle>bold</fontstyle>
+		<align>right</align>
+		<maxsize>0</maxsize>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2</shadow_factor>
+		<pen_width>1</pen_width>
+		<is_text_rec>1</is_text_rec>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text9#</id>
+		<text>Lagnamn Hemma</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>10;10;5;2</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text7#</id>
+		<text>Lagpoäng Borta</text>
+		<align>right</align>	
+		<rect>
+			<x>100</x>
+			<y>40;40;35;20</y>
+			<w>30</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text10#</id>
+		<text>Lagnamn Borta</text>
+		<align>left</align>	
+		<rect>
+			<x>150</x>
+			<y>40;40;35;20</y>
+			<w>200</w>
+			<h>30;30;25;20</h>
+		</rect>
+	</true_type_text>
+	
+	<!-- Total diff mellan lagen -->
+	<picture>
+		<id>#VBST_JOB_text1#</id>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>400</x>
+			<y>5;5;5;2;2;2;2;1</y>
+			<w>70</w>
+			<h>60;60;50;40</h>
+		</rect>
+	</picture>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text1#</id>
+		<text>Lag Diff</text>
+		<align>center</align>
+		<is_text_rec>0</is_text_rec>	
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<rect>
+			<x>410</x>
+			<y>15;15;15;12;12;12;12;11</y>
+			<w>50</w>
+			<h>40;40;30;20</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text11#</id>
+		<text>Pari</text>
+		<align>center</align>
+		<is_text_rec>0</is_text_rec>	
+		<color_fill>
+			<trans>255</trans>
+			<red>255</red>
+			<green>255</green>
+			<blue>255</blue>
+		</color_fill>
+		<rect>
+			<x>475</x>
+			<y>15;15;10;5</y>
+			<w>50</w>
+			<h>15;15;15;10</h>
+		</rect>
+	</true_type_text>
+	<true_type_text>	
+		<id>#VBST_JOB_text8#</id>
+		<text>Pari värde</text>
+		<align>center</align>
+		<is_text_rec>0</is_text_rec>	
+		<rect>
+			<x>475</x>
+			<y>35;35;30;20</y>
+			<w>50</w>
+			<h>20;20;20;15</h>
+		</rect>
+	</true_type_text>
+</layer_after_11>
+
+
+<!-- VBS-T banparsdiffar nedanför protokollen -->
+<bottom_panel_11>
+	<id>DD</id>
+	<y_generate>90;90;90;90;60;60;42;42</y_generate>
+	
+	<!--- Vita rutor för diffar --->
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>85</x>
+			<y>0</y>
+			<w>110</w>
+			<h>85;85;85;85;55;55;40;40</h>
+		</rect>
+	</picture>	
+	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>265</x>
+			<y>0</y>
+			<w>110</w>
+			<h>85;85;85;85;55;55;40;40</h>
+		</rect>
+	</picture>	
+	
+	<picture>
+		<file>C:\viking2001\V3GFX\Resource\Objects\MessageFrameFilled.png</file>
+		<rect>
+			<x>445</x>
+			<y>0</y>
+			<w>110</w>
+			<h>85;85;85;85;55;55;40;40</h>
+		</rect>
+	</picture>
+	
+	
+	<!-- Diffar för resp banpar -->
+	<true_type_text>	
+		<id>#VBST_JOB_text2#</id> <!-- [text9] text=   from the vbst ontop file -->
+		<rect>
+			<x>95</x>
+			<y>15;15;15;15;10;10;10;10</y>
+			<w>90</w>
+			<h>55;55;55;55;35;35;20;20</h>
+		</rect>
+		<color_fill>
+			<trans>255</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_fill>
+		<color_shadow>
+			<trans>155</trans>
+			<red>0</red>
+			<green>0</green>
+			<blue>0</blue>
+		</color_shadow>
+		<fontstyle>bold</fontstyle>
+		<align>center</align>
+		<aspect>0.75</aspect>
+		<halo_factor>0</halo_factor>
+		<shadow_factor>2;2;2;2;2;2;1;1</shadow_factor>
+		<is_text_rec>0</is_text_rec>
+	</true_type_text>
+	
+	<true_type_text>	
+		<id>#VBST_JOB_text3#</id>
+		<rect>
+			<x>275</x>
+		</rect>
+	</true_type_text>
+
+	<true_type_text>	
+		<id>#VBST_JOB_text4#</id>
+		<rect>
+			<x>455</x>
+		</rect>
+	</true_type_text>
+	
+</bottom_panel_11>	
+
+
+	

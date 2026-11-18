@@ -1,0 +1,338 @@
+
+<!--
+	===========================================================================================================
+		Käglor på protokoll 
+	===========================================================================================================	
+-->
+<picture>
+	<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\Triangle.png</file>
+	<id>#ANY_PIN_BG#</id>			
+	<rect>
+		<x>730;
+			 730|730|730|730|1041|245|245|425|600|730</x>
+		<y>690;390</y>
+		<w>460</w>
+		<h>300</h>
+	</rect>	
+	<color_factor>1.0</color_factor>
+	<trans>1</trans>	
+	
+		<layer_after_1>
+
+		</layer_after_1>
+			
+		<layer_after_2>				
+			<!-- Kägelmarkeringar -->		
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla10 --> 
+			<rect>
+				<x>446</x>
+				<y>27</y>
+				<w>80</w>
+				<h>77</h>				
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla9 --> 
+			<rect>
+				<x>326</x>
+				<y>27</y>
+				<w>80</w>
+				<h>77</h>							
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla8 --> 
+			<rect>
+				<x>206</x>
+				<y>27</y>
+				<w>80</w>
+				<h>77</h>								
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla7 --> 
+			<rect>
+				<x>86</x>
+				<y>27</y>
+				<w>80</w>
+				<h>77</h>						
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla6 --> 
+			<rect>
+				<x>386</x>
+				<y>100</y>
+				<w>80</w>
+				<h>77</h>					
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla5 --> 
+			<rect>
+				<x>266</x>
+				<y>100</y>
+				<w>80</w>
+				<h>77</h>						
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla4 --> 
+			<rect>
+				<x>146</x>
+				<y>100</y>
+				<w>80</w>
+				<h>77</h>					
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla3 --> 
+			<rect>
+				<x>326</x>
+				<y>173</y>
+				<w>80</w>
+				<h>77</h>						
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla2 --> 
+			<rect>
+				<x>206</x>
+				<y>173</y>
+				<w>80</w>
+				<h>77</h>					
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_PIN_BG#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BlueRing200Black.png</file> 			<!-- Kägla1 --> 
+			<rect>
+				<x>266</x>
+				<y>238</y>
+				<w>80</w>
+				<h>77</h>				
+			</rect>	
+			</picture>			
+
+			<!-- Käglor -->
+			<picture> 
+			<id>#ANY_PIN_NUM_10#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla10 --> 
+			<rect>
+				<x>445</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>						
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_10#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla10 --> 
+			<rect>
+				<x>445</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>						
+			</rect>	
+			</picture>
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_9#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla9 --> 
+			<rect>
+				<x>325</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>								
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_9#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla9 --> 
+			<rect>
+				<x>325</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>								
+			</rect>	
+			</picture>			
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_8#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla8 --> 
+			<rect>
+				<x>205</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>							
+			</rect>	
+			</picture>	
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_8#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla8 --> 
+			<rect>
+				<x>205</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>							
+			</rect>	
+			</picture>
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_7#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla7 --> 
+			<rect>
+				<x>85</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>						
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_7#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla7 --> 
+			<rect>
+				<x>85</x>
+				<y>14</y>
+				<w>82</w>
+				<h>89</h>						
+			</rect>	
+			</picture>
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_6#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla6 --> 
+			<rect>
+				<x>385</x>
+				<y>87</y>
+				<w>82</w>
+				<h>89</h>					
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_6#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla6 --> 
+			<rect>
+				<x>385</x>
+				<y>87</y>
+				<w>82</w>
+				<h>89</h>					
+			</rect>	
+			</picture>
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_5#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla5 --> 
+			<rect>
+				<x>265</x>
+				<y>87</y>
+				<w>82</w>
+				<h>89</h>								
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_5#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla5 --> 
+			<rect>
+				<x>265</x>
+				<y>87</y>
+				<w>82</w>
+				<h>89</h>								
+			</rect>	
+			</picture>
+
+			<picture> 
+			<id>#ANY_PIN_NUM_4#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla4 --> 
+			<rect>
+				<x>145</x>
+				<y>87</y>
+				<w>82</w>
+				<h>89</h>					
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_4#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla4 --> 
+			<rect>
+				<x>145</x>
+				<y>87</y>
+				<w>82</w>
+				<h>89</h>					
+			</rect>	
+			</picture>
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_3#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla3 --> 
+			<rect>
+				<x>325</x>
+				<y>160</y>
+				<w>82</w>
+				<h>89</h>							
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_3#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla3 --> 
+			<rect>
+				<x>325</x>
+				<y>160</y>
+				<w>82</w>
+				<h>89</h>							
+			</rect>	
+			</picture>
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_2#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla2 --> 
+			<rect>
+				<x>205</x>
+				<y>160</y>
+				<w>82</w>
+				<h>89</h>					
+			</rect>	
+			</picture>
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_2#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla2 --> 
+			<rect>
+				<x>205</x>
+				<y>160</y>
+				<w>82</w>
+				<h>89</h>					
+			</rect>	
+			</picture>
+			
+			<picture> 
+			<id>#ANY_PIN_NUM_1#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200White.png</file> 			<!-- Kägla1 --> 
+			<rect>
+				<x>265</x>
+				<y>225</y>
+				<w>82</w>
+				<h>89</h>				
+			</rect>	
+			</picture>			
+			<picture> 
+			<id>#ANY_RED_PIN_NUM_1#</id>
+			<file>C:\Viking2001\V3GFX\Resource\Pins_On_Protocol\Standard_FHD\BluePin200Red.png</file> 			<!-- Kägla1 --> 
+			<rect>
+				<x>265</x>
+				<y>225</y>
+				<w>82</w>
+				<h>89</h>				
+			</rect>	
+			</picture>						
+	</layer_after_2>	
+</picture>

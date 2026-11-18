@@ -1,0 +1,2 @@
+# Keep every file byte-exact (the copied Viking files are CRLF and Latin-1, and the game was tested that way)
+* -text

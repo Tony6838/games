@@ -1,0 +1,310 @@
+<!--
+	===========================================================================================================
+		Show Names
+	===========================================================================================================	
+-->
+<protocol>
+	<x_generate>1920</x_generate>
+	<y_generate>1080</y_generate>
+
+	<layer_before_1>
+	<picture>
+		<file>VBSHoneycomb.png</file>
+		<rect>
+			<x>0</x>
+			<y>0</y>
+			<w>1920</w>
+			<h>1080</h>
+		</rect>
+	</picture>		
+
+<!--
+	<picture>
+		<file>c:\Viking2001\V3Gfx\Resource\Objects\Welcome.png</file>
+		<rect>
+			<x>381</x>
+			<y>20</y>
+			<w>1158</w>
+			<h>136</h>
+		</rect>
+	</picture>		
+-->
+
+	<picture>
+		<file>c:\Viking2001\V3Gfx\Resource\Objects\PinLeft.png</file>
+		<rect>
+			<x>0</x>
+			<y>500</y>
+			<w>491</w>
+			<h>646</h>
+		</rect>
+	</picture>
+
+	<!-- Bannummer -->
+		<true_type_text>
+				<id>#MESSAGE2#</id>
+			<font>Arial</font>
+			<color_fill>
+				<trans>255</trans>
+				<red>255</red>
+				<green>255</green>
+				<blue>255</blue>
+			</color_fill>
+			<color_pen>
+				<trans>255</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_pen>
+			<color_shadow>
+				<trans>155</trans>
+				<red>0</red>
+				<green>0</green>
+				<blue>0</blue>
+			</color_shadow>
+			<rect>
+				<x>50</x>
+				<y>50</y>
+				<w>160</w>
+				<h>160</h>
+			</rect>
+			<fontstyle>bold</fontstyle>
+			<align>center</align>
+			<maxsize>0</maxsize>
+			<aspect>1</aspect>
+			<halo_factor>0</halo_factor>
+			<shadow_factor>2</shadow_factor>
+			<pen_width>8</pen_width>
+			<is_text_rec>0</is_text_rec>
+		</true_type_text>
+
+	<!-- Startnamn -->
+	<picture>
+		<id>#MESSAGE1#</id>	
+		<file>c:\Viking2001\V3Gfx\Resource\Objects\B1200x110R10.png</file>
+		<rect>
+			<x>260</x>
+			<y>50</y>
+			<w>1400</w>
+			<h>150</h>
+		</rect>			
+		<layer_before_1>
+			<rectangle_fill>
+				<rect>
+					<x>5</x>
+					<y>5</y>
+					<w>1195</w>
+					<h>90</h>
+				</rect>
+				<color>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color>
+			</rectangle_fill>
+		</layer_before_1>
+		<layer_after_1>
+			<true_type_text>
+				<id>#MESSAGE1#</id>
+				<text></text>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<rect>
+					<x>50</x>
+					<y>15</y>
+					<w>1100</w>
+					<h>70</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.95</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>0</shadow_factor>
+				<pen_width>0</pen_width>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>
+		</layer_after_1>
+	</picture>	
+
+<!--
+		The white name panel is sized for the number of names the message actually carries.
+		A ";" separated value is one column per player count, counted from one: the first
+		column is used for one name, the last for eight. CGdiMON::ShowTextMessage counts the
+		names and BitmapFromXml picks the column, so any element in this file can be written
+		that way - not only the two heights below. Fewer columns than counts is allowed, the
+		last one is then used for every count above it.
+		Heights: 152 for one name and 94 more per name after that, which is the row spacing.
+-->
+	<rectangle_fill>
+		<rect>
+			<x>465</x>
+			<y>220</y>
+			<w>990</w>
+			<h>152;246;340;434;528;622;716;810</h>
+		</rect>
+		<color>
+			<trans>255</trans>
+			<red>250</red>
+			<green>250</green>
+			<blue>250</blue>
+		</color>
+	</rectangle_fill>
+			
+	</layer_before_1>
+
+<!-- Players -->
+	<layer_after_1>	
+	
+	<picture>
+		<file>c:\Viking2001\V3Gfx\Resource\Objects\B1000x810R10.png</file>
+		<rect>
+			<x>460</x>
+			<y>220</y>
+			<w>1000</w>
+			<h>152;246;340;434;528;622;716;810</h>
+		</rect>	
+	</picture>
+			
+<!-- Player1 -->
+			<true_type_text>
+				<id>#MESSAGE3#</id>
+				<text></text>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_fill>
+				<rect>
+					<x>495</x>
+					<y>260</y>
+					<w>930</w>
+					<h>75</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>left</align>
+				<aspect>0.95</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>0</shadow_factor>
+				<pen_width>0</pen_width>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>	
+			
+			<true_type_text>
+				<id>#MESSAGE4#</id>
+				<text></text>
+				<rect>
+					<y>+=94</y>
+				</rect>
+			</true_type_text>	
+
+			<true_type_text>
+				<id>#MESSAGE5#</id>
+				<text></text>
+				<rect>
+					<y>+=94</y>
+				</rect>
+			</true_type_text>
+			
+			<true_type_text>
+				<id>#MESSAGE6#</id>
+				<text></text>
+				<rect>
+					<y>+=94</y>
+				</rect>
+			</true_type_text>
+
+			<true_type_text>
+				<id>#MESSAGE7#</id>
+				<text></text>
+				<rect>
+					<y>+=94</y>
+				</rect>
+			</true_type_text>
+
+			<true_type_text>
+				<id>#MESSAGE8#</id>
+				<text></text>
+				<rect>
+					<y>+=94</y>
+				</rect>
+			</true_type_text>
+
+			<true_type_text>
+				<id>#MESSAGE9#</id>
+				<text></text>
+				<rect>
+					<y>+=94</y>
+				</rect>
+			</true_type_text>
+
+			<true_type_text>
+				<id>#MESSAGE10#</id>
+				<text></text>
+				<rect>
+					<y>+=94</y>
+				</rect>
+			</true_type_text>
+
+<!--
+		Start text, open play only: "Banan kommer startas klockan 16:00." or "Banan kommer strax
+		startas." in the reception's language (PlayerNamesMessage.h in the code). Blank when the
+		message carries none - a competition's names, an older reception - and an older Commercial,
+		which does not know the id, leaves it blank too. Under the panel, one column per name count
+		as the panel has: 15 below it and as tall as a name row, except with eight names, where the
+		panel reaches 1030 and leaves 42 above the bottom. Between the two pin pictures (PinLeft ends
+		at 491, PinsRight starts at 1430), centred on the screen, white with a dark edge so it reads
+		on the background.
+-->
+			<true_type_text>
+				<id>#START_TEXT#</id>
+				<text></text>
+				<font>Arial</font>
+				<color_fill>
+					<trans>255</trans>
+					<red>255</red>
+					<green>255</green>
+					<blue>255</blue>
+				</color_fill>
+				<color_shadow>
+					<trans>200</trans>
+					<red>0</red>
+					<green>0</green>
+					<blue>0</blue>
+				</color_shadow>
+				<rect>
+					<x>500</x>
+					<y>387;481;575;669;763;857;951;1036</y>
+					<w>920</w>
+					<h>75;75;75;75;75;75;75;42</h>
+				</rect>
+				<fontstyle>bold</fontstyle>
+				<align>center</align>
+				<aspect>0.95</aspect>
+				<halo_factor>0</halo_factor>
+				<shadow_factor>3;3;3;3;3;3;3;2</shadow_factor>
+				<pen_width>6;6;6;6;6;6;6;4</pen_width>
+				<is_text_rec>1</is_text_rec>
+			</true_type_text>
+	</layer_after_1>
+	
+	<layer_after_2>	
+		<picture>
+		<file>c:\Viking2001\V3Gfx\Resource\Objects\PinsRight.png</file>
+		<rect>
+			<x>1430</x>
+			<y>680</y>
+			<w>723</w>
+			<h>455</h>
+		</rect>
+		</picture>		
+	</layer_after_2>
+	
+</protocol>
