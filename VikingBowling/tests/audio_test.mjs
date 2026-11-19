@@ -8,10 +8,16 @@
 //    converted split; no reaction to a gutter ball, a split, a near miss or a missed spare (the
 //    people have no voices); the human louder than a machine player; and that the
 //    strikes-in-a-row guess made before a ball matches the engine.
+// 4. The lane lights' flash (js/audio/moments.js): at 30 to 144 frames a second, for every flash
+//    the game gives (a spare to a perfect game, and flashes on top of each other), the lights
+//    never go over +85 % and are back at exactly their resting intensity when the flash is over,
+//    with a scene whose gameLights() hands out a new array every call; lights that change during
+//    a flash (a new detail level) are put back first.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import * as S from '../js/audio/synth.js';
 import { classify, earlyClassify, plan, upgrade, strikeStreak, flashFor } from '../js/audio/reactions.js';
+import { LaneFlash, FLASH_GAIN } from '../js/audio/moments.js';
 import { startOpenPlay, globCheckSplit } from '../js/engine/openplay.js';
 
 const outDir = process.argv[2] || null;
@@ -234,6 +240,47 @@ for (const method of ['normal', 'tenth', 'short3', 'notap9', 'mini']) {
 }
 console.log(`  ${strikes} strikes: the early size matches the engine's in ${agree} (${(100 * agree / strikes).toFixed(2)} %)`);
 if (agree / strikes < 0.99) fail('the strikes-in-a-row guess disagrees with the engine too often');
+
+// ---- 4. the lane lights' flash -------------------------------------------------------------------
+console.log('\n4. The lane lights\' flash: at most +85 %, and back to rest exactly');
+{
+  const flashes = [['spare', [[0.25, 1]]], ['strike', [[0.45, 1]]], ['turkey', [[0.75, 2]]], ['perfect game', [[1, 5]]],
+    ['strike, then its upgrade to a double', [[0.45, 1], [0.48, 1, 0.2]]]];
+  const rows = [];
+  for (const fps of [30, 60, 120, 144]) {
+    for (const [what, list] of flashes) {
+      const deck = { intensity: 16 }, lamps = [{ intensity: 6 }, { intensity: 6 }, { intensity: 6 }];
+      const scene = { gameLights: () => [deck, ...lamps] };          // a new array every call, as scene.js once had
+      const f = new LaneFlash(scene), dt = 1 / fps;
+      for (let i = 0; i < 5; i++) f.update(dt);
+      let peak = 0, t = 0;
+      const pending = list.map(([k, n, at = 0]) => ({ k, n, at }));
+      while (t < 4) {
+        for (const p of pending.filter((q) => !q.done && t >= q.at)) { f.trigger(p.k, p.n); p.done = true; }
+        f.update(dt); t += dt;
+        peak = Math.max(peak, deck.intensity / 16);
+      }
+      const back = [deck, ...lamps].every((l, i) => l.intensity === (i ? 6 : 16));
+      rows.push({ fps, flash: what, peak: +peak.toFixed(3), back });
+      if (peak > 1 + FLASH_GAIN + 1e-9) fail(`${fps} fps, ${what}: the lights went up ${(peak * 100 - 100).toFixed(0)} %, more than ${FLASH_GAIN * 100} %`);
+      if (peak < 1.05) fail(`${fps} fps, ${what}: no flash to see (+${(peak * 100 - 100).toFixed(1)} %)`);
+      if (!back) fail(`${fps} fps, ${what}: the lights did not come back to rest (deck lamp ${deck.intensity})`);
+    }
+  }
+  console.table(rows);
+  // the lights change in the middle of a flash (a new detail level): the old ones go back to rest
+  const a = { intensity: 16 }, b = { intensity: 6 }, c = { intensity: 16 };
+  let list = [a, b];
+  const f = new LaneFlash({ gameLights: () => list });
+  f.update(1 / 60); f.trigger(1, 1);
+  for (let i = 0; i < 10; i++) f.update(1 / 60);
+  if (!(a.intensity > 16)) fail('the flash did not brighten the lights');
+  list = [c, b];
+  f.update(1 / 60);
+  if (a.intensity !== 16) fail(`a light let go of during a flash was not put back (${a.intensity})`);
+  for (let i = 0; i < 200; i++) f.update(1 / 60);
+  if (c.intensity !== 16 || b.intensity !== 6) fail(`after lights changed during a flash, they did not come back to rest (${c.intensity}, ${b.intensity})`);
+}
 
 console.log(failures ? `\n${failures} FAILURE(S)` : '\nAll audio checks passed.');
 process.exit(failures ? 1 : 0);

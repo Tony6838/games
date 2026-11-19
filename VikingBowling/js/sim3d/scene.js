@@ -205,7 +205,10 @@ export class BowlingScene {
 
     this.textures = { lane: laneTexture(), approach: approachTexture() };
     this.pinGeo = pinGeometry();
-    this.pinMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 0.9 });
+    // the pins reflect the hall's own environment map (bakeEnvironment), as the lane and the balls
+    // do, not scene.environment: that bright white room lit them evenly from every side, which
+    // flattened their shading and washed the red neck stripes pink
+    this.pinMat = new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1 });
     this.redPinMat = new THREE.MeshPhysicalMaterial({ color: 0xd81e22, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08 });
     this.lanes = new Map();
     this.effects = [];
@@ -222,8 +225,11 @@ export class BowlingScene {
       clearcoatMap: oil, clearcoatRoughnessMap: oil, envMapIntensity: 0.7 });
     this.hall = new Hall({ renderer: this.renderer, scene: this.scene, textures: this.textures, laneMat: this.laneMat, gameXs: xs, base: laneNumbers.base });
     this.hall.build(this.detail);
-    // light over the pin decks and along the lanes
-    const deckLight = new THREE.SpotLight(0xfff4e0, 60, 9, Math.PI / 5, 0.5, 1.2);
+    // light over the pin decks and along the lanes. The intensity is in candela (three.js's
+    // physical light units): 16 cd from 2.3-2.8 m lights the white pins' faces towards the lamp to
+    // just under white after the tone mapping, with their shading and red stripes kept, and leaves
+    // room for the strike flash (moments.js, +85 %); 60 blew the pins and the deck out to white
+    const deckLight = new THREE.SpotLight(0xfff4e0, 16, 9, Math.PI / 5, 0.5, 1.2);
     deckLight.position.set((xs[0] + xs[xs.length - 1]) / 2, 2.6, -LANE.headPin + 2.0);
     deckLight.target.position.set(deckLight.position.x, 0, -LANE.headPin - 0.4);
     deckLight.shadow.mapSize.set(LOW_END ? 512 : 1024, LOW_END ? 512 : 1024);
@@ -286,6 +292,9 @@ export class BowlingScene {
     this.laneMat.needsUpdate = true;
     for (const l of this.lanes.values()) { l.ball.material.envMap = env; l.ball.material.needsUpdate = true; }
     if (this.hall.mats.ball) this.hall.mats.ball.envMap = env;
+    // the game's pins, and the approach (lit by scene.environment, the white room, it showed hardly
+    // any wood colour beside the lanes)
+    for (const m of [this.pinMat, this.redPinMat, this.hall.mats.appr]) if (m) { m.envMap = env; m.needsUpdate = true; }
   }
 
   // ---- detail level ------------------------------------------------------------
@@ -459,9 +468,11 @@ export class BowlingScene {
 }
 
 // The lights over the game's lanes (the pin-deck lamp and the lamps behind the valances), for
-// js/audio/moments.js, which brightens them for a moment on a strike
+// js/audio/moments.js, which brightens them for a moment on a strike. The same array every call
+// (they are made once, in buildHall)
 BowlingScene.prototype.gameLights = function () {
-  return this.deckLight ? [this.deckLight, ...(this.lampLights || [])] : [];
+  if (!this.deckLight) return [];
+  return this.gameLightList || (this.gameLightList = [this.deckLight, ...(this.lampLights || [])]);
 };
 
 // The lane number on a game lane's masking unit

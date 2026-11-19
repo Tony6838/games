@@ -240,14 +240,20 @@ for the lane and approach wood, to the download, and nothing else.
 middle, joined by dovetails (a synthetic lane prints the same pattern), with grain; the
 approach is maple boards in line with the lane's. The finish is a clear coat whose gloss
 follows the oil: glossy over the 40 ft pattern, duller on the dry back end (a clear-coat map).
-The lane and the balls reflect an environment map rendered once from the hall; on the high
+The lane, the approach, the balls and the game's pins reflect an environment map rendered once
+from the hall (not three.js's bright neutral room, `scene.environment`, which lit the pins evenly
+from every side, washed their red stripes pink and left the approach almost white); on the high
 level the lanes also mirror the pin decks, the masking units, the TVs and the lamps (a planar
 reflection at half resolution, weighted by the Fresnel term and weaker on the dry back end).
 The valances' light on the lanes and the brighter pin decks are a light map, not extra lamps;
 the masking band, the TVs, the neon and the lamp lines are emissive, so the hall is dark and the
-lanes glow. Shadows: on the high level the pin-deck lamp casts its soft shadows as before; every
-ball has a soft contact shadow (a blob) on the lane, the approach and in the gutter; on the low
-level the pins have blobs too and no shadow pass is drawn.
+lanes glow. The pin-deck lamp is a spot light of 16 cd (three.js's physical units, ACES tone
+mapping at exposure 1.05): the white pins' faces towards it come out just under white, so they
+keep their shading and red stripes, and the strike flash (+85 %, "The lights" below) still
+clips almost nothing (at 60 cd the pins and the deck were blown out). Shadows: on the high level
+the pin-deck lamp casts its soft shadows as before; every ball has a soft contact shadow (a blob)
+on the lane, the approach and in the gutter; on the low level the pins have blobs too and no
+shadow pass is drawn.
 
 **Life.** Every 3.5-9.5 s a ball rolls down a lane two to seven lanes from the game's lanes:
 the pins fall, the rake sweeps, the table lifts the leave or lowers a new rack. It is seeded, so
@@ -701,7 +707,11 @@ reaction comes with the score.
 **The lights.** On a big ball for the player the lights over the lane pair (the pin-deck lamp
 and the lamps behind the valances, `scene.gameLights()`) brighten for a moment and fade back
 within a second: a spare a little, a strike more, a turkey in two pulses, four in a row in three,
-a perfect game in five (`js/audio/moments.js`). Only light intensities change.
+a perfect game in five (`js/audio/moments.js`). Only light intensities change. A flash scales the
+lights' resting intensities, at most +85 %, and puts them back exactly when it is over, at any
+frame rate (`tests/audio_test.mjs` checks it at 30-144 fps). Until 2026-11-19 every frame of a
+flash took the brightened lights as the resting ones, so one strike left them thousands of times
+too bright - more on a faster screen - and the lanes, the approach and the pins turned white.
 
 ### Controls
 
@@ -1079,7 +1089,7 @@ teams, points, pins, leader) is printed by the test.
 | `node tools/make_tv_media.mjs [baseUrl] [previewDir]` | makes the TV animations (not a test) |
 | `node tests/motion_test.mjs`, `tests/motion_browser.mjs`, `tests/motion_android.mjs` | throwing by swinging the phone: see "Throwing by swinging the phone" |
 | `node tests/shoot.mjs <spec>` | headless Edge screenshots (the specs used are described below) |
-| `node tests/audio_test.mjs [outDir]` | the sound, in node: renders every sound (no NaN, no clipping, no DC, each in its band; the room tone at its level and seamless; with `outDir` each is written as a WAV to listen to); no human voice: no voice synthesis left in `synth.js` and no reaction made of anything but applause and whistles; balls scored by the game's engine give the right reactions (a strike, a double, a turkey, four in a row, a perfect game, a spare, a converted split, No Tap 9; nothing for a gutter ball, a split, a near miss with the 10 and with the 5, one pin left of a spare, a missed spare, an open frame); the player's reactions louder than a machine player's, a bigger strike bigger; the strikes-in-a-row guess made before the ball against the engine's count after it (8,732 strikes in five game types: 100 % the same) |
+| `node tests/audio_test.mjs [outDir]` | the sound, in node: renders every sound (no NaN, no clipping, no DC, each in its band; the room tone at its level and seamless; with `outDir` each is written as a WAV to listen to); no human voice: no voice synthesis left in `synth.js` and no reaction made of anything but applause and whistles; balls scored by the game's engine give the right reactions (a strike, a double, a turkey, four in a row, a perfect game, a spare, a converted split, No Tap 9; nothing for a gutter ball, a split, a near miss with the 10 and with the 5, one pin left of a spare, a missed spare, an open frame); the player's reactions louder than a machine player's, a bigger strike bigger; the strikes-in-a-row guess made before the ball against the engine's count after it (8,732 strikes in five game types: 100 % the same); the lane lights' flash at 30, 60, 120 and 144 frames a second, from a spare to a perfect game: never over +85 %, and back at exactly the resting intensity afterwards (also when the lights change during a flash) |
 | `node tests/audio_browser.mjs <url> <outDir> [mobile] [cpu] [quick]` | the sound in headless Edge with the browsers' own autoplay rules, the game served from a sub-path (`node tests/serve.mjs 8790 <folder holding games/VikingBowling>`, then `http://127.0.0.1:8790/games/VikingBowling/`): no AudioContext and no sound before the first gesture, one context created in it and running; every sound rendered, no voice among them, the room tone running; a full EUR and a full AMR game in 3D (the player by test throws, two machine players), where every scored ball with a reaction got it, the early reactions came 0.6 s or more (median 1.5 s) before the score, the impacts grew with the pins down, the far lanes were heard and every sound played came from a bank that is not a voice; every reaction played through the shared game events with the engine's result and recorded from the output as a WAV (a turkey louder than a strike, a perfect game louder than a turkey, the player's strike more than 1.5 times a machine player's, a bad ball nothing over the room tone, two strikes never the same sound); mute and volume, remembered over a reload, and no AudioContext while muted; the frame time with the sound on and muted on the low detail level; no exception or console error |
 
 ## Screenshots
