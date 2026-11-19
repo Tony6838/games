@@ -1,44 +1,50 @@
 // ---------------------------------------------------------------------------
-// input.js - the throw: a swipe with a finger or the mouse.
+// input.js - the throw: grip the ball with a finger or the mouse, and let go.
 //
-// Two gestures that cannot be mistaken for each other:
-//   place   press and HOLD still (0.4 s), then drag: the ball follows the finger across
-//           the approach (left/right) and back from the foul line (forward/back), like
-//           choosing where to stand. Letting go places it; it never throws. The arrow keys
-//           do the same (left/right, up/down).
-//   throw   press and move at once. A swipe up towards the pins throws; it may start with
-//           a pull-back (drag the ball back towards you first, a backswing): the pull-back's
-//           length and speed add some power, capped. Letting go during the pull-back,
-//           before any push forward, cancels: no throw.
-// The forward swipe decides the throw:
-//   speed   how fast the finger moved over the last 120 ms of the swipe, in physical units
-//           (mm/s: CSS pixels over the device's pixels per millimetre), so the same finger
-//           speed gives the same ball on a phone, a tablet and a desktop, in portrait and in
-//           landscape; mapped on a logarithmic curve, see launchSpeed()
-//   line    which way the swipe pointed (a few degrees either side)
-//   hook    how much the swipe curved at the end: curve to the left and the ball hooks
-//           left, as a right-hander's ball does; to the right, a left-hander's
-// A swipe that is too short or too slow is not a throw ("too weak").
+// A press on the lane grips the ball at once: a hand holds it (an SVG drawn over the ball, as
+// a bowler's thumb and two fingers sit in the holes). The ball follows the slow part of the
+// drag (slower than followMmS, a clutch: a quick stroke leaves it in the hand where it stood)
+// across the approach and back from the foul line. Everything is decided when the finger lifts,
+// by its release velocity - how it moved over the last releaseMs before the lift:
+//   throw   forward (within maxReleaseDeg of straight up the screen), at weakMmS or faster, at
+//           the end of a forward stroke of minSwingMm or more:
+//     speed   the release speed in physical units (mm/s: CSS pixels over the device's pixels
+//             per millimetre), so the same finger speed gives the same ball on a phone, a
+//             tablet and a desktop, in portrait and in landscape; on a logarithmic curve,
+//             launchSpeed()
+//     line    the release velocity's direction, compressed (lineK) to a few degrees
+//     spin    the curve of the path near the release (the heading's turn over its last
+//             curveMm): curving to the left is a right-hander's release, side rotation that
+//             hooks the ball to the left in the dry back end (physics.js); a straight push
+//             gives none. On a phone, a twist of the phone at the release adds to it
+//             (counterclockwise as the player sees the screen = to the left), as the swing's
+//             wrist turn does - read from devicemotion only where it comes without asking
+//   place   anything else: a slow drag and lift, a sideways or backward release, a finger
+//           that stopped before it lifted. The ball stays where it was let go: that is how
+//           the player chooses where to stand. The arrow keys move it too.
+//   weak    a quick forward flick shorter than minSwingMm ("too weak"); the ball stays.
+// A throw does not move the stance: the next ball waits where this one was gripped.
 //
 // Every sample is timed by the event's own clock (e.timeStamp: when the finger was there),
 // not by when the page got round to handling it, and every point the browser coalesced
 // into one pointermove is used. On a slow device (a few frames a second) the events of a
 // swipe are handled in bursts, late; timed by performance.now() the swipe looked slow and
-// was refused as too weak. The pointer-up only ends the gesture: it is not a sample.
-// The hold that starts placing is decided by the same clock: a finger that had already
-// moved within the hold time is a throw, even if its moves are handled after the hold timer.
+// was refused as too weak. The pointer-up only ends the gesture: it is not a sample, but its
+// time says whether the finger had stopped before it let go.
 // A browser whose main thread is that busy may also give up a touch's pointer stream
 // (pointercancel) while it goes on delivering the same touch as touch events; the swipe
 // then continues with those, and only a touchcancel really cancels it.
 //
 // On a phone or tablet with motion sensors the throw is by default a swing of the phone
-// (js/sim3d/motion.js, the "Kast" setting: Auto / Rörelse / Svep); placing the ball (hold and
-// drag, the arrow keys) works the same in both. A swing's speed is put on the swipe's own
-// speed curve (motionParams below), so both give the same range of balls.
+// (js/sim3d/motion.js, the "Kast" setting: Auto / Rörelse / Svep); gripping and dragging the
+// ball to move it (and the arrow keys) works the same in both, but with the swing a release on
+// the lane does not throw. A swing's speed is put on the swipe's own speed curve (motionParams
+// below), so both give the same range of balls.
 // Every throw released by the player, swipe or swing, is announced on the game's events
 // (js/game/events.js) as 'throwRelease' { human: true, input: 'swipe' | 'motion', speed, angle, side }.
 // ---------------------------------------------------------------------------
-import { MOTION, MotionThrow, motionCapable, motionPossible, motionRefusedBefore } from './motion.js';
+import { MOTION, MotionThrow, FRAMES, motionCapable, motionPossible, motionRefusedBefore } from './motion.js';
+import { LANE } from './physics.js';
 import { gameEvents } from '../game/events.js';
 
 // Where the ball may stand: across the lane (m from its middle) and behind the foul line (m)
@@ -46,23 +52,38 @@ export const STANCE = { maxX: 0.42, zMin: 0.35, zMax: 4.4 };
 
 // The gesture and the throw. Distances in mm and speeds in mm/s of the finger on the screen.
 export const THROW = {
-  holdMs: 400,          // press this long without moving to place the ball
-  slopMm: 1.7,          // movement that still counts as holding still
-  startMm: 5.5,         // movement up (or down: a pull-back) that starts a throw
-  minSwingMm: 17,       // a forward swipe shorter than this is too weak
-  weakMmS: 50,          // a forward swipe slower than this is too weak
+  releaseMs: 70,        // the release velocity: the finger's movement over the last 70 ms before the lift
+                        // (4 samples of a 60 Hz touch screen; a longer window mixes a late flick with the drag before it)
+  restMs: 100,          // a finger that has not moved for this long before it lifts stopped: no throw
+  followMmS: 120,       // the ball follows the drag while the finger is slower than this (over followMs)
+  followMs: 60,
+  maxReleaseDeg: 50,    // a release more than this off straight up the screen is sideways: no throw
+  minSwingMm: 17,       // a forward stroke shorter than this is too weak
+  weakMmS: 50,          // a forward release slower than this does not throw (the ball is placed)
   // launch speed (m/s) = vMin + vPerLn * ln(f / weakMmS), f clamped to weakMmS..topMmS:
   //   50 mm/s 3.3 (10 km/h down the lane), 170 mm/s 5.0, 400 mm/s 6.25, 700 mm/s 7.05,
   //   1200 mm/s 7.8, 2000 mm/s and faster 8.54 (29 km/h)
   vMin: 3.3, vPerLn: 1.42, topMmS: 2000,
-  // the pull-back: up to boostMax m/s more, for a pull-back of boostFullMm at boostFullMmS
-  boostMax: 0.9, boostFullMm: 30, boostFullMmS: 400,
-  vCap: 9.0,            // the fastest ball, pull-back included
-  // side rotation: the swipe's curve gives up to 20 rad/s; at sideRefSpeed it is sideAtRef of
-  // that, and it grows with speed^sidePow (a quicker arm turns the ball more, but less than in
-  // proportion: a slower ball still hooks further and enters the pins at a steeper angle)
+  vCap: 9.0,            // the fastest ball
+  // the line: the release direction (rad, 0 = straight up the screen) times lineK, within lineMax:
+  // 10 degrees off straight is 0.0087 rad, 16 cm at the head pin (the pocket for a straight ball
+  // from the middle is 4 degrees right). A curve turns the release direction too: a hook is
+  // released aimed right and curved left, as a bowler plays out and lets the ball come back
+  lineK: 0.05, lineMax: 0.06,
+  // the spin from the curve: the heading's turn between the two halves of the path's last curveMm
+  // before the release, a dead zone of curveDeadRad, then curvePerRad rad/s of side rotation per
+  // radian of turn (a gentle curve, 15 degrees: about 5 rad/s on a 7 m/s ball, 17 cm of hook)
+  curveMm: 30, curveDeadRad: 0.05, curvePerRad: 28,
+  // the phone's twist at the release (about the axis through the screen, the last twistMs):
+  // the swing's own wrist-turn mapping (motion.js MOTION: 180 ms, an 8 degree dead zone, then
+  // 18 rad/s per radian)
+  twistMs: MOTION.twistMs, twistDeadDeg: MOTION.twistDeadDeg, twistPerRad: MOTION.sidePerRad,
+  sideMax: 20,          // curve and twist together, before sideFactor
+  // side rotation grows with speed: at sideRefSpeed it is sideAtRef of the raw value, and it
+  // grows with speed^sidePow (a quicker arm turns the ball more, but less than in proportion: a
+  // slower ball still hooks further and enters the pins at a steeper angle)
   sideRefSpeed: 7.05, sideAtRef: 0.69, sidePow: 0.6,
-  placeXPerMm: 0.0175,  // placing: metres across the lane per mm of finger travel (the lane's width in 48 mm)
+  placeXPerMm: 0.0175,  // the drag: metres across the lane per mm of finger travel (the lane's width in 48 mm)
   placeZPerMm: 0.074    // ... and metres back per mm (the stance's depth in 55 mm)
 };
 
@@ -150,6 +171,116 @@ function stamp(e) {
 }
 
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const deadZone = (v, d) => Math.sign(v) * Math.max(0, Math.abs(v) - d);
+
+// ---- the phone's twist at the release --------------------------------------------------------
+// How far the phone turned about the axis through its screen over the last twistMs before tUp
+// (deg, + = counterclockwise as the player sees the screen: the right-hand rule about z, which
+// points out of the screen). samples: [{ t (ms, the events' clock), z (deg/s) }]. null when the
+// sensor did not follow the release (fewer than 3 samples in the window, or none near the lift).
+export function gripTwistDeg(samples, tUp, ms = THROW.twistMs) {
+  if (!samples || samples.length < 3) return null;
+  const t0 = tUp - ms;
+  let i = samples.length - 1;
+  while (i > 0 && samples[i].t > tUp + 20) i--;
+  if (tUp - samples[i].t > 60) return null;
+  let deg = 0, n = 0;
+  for (; i > 0 && samples[i].t > t0; i--) {
+    const a = samples[i - 1], b = samples[i];
+    const ta = Math.max(a.t, t0);
+    deg += (a.z + b.z) / 2 * (b.t - ta) / 1000;
+    n++;
+  }
+  return n >= 2 ? deg : null;
+}
+
+// The side rotation (rad/s, before sideFactor; + hooks left) of a twist of `deg` degrees
+export function twistSideRaw(deg) {
+  return deg === null || deg === undefined ? 0 : deadZone(deg, THROW.twistDeadDeg) * Math.PI / 180 * THROW.twistPerRad;
+}
+
+// The phone's rotation rate about the axis through the screen, from devicemotion, while the ball
+// can be thrown. Only listened to where the motion events come without asking (Android) or were
+// allowed on this page already (iOS, the swing's card): adding a listener never asks. Which of
+// rotationRate's alpha/beta/gamma is that axis: what the swing's tracker found from its data
+// when it has run on this page (motion.js FRAMES), else Chromium's order (gamma; the README's
+// "Throwing by swinging the phone"), and on iPhone and iPad the standard's (alpha).
+class TwistSensor {
+  constructor(input) {
+    this.input = input;
+    this.samples = [];
+    this.on = false;
+    this.onMotion = (e) => this.push(e);
+  }
+  start() {
+    if (this.on || typeof window === 'undefined' || !motionCapable()) return;
+    this.on = true;
+    this.samples.length = 0;
+    window.addEventListener('devicemotion', this.onMotion);
+  }
+  stop() {
+    if (!this.on) return;
+    this.on = false;
+    window.removeEventListener('devicemotion', this.onMotion);
+    this.samples.length = 0;
+  }
+  frame() {
+    const m = this.input.motion, T = m && m.tracker;
+    if (T && T.gyroEvents > 30) return T.frame;
+    const nav = typeof navigator !== 'undefined' ? navigator : {};
+    const ua = nav.userAgent || '';
+    return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && (nav.maxTouchPoints || 0) > 1) ? 2 : 0;
+  }
+  push(e) {
+    const r = e.rotationRate;
+    if (!r || typeof r.alpha !== 'number' || typeof r.beta !== 'number' || typeof r.gamma !== 'number') return;
+    const z = FRAMES[this.frame()].f(r)[2];
+    if (!isFinite(z)) return;
+    const t = stamp(e);
+    this.samples.push({ t, z });
+    while (this.samples.length > 2 && t - this.samples[0].t > 1000) this.samples.shift();
+  }
+  twistAt(tUp) { return this.on ? gripTwistDeg(this.samples, tUp) : null; }
+}
+
+// ---- the hand on the ball ------------------------------------------------------------------
+// A right hand from behind, gripping the ball as a bowler does: the thumb up in the thumb hole,
+// the middle and ring fingers in the finger holes, the index and little fingers on the ball, the
+// wrist towards the player. Drawn for this game; the ball is the circle of radius 50 round (0, 0).
+const HAND_SVG = `<svg viewBox="-70 -60 140 190" width="140" height="190" aria-hidden="true">
+<defs>
+<linearGradient id="vbgSkin" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3C6A0"/><stop offset="1" stop-color="#D49A72"/></linearGradient>
+<linearGradient id="vbgArm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DDA47A"/><stop offset="0.5" stop-color="#DDA47A" stop-opacity="0.85"/><stop offset="1" stop-color="#DDA47A" stop-opacity="0"/></linearGradient>
+<radialGradient id="vbgHole" cx="0.5" cy="0.3" r="0.7"><stop offset="0" stop-color="#030304"/><stop offset="1" stop-color="#262830"/></radialGradient>
+</defs>
+<g stroke-linejoin="round" stroke-linecap="round">
+<ellipse cx="-11" cy="-27" rx="8.5" ry="7" fill="url(#vbgHole)"/>
+<ellipse cx="-9" cy="1" rx="7.5" ry="6" fill="url(#vbgHole)"/>
+<ellipse cx="10" cy="2" rx="7.5" ry="6" fill="url(#vbgHole)"/>
+<path d="M-16 58 C-18 80 -20 100 -22 128 L22 128 C20 100 18 80 16 58 Z" fill="url(#vbgArm)"/>
+<g fill="url(#vbgSkin)" stroke="#5B3421" stroke-width="2.4">
+<path d="M-21 27 C-28 23 -33 15 -35 7 C-36 1 -31 -2 -27 2 C-23 7 -19 14 -14 21 Z"/>
+<path d="M21 29 C27 25 31 18 32 12 C33 6 27 4 25 9 C23 14 20 20 16 25 Z"/>
+<path d="M-26 30 C-29 12 -23 -10 -17.5 -24 C-16 -29 -6 -29 -5.5 -23 C-6 -12 -9 6 -11 24 Z"/>
+<path d="M-15 24 L-15 3 C-15 -4 -3 -4 -3 3 L-3 24 Z"/>
+<path d="M4 25 L4 4 C4 -3 16 -3 16 4 L16 25 Z"/>
+<path d="M-16 60 C-26 51 -30 36 -27 25 C-25 18 -18 17 -10 18 C-2 19 7 19 15 18 C23 17 29 21 28 31 C27 44 23 53 16 60 Z"/>
+</g>
+<path d="M-19.5 -27 A8.5 7 0 0 1 -2.5 -27 Z M-16.5 1 A7.5 6 0 0 1 -1.5 1 Z M2.5 2 A7.5 6 0 0 1 17.5 2 Z" fill="url(#vbgHole)"/>
+<path d="M-19.5 -27 A8.5 7 0 0 1 -2.5 -27 M-16.5 1 A7.5 6 0 0 1 -1.5 1 M2.5 2 A7.5 6 0 0 1 17.5 2" fill="none" stroke="#A3A9B6" stroke-width="2"/>
+<path d="M-21 22 C-17 19.5 -13 19.5 -10 21.5 M-5 21.5 C-1 19.5 3 19.5 6 21.5 M11 22 C15 20 19 20 22 23" fill="none" stroke="#B27C58" stroke-width="1.8"/>
+</g>
+</svg>`;
+
+function makeHand() {
+  if (typeof document === 'undefined' || !document.body) return null;
+  const d = document.createElement('div');
+  d.id = 'gripHand';
+  d.className = 'gripHand';
+  d.innerHTML = HAND_SVG;
+  document.body.appendChild(d);
+  return d;
+}
 
 // A world point on the screen (CSS px) through a three.js camera's matrices; null behind it
 function projectPoint(cam, x, y, z, w, h) {
@@ -164,8 +295,10 @@ export class SwipeInput {
   constructor(element, overlay, handlers) {
     this.el = element;
     this.overlay = overlay;               // a canvas over the 3D view for the trail
-    this.h = handlers;                    // { onPosition(x0, z0), onThrow(params), onAim(partial), onWeak(), onMisplace(),
-                                          //   onHint(i18nKey, ms), onChooseSwipe(), onModeChange() }
+    this.h = handlers;                    // { onPosition(x0, z0), onThrow(params), onAim(partial), onWeak(),
+                                          //   onHint(i18nKey, ms), onChooseSwipe(), onModeChange(),
+                                          //   onMode(mode, info): 'ready' | 'grip' | 'off' (the hints, js/game/modehint.js),
+                                          //   onBlocked({ x, y }): a press on the lane while no throw can come }
     this.enabled = false;
     this.useMotion = false;               // the throw is a swing of the phone (motion.js), not a swipe
     this.motion = null;
@@ -175,6 +308,8 @@ export class SwipeInput {
     this.maxX = STANCE.maxX;
     this.pxmm = 6;
     this.ctx = overlay.getContext('2d');
+    this.twist = new TwistSensor(this);
+    this.hand = null;                     // the hand on the ball (made at the first grip)
     element.addEventListener('pointerdown', (e) => this.down(e));
     // a long press must not open the browser's menu
     element.addEventListener('contextmenu', (e) => { if (this.enabled) e.preventDefault(); });
@@ -193,8 +328,18 @@ export class SwipeInput {
     this.z0 = clamp(z0, STANCE.zMin, STANCE.zMax);
     this.clearTrail();
     if (this.useMotion && !this.motion.show()) this.useMotion = false;
+    this.syncTwist();
+    this.mode('ready');
   }
-  disable() { this.enabled = false; this.active = false; this.clearHold(); this.clearTrail(); if (this.motion) this.motion.hide(); }
+  disable() {
+    this.enabled = false; this.active = false; this.grip(false); this.clearTrail(); this.twist.stop();
+    if (this.motion) this.motion.hide();
+    this.mode('off');
+  }
+  // the phone's twist is read while a grip throw can come
+  syncTwist() { if (this.enabled && !this.useMotion) this.twist.start(); else this.twist.stop(); }
+  // the input's mode, for the hints (js/game/modehint.js)
+  mode(m, info = null) { if (this.h.onMode) this.h.onMode(m, info); }
 
   // The way to throw: 'auto' (a swing on a phone or tablet with motion sensors, unless they were
   // found missing or refused here before; else the swipe), 'motion' or 'swipe'. retry: the
@@ -209,6 +354,8 @@ export class SwipeInput {
     if (this.enabled && was !== this.useMotion) {
       if (this.useMotion) { if (!this.motion.show()) this.useMotion = false; }
       else if (this.motion) this.motion.hide();
+      this.syncTwist();
+      this.mode('ready');
     }
   }
   makeMotion() {
@@ -238,6 +385,8 @@ export class SwipeInput {
   motionFailed(key) {
     this.useMotion = false;
     this.hint(key, 6500);
+    this.syncTwist();
+    if (this.enabled) this.mode('ready');
     if (this.h.onModeChange) this.h.onModeChange();
   }
   // ... and back (a permission granted after its timeout): the swing as the setting says, the note gone
@@ -305,7 +454,8 @@ export class SwipeInput {
   }
 
   down(e) {
-    if (!this.enabled || e.button > 0) return;
+    if (e.button > 0) return;
+    if (!this.enabled) { if (this.h.onBlocked) this.h.onBlocked({ x: e.clientX, y: e.clientY }); return; }
     if (this.motion && this.motion.press) return;      // the thumb is on the swing button
     this.active = true;
     this.viaTouch = false;
@@ -315,28 +465,14 @@ export class SwipeInput {
     this.startX0 = this.x0;
     this.startZ0 = this.z0;
     this.tDown = stamp(e);
-    this.samples = [{ x: e.clientX, y: e.clientY, t: this.tDown, ph: 'pending' }];
-    this.phase = 'pending';               // pending -> place | start -> pull -> swing | swing
-    this.armed = false;
-    this.swingStart = 0;
-    this.bottom = 0;
-    this.pullPx = 0;
-    this.pullPeakPxS = 0;
-    this.clearHold();
-    this.holdTimer = window.setTimeout(() => this.arm(), THROW.holdMs);
+    this.samples = [{ x: e.clientX, y: e.clientY, t: this.tDown, fast: false }];
+    // the clutch: the ball follows the finger from here while it moves slowly
+    this.anchor = { x: e.clientX, y: e.clientY, x0: this.x0, z0: this.z0 };
+    try { if (navigator.vibrate) navigator.vibrate(10); } catch (err) { /* no vibration */ }
+    this.grip(true);
+    this.mode('grip');
     e.preventDefault();
   }
-
-  // The hold time has passed with the finger still: show that the ball is picked up (the
-  // events' own times confirm it when the finger moves)
-  arm() {
-    this.holdTimer = 0;
-    if (!this.active || this.phase !== 'pending') return;
-    this.armed = true;
-    try { if (navigator.vibrate) navigator.vibrate(12); } catch (err) { /* no vibration */ }
-    this.drawTrail();
-  }
-  clearHold() { if (this.holdTimer) { window.clearTimeout(this.holdTimer); this.holdTimer = 0; } }
 
   move(e) {
     if (!this.active || e.pointerId !== this.pointerId) return;
@@ -354,47 +490,26 @@ export class SwipeInput {
       this.addSample(s);
     }
     this.drawTrail();
-    if (this.phase === 'swing' && this.h.onAim && !this.useMotion) {
-      const p = this.params(false);
-      if (p) this.h.onAim(p);
+    // the aim line (Siktlinje) while a throw is under way: the ball as if it were let go now
+    if (this.h.onAim && !this.useMotion) {
+      const last = this.samples[this.samples.length - 1];
+      const r = last.fast ? this.releaseOf(last.t, false) : null;
+      if (r && r.kind === 'throw') this.h.onAim(r.p);
     }
   }
 
   addSample(s) {
-    const first = this.samples[0];
-    const mm = this.pxmm;
-    if (this.phase === 'pending') {
-      if (Math.hypot(s.x - first.x, s.y - first.y) > THROW.slopMm * mm) {
-        // still for the whole hold time (by the events' clock): placing; moved sooner: a throw
-        this.phase = s.t - this.tDown >= THROW.holdMs ? 'place' : 'start';
-        this.armed = false;
-        this.clearHold();
-      }
-    }
-    s.ph = this.phase;
-    this.samples.push(s);
-    const i = this.samples.length - 1;
-    if (this.phase === 'place') {
-      this.place(this.startX0 + (s.x - first.x) / mm * THROW.placeXPerMm, this.startZ0 + (s.y - first.y) / mm * THROW.placeZPerMm);
-      return;
-    }
-    if (this.phase === 'start') {
-      const up = (first.y - s.y) / mm;
-      if (-up > THROW.startMm) this.phase = 'pull';
-      else if (up > THROW.startMm) { this.phase = 'swing'; this.swingStart = this.lowest(0, i); }
-      s.ph = this.phase;
-    }
-    if (this.phase === 'pull') {
-      if (s.y >= this.samples[this.bottom].y) this.bottom = i;
-      this.pullPx = Math.max(this.pullPx, s.y - first.y);
-      // the pull-back's speed: over the last 60 ms (or what there is of it)
-      let k = i;
-      while (k > 0 && s.t - this.samples[k].t < 60) k--;
-      const dt = Math.max(16, s.t - this.samples[k].t);
-      this.pullPeakPxS = Math.max(this.pullPeakPxS, (s.y - this.samples[k].y) / (dt / 1000));
-      // pushed forward from the lowest point: the swing starts there
-      if ((this.samples[this.bottom].y - s.y) / mm > THROW.startMm) { this.phase = 'swing'; this.swingStart = this.bottom; s.ph = 'swing'; }
-    }
+    const S = this.samples, mm = this.pxmm;
+    // the finger's speed over the last followMs (by the events' clock)
+    let k = S.length - 1;
+    while (k > 0 && s.t - S[k].t < THROW.followMs) k--;
+    const dt = Math.max(1, s.t - S[k].t);
+    s.fast = Math.hypot(s.x - S[k].x, s.y - S[k].y) / mm / (dt / 1000) >= THROW.followMmS;
+    S.push(s);
+    const A = this.anchor;
+    // a quick stroke: the ball stays in the hand where it is (the clutch slips)
+    if (s.fast) { A.x = s.x; A.y = s.y; A.x0 = this.x0; A.z0 = this.z0; return; }
+    this.place(A.x0 + (s.x - A.x) / mm * THROW.placeXPerMm, A.z0 + (s.y - A.y) / mm * THROW.placeZPerMm);
   }
 
   // The sample nearest the player (largest y) between a and b
@@ -409,34 +524,92 @@ export class SwipeInput {
     this.finish(e);
   }
 
+  // The finger lifts: a throw, a too short flick, or the ball placed where it was let go
   finish(e) {
     this.active = false;
     this.viaTouch = false;
-    this.clearHold();
-    // The pointer-up is not a sample: it is handled as late as the moves, and its point is
-    // the last move's. Only a finger that rested before it let go (by the events' own
-    // clock) makes the swipe end without speed.
-    const lastMove = this.samples[this.samples.length - 1];
-    const rested = lastMove && stamp(e) - lastMove.t > 300;
-    const p = this.phase === 'swing' && !rested ? this.params(true) : null;
+    const tUp = stamp(e);
+    const r = this.releaseOf(tUp, true);
+    this.grip(false);
     window.setTimeout(() => this.clearTrail(), 350);
-    // with motion control a swipe does not throw: say how it is done (placing still works)
-    if (this.useMotion && this.phase === 'swing') this.hint('motionUseButton', 5000);
-    else if (p) this.release(p, 'swipe');
-    else if (this.phase === 'swing') this.h.onWeak && this.h.onWeak();
-    else if (this.phase === 'start' && lastMove && Math.abs(lastMove.x - this.samples[0].x) / this.pxmm > 8) {
-      // a quick sideways slide (how the ball was moved before): say how it is moved now
-      this.h.onMisplace && this.h.onMisplace();
+    // with motion control a release on the lane does not throw: say how it is done (the ball
+    // stays where it was let go: moving it works the same)
+    if (r.kind === 'throw' && this.useMotion) { this.hint('motionUseButton', 5000); r.kind = 'nothrow'; }
+    if (r.kind === 'throw') {
+      const sx = this.startX0, sz = this.startZ0;
+      this.release(r.p, 'swipe');
+      // the stance stays where the ball was gripped: a throw's own drag does not move the player
+      this.x0 = sx; this.z0 = sz;
+      this.h.onPosition && this.h.onPosition(sx, sz);
+      return;
     }
-    // placing ends here; a press, a sideways slide or a pull-back without a push is no throw
+    if (r.kind === 'weak') this.h.onWeak && this.h.onWeak();
+    if (this.enabled) this.mode('ready', { after: r.kind, moved: this.x0 !== this.startX0 || this.z0 !== this.startZ0 });
   }
 
-  cancel() { this.active = false; this.viaTouch = false; this.clearHold(); this.clearTrail(); }
+  // How the finger let go at tUp: { kind: 'throw', p } | { kind: 'weak' } | { kind: 'place', why }.
+  // final: the real lift (the twist is read, the rest before the lift counts); else the aim line's
+  // "as if let go now".
+  releaseOf(tUp, final) {
+    const S = this.samples, mm = this.pxmm;
+    if (S.length < 2) return { kind: 'place', why: 'tap' };
+    const last = S[S.length - 1];
+    if (final && tUp - last.t > THROW.restMs) return { kind: 'place', why: 'stopped' };
+    // the release velocity over the last releaseMs; but a still finger sends no moves, so a quick
+    // flick after a rest has a gap before its first point: the rest is not part of the release
+    // (a slow device's gaps are moving all the way, and are kept)
+    let k = S.length - 1;
+    while (k > 0 && last.t - S[k].t < THROW.releaseMs) {
+      const gap = S[k].t - S[k - 1].t;
+      if (gap > 40 && last.t - S[k].t >= 8) {
+        const vAfter = Math.hypot(last.x - S[k].x, last.y - S[k].y) / (last.t - S[k].t);
+        if (Math.hypot(S[k].x - S[k - 1].x, S[k].y - S[k - 1].y) / gap < 0.4 * vAfter) break;
+      }
+      k--;
+    }
+    const a = S[k];
+    const dt = Math.max(8, last.t - a.t) / 1000;          // one frame of a 120 Hz touch screen at least
+    const vx = (last.x - a.x) / mm / dt, vy = (a.y - last.y) / mm / dt;    // mm/s, vy + = up the screen
+    const fingerMmS = Math.hypot(vx, vy);
+    const dir = Math.atan2(vx, vy);                       // 0 = straight up the screen, + = to the right
+    if (vy < THROW.weakMmS || Math.abs(dir) > THROW.maxReleaseDeg * Math.PI / 180) return { kind: 'place', why: vy <= 0 ? 'back' : vy < THROW.weakMmS ? 'slow' : 'sideways' };
+    // the forward stroke: from the point nearest the player before the release
+    const low = this.lowest(0, S.length - 1);
+    const strokeMm = (S[low].y - last.y) / mm;
+    if (strokeMm < THROW.minSwingMm) return final ? { kind: 'weak' } : { kind: 'place', why: 'short' };
+    const speed = Math.min(THROW.vCap, launchSpeed(fingerMmS));
+    const angle = clamp(dir * THROW.lineK, -THROW.lineMax, THROW.lineMax);
+    const turn = this.curveTurn(low);
+    const twist = final ? this.twist.twistAt(tUp) : null;
+    // a turn to the left (negative) is a right-hander's hook: positive side rotation; so is a
+    // counterclockwise twist of the phone (positive)
+    const curveSide = -deadZone(turn, THROW.curveDeadRad) * THROW.curvePerRad, twistSide = twistSideRaw(twist);
+    const side = clamp(curveSide + twistSide, -THROW.sideMax, THROW.sideMax) * sideFactor(speed);
+    return { kind: 'throw', p: { x0: this.x0, z0: this.z0, speed, angle, side, roll: 0.5, fingerMmS, releaseDir: dir, turn, twist, curveSide, twistSide, strokeMm } };
+  }
+
+  // How the path turned near the release (rad, + = to the right): the heading of the second half
+  // of its last curveMm against the first half's, within the forward stroke from sample `from`
+  curveTurn(from) {
+    const S = this.samples, mm = this.pxmm, n = S.length - 1;
+    let len = 0, j = n;
+    while (j > from && len < THROW.curveMm * mm) { len += Math.hypot(S[j].x - S[j - 1].x, S[j].y - S[j - 1].y); j--; }
+    if (len < 6 * mm || n - j < 2) return 0;
+    // the point half way along that piece of the path
+    let half = 0, m = n;
+    while (m > j && half < len / 2) { half += Math.hypot(S[m].x - S[m - 1].x, S[m].y - S[m - 1].y); m--; }
+    const head = (u, v) => Math.atan2(v.x - u.x, u.y - v.y);
+    let turn = head(S[m], S[n]) - head(S[j], S[m]);
+    if (turn > Math.PI) turn -= 2 * Math.PI; else if (turn < -Math.PI) turn += 2 * Math.PI;
+    return turn;
+  }
+
+  cancel() { this.active = false; this.viaTouch = false; this.grip(false); this.clearTrail(); if (this.enabled) this.mode('ready', { after: 'cancel' }); }
 
   // The swipe's pointer stream was cancelled: a touch that goes on as touch events goes on
   pointerCancel(e) {
     if (this.active && e && e.pointerType === 'touch' && e.pointerId === this.pointerId && !this.viaTouch) { this.viaTouch = true; return; }
-    this.cancel();
+    if (this.active) this.cancel();
   }
   touchMove(e) {
     if (!this.active || !this.viaTouch) return;
@@ -449,52 +622,30 @@ export class SwipeInput {
     this.finish(e);
   }
 
-  // The power a pull-back adds (m/s): its length and speed, capped
-  pullBoost() {
-    if (this.pullPx <= 0) return 0;
-    const len = this.pullPx / this.pxmm, sp = this.pullPeakPxS / this.pxmm;
-    return THROW.boostMax * Math.min(1, len / THROW.boostFullMm) * (0.35 + 0.65 * Math.min(1, sp / THROW.boostFullMmS));
+  // The hand on the ball while it is held: drawn every frame at the ball as the camera sees it
+  // (the camera moves after the ball as it is dragged)
+  grip(on) {
+    this.gripping = on;
+    if (on && !this.hand) this.hand = makeHand();         // null outside a browser
+    if (!this.hand) return;
+    if (!on) { this.hand.classList.remove('show'); return; }
+    this.handFrame();
   }
-
-  // The throw described by the forward part of the gesture
-  params(final) {
-    const pts = this.samples.slice(Math.max(0, this.swingStart || 0));
-    // two points are enough for the speed and the line (a slow device may deliver no more:
-    // the browser coalesces the moves of a frame); the hook needs more and is 0 then
-    if (pts.length < 2) return null;
-    const mm = this.pxmm;
-    const last = pts[pts.length - 1];
-    // speed from the last 120 ms of the swipe; but a still finger sends no moves, so a quick
-    // flick after a rest has a gap before its first point: the rest is not part of the swipe
-    // (a slow device's gaps are moving all the way, and are kept)
-    let k = pts.length - 1;
-    while (k > 0 && last.t - pts[k].t < 120) {
-      const gap = pts[k].t - pts[k - 1].t;
-      if (gap > 40 && last.t - pts[k].t >= 8) {
-        const vAfter = (pts[k].y - last.y) / (last.t - pts[k].t);
-        if ((pts[k - 1].y - pts[k].y) / gap < 0.4 * vAfter) break;
+  handFrame() {
+    if (this.handRaf) { cancelAnimationFrame(this.handRaf); this.handRaf = 0; }
+    if (!this.gripping || !this.hand) return;
+    const v = this.h.aimView && this.h.aimView();
+    if (v && v.camera && v.camera.projectionMatrix) {
+      const W = window.innerWidth, H = window.innerHeight, R = LANE.ballRadius;
+      const c = projectPoint(v.camera, v.laneX + this.x0, R, this.z0, W, H);
+      const top = projectPoint(v.camera, v.laneX + this.x0, 2 * R, this.z0, W, H);
+      if (c && top) {
+        const r = clamp(c.y - top.y, 8, 120);
+        this.hand.style.transform = `translate(${(c.x - 70).toFixed(1)}px, ${(c.y - 60).toFixed(1)}px) scale(${(r / 50).toFixed(3)})`;
+        this.hand.classList.add('show');
       }
-      k--;
     }
-    const a = pts[k];
-    const dt = Math.max(8, last.t - a.t);                // one frame of a 120 Hz touch screen at least
-    const fingerPxS = (a.y - last.y) / (dt / 1000);      // CSS px per second, up is +
-    const fingerMmS = fingerPxS / mm;
-    const totalMm = (pts[0].y - last.y) / mm;
-    if (final && (totalMm < THROW.minSwingMm || fingerMmS < THROW.weakMmS)) return null;
-    // direction: the whole swing's chord; hook: how the direction turned from the first to the last third
-    const n = pts.length;
-    const p0 = pts[0], p1 = pts[Math.floor(n / 3)], p2 = pts[Math.floor(2 * n / 3)], p3 = last;
-    const ang = (u, v) => Math.atan2(v.x - u.x, u.y - v.y);  // 0 = straight up, + = to the right
-    // the line is where the swipe was heading before its end curved: the curve is the hook
-    const chord = ang(p0, p2);
-    const turn = ang(p2, p3) - ang(p0, p1);
-    const boost = this.pullBoost();
-    const speed = Math.min(THROW.vCap, launchSpeed(fingerMmS) + boost);
-    const angle = clamp(chord * 0.075, -0.06, 0.06);
-    // a turn to the left (negative) is a right-hander's hook: positive side rotation
-    const side = clamp(-turn * 18, -20, 20) * sideFactor(speed);
-    return { x0: this.x0, z0: this.z0, speed, angle, side, roll: 0.5, vy: fingerPxS / window.innerHeight, fingerPxS, fingerMmS, boost, chord, turn };
+    this.handRaf = requestAnimationFrame(() => { this.handRaf = 0; this.handFrame(); });
   }
 
   drawTrail() {
@@ -504,44 +655,16 @@ export class SwipeInput {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, c.clientWidth, c.clientHeight);
     const S = this.samples;
-    if (!S.length) return;
-    // picked up (held) or being placed: a ring with four arrows at the finger
-    if (this.armed || this.phase === 'place') {
-      const p = S[S.length - 1];
-      g.strokeStyle = 'rgba(238,242,248,0.9)';
-      g.fillStyle = 'rgba(238,242,248,0.9)';
-      g.lineWidth = 3;
-      g.beginPath(); g.arc(p.x, p.y, 30, 0, Math.PI * 2); g.stroke();
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const cx = p.x + dx * 44, cy = p.y + dy * 44;
-        g.beginPath();
-        g.moveTo(cx + dx * 8, cy + dy * 8);
-        g.lineTo(cx - dx * 4 + dy * 7, cy - dy * 4 + dx * 7);
-        g.lineTo(cx - dx * 4 - dy * 7, cy - dy * 4 - dx * 7);
-        g.closePath(); g.fill();
-      }
-      return;
-    }
     if (S.length < 2 || this.useMotion) return;         // with motion control a swipe draws no throw
+    // the finger's path: gold where it moved quickly (a throw), pale where it dragged the ball
     g.lineCap = 'round';
     g.lineJoin = 'round';
     for (let i = 1; i < S.length; i++) {
       const a = S[i - 1], b = S[i];
       const f = i / S.length;
-      g.strokeStyle = b.ph === 'swing' ? `rgba(226,181,80,${0.25 + 0.75 * f})`
-        : b.ph === 'pull' ? `rgba(110,180,255,${0.35 + 0.65 * f})` : 'rgba(238,242,248,0.6)';
-      g.lineWidth = 4 + 10 * f;
+      g.strokeStyle = b.fast ? `rgba(226,181,80,${0.25 + 0.75 * f})` : 'rgba(238,242,248,0.45)';
+      g.lineWidth = b.fast ? 4 + 10 * f : 3;
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
-    }
-    // the pull-back's power, as a ring filling round the point where it turned
-    if (this.pullPx > 0) {
-      const b = S[this.bottom];
-      const k = this.pullBoost() / THROW.boostMax;
-      g.lineWidth = 5;
-      g.strokeStyle = 'rgba(110,180,255,0.35)';
-      g.beginPath(); g.arc(b.x, b.y, 22, 0, Math.PI * 2); g.stroke();
-      g.strokeStyle = 'rgba(110,180,255,0.95)';
-      g.beginPath(); g.arc(b.x, b.y, 22, -Math.PI / 2, -Math.PI / 2 + k * Math.PI * 2); g.stroke();
     }
   }
 

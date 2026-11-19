@@ -285,6 +285,22 @@ const lay = await b.eval(`const r = (s) => { const e = document.querySelector(s)
   for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) { const A = parts[names[i]], B = parts[names[j]]; if (A && B && A.x < B.r - 1 && B.x < A.r - 1 && A.y < B.b - 1 && B.y < A.b - 1) out.push(names[i] + ' overlaps ' + names[j]); }
   return { out, parts };`);
 check(lay && lay.out && lay.out.length === 0, 'HUD layout: ' + (lay && lay.out ? (lay.out.join(', ') || 'nothing cut off or overlapping') : JSON.stringify(lay)));
+// the console button labelled with the console's own word (a bare screen icon was not recognised as
+// the lane console), inside the screen, and every HUD button reachable: nothing on top of it at its
+// centre and corners (the small TVs once covered the top buttons on a short upright screen; the
+// hints have pointer-events: none, so elementFromPoint passes through them as a tap does)
+const hud = await b.eval(`if (!document.querySelector('#play').classList.contains('active')) return null;
+  const out = [];
+  for (const e of document.querySelectorAll('.hudBtns button')) {
+    const q = e.getBoundingClientRect();
+    if (q.x < -1 || q.y < -1 || q.right > innerWidth + 1 || q.bottom > innerHeight + 1) out.push(e.id + ' outside');
+    const pts = [[q.x + q.width / 2, q.y + q.height / 2], [q.x + 4, q.y + 4], [q.right - 4, q.y + 4], [q.x + 4, q.bottom - 4], [q.right - 4, q.bottom - 4]];
+    const by = pts.map(([x, y]) => document.elementFromPoint(Math.max(0, Math.min(innerWidth - 1, x)), Math.max(0, Math.min(innerHeight - 1, y)))).filter((t) => !t || (t !== e && !e.contains(t)));
+    if (by.length) out.push(e.id + ' covered by ' + [...new Set(by.map((t) => t ? (t.id || String(t.className).split(' ')[0] || t.tagName) : 'nothing'))].join('/'));
+  }
+  const l = document.querySelector('#btnConsole .conLabel');
+  return { out, label: l ? l.textContent : '', w: Math.round(document.querySelector('#btnConsole').getBoundingClientRect().width) };`);
+if (hud) check(hud.label.length > 0 && hud.out.length === 0, `the HUD's buttons reachable, the console button labelled "${hud.label}" (${hud.w} px wide): ` + (hud.out.join(', ') || 'none cut off or covered'));
 
 for (const d of b.log.filter((l) => /^DIALOG/.test(l))) console.log('  ' + d);
 const errors = b.log.filter((l) => /EXCEPTION|ERROR/.test(l));

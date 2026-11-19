@@ -1,11 +1,13 @@
 // The sound test, in node (no browser).
 //   node tests/audio_test.mjs [outDir]
 // 1. Renders every sound of js/audio/synth.js, checks it (no NaN, no clipping, no DC, the right
-//    length and band) and, with outDir, writes each as a WAV file to listen to.
+//    length and band) and, with outDir, writes each as a WAV file to listen to. There are no human
+//    voices: no voice synthesis is exported and no reaction uses anything but applause and whistles.
 // 2. Plays balls through the game's own OpenPlay engine and checks that the reactions of
 //    js/audio/reactions.js follow them: a strike, a double, a turkey, a perfect game, a spare, a
-//    converted split, a gutter ball, a split, a near miss, a missed spare; the human louder than a
-//    machine player; and that the strikes-in-a-row guess made before a ball matches the engine.
+//    converted split; no reaction to a gutter ball, a split, a near miss or a missed spare (the
+//    people have no voices); the human louder than a machine player; and that the
+//    strikes-in-a-row guess made before a ball matches the engine.
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import * as S from '../js/audio/synth.js';
@@ -47,7 +49,7 @@ function centroid(buf) {
   return den ? num / den : 0;
 }
 
-function check(name, buf, band) {
+function check(name, buf, band, minPeak = 0.05) {
   const n = buf.ch[0].length;
   let peak = 0, sum = 0, e = 0, bad = 0;
   for (const c of buf.ch) for (let i = 0; i < n; i++) { const v = c[i]; if (!Number.isFinite(v)) bad++; peak = Math.max(peak, Math.abs(v)); sum += v; e += v * v; }
@@ -55,7 +57,7 @@ function check(name, buf, band) {
   const row = { name, s: +(n / buf.sr).toFixed(2), sr: buf.sr, ch: buf.ch.length, peak: +peak.toFixed(3), rms: +rms.toFixed(3), dc: +dc.toFixed(4), centroidHz: Math.round(cen) };
   if (bad) fail(`${name}: ${bad} samples not finite`);
   if (peak > 0.99) fail(`${name}: clips (peak ${peak})`);
-  if (peak < 0.05) fail(`${name}: silent (peak ${peak})`);
+  if (peak < minPeak) fail(`${name}: silent (peak ${peak})`);
   if (dc > 0.01) fail(`${name}: DC ${dc}`);
   if (band && (cen < band[0] || cen > band[1])) fail(`${name}: centroid ${Math.round(cen)} Hz outside ${band}`);
   if (outDir) writeFileSync(join(outDir, name + '.wav'), wav(buf));
@@ -68,11 +70,11 @@ const rows = [];
 const time = (fn) => { const t0 = performance.now(); const r = fn(); return [r, performance.now() - t0]; };
 const BAND = {
   // the band each sound's energy should sit in (spectral centroid, Hz)
-  yeah: [500, 3000], cheer: [500, 3000], roar: [500, 3000], whoa: [400, 2600], oh: [300, 2200], aww: [400, 2400], ooh: [300, 2200], sigh: [400, 3000], whistle: [1800, 4000],
+  whistle: [1800, 4000], roomTone: [300, 1800],     // (a one-pole lowpass: its 6 dB/octave tail lifts the centroid)
   clapS: [900, 3200], clapM: [900, 3200], clapL: [800, 3200], clapXL: [700, 3200],
   clack: [800, 4000], ballHit: [400, 3500], thud: [150, 1500], kick: [150, 1500], pit: [60, 800], cushion: [40, 500], drop: [60, 900], ballClack: [900, 4000], clunk: [150, 1800]
 };
-for (const k of S.CROWD_KINDS) { const [b, ms] = time(() => S.renderCrowd(k, 101)); rows.push({ ...check('crowd_' + k, b, BAND[k]), ms: Math.round(ms) }); }
+{ const [b, ms] = time(() => S.renderWhistle(101)); rows.push({ ...check('whistle', b, BAND.whistle), ms: Math.round(ms) }); }
 for (const k of S.APPLAUSE_SIZES) { const [b, ms] = time(() => S.renderApplause(k, 202)); rows.push({ ...check('applause_' + k, b, BAND[k]), ms: Math.round(ms) }); }
 for (const k of S.IMPACT_TYPES) { const [b, ms] = time(() => S.renderImpact(k, 303)); rows.push({ ...check('impact_' + k, b, BAND[k]), ms: Math.round(ms) }); }
 for (const [name, fn] of [
@@ -81,14 +83,32 @@ for (const [name, fn] of [
   ['bumper_up', () => S.renderBumper(true, 407)], ['bumper_down', () => S.renderBumper(false, 408)],
   ['chime_up', () => S.renderChime(true)], ['chime_down', () => S.renderChime(false)], ['far_roll', () => S.renderFarRoll(409)],
   ['far_crash_10', () => S.renderFarCrash(10, 410)], ['far_crash_6', () => S.renderFarCrash(6, 411)], ['far_crash_2', () => S.renderFarCrash(2, 412)],
-  ['reverb_ir', () => S.renderImpulse(48000, 1.6, 1.4, 7)],
-  ['murmur', () => { const o = {}; for (const _ of S.murmurJob(99, o)) { /* talker by talker */ } return o.buf; }]
+  ['reverb_ir', () => S.renderImpulse(48000, 1.6, 1.4, 7)]
 ]) { const [b, ms] = time(fn); rows.push({ ...check(name, b), ms: Math.round(ms) }); }
+// the hall's room tone: the ventilation, far below everything else (about -44 dBFS RMS)
+const roomBuf = S.renderRoomTone(99);
+const roomRow = check('room_tone', roomBuf, BAND.roomTone, 0.005);
+rows.push(roomRow);
 console.table(rows);
+if (!(roomRow.rms > 0.003 && roomRow.rms < 0.012)) fail(`the room tone's level is ${roomRow.rms} RMS, expected about 0.006`);
+{ // a seamless loop: the jump from the last sample to the first is no bigger than one between neighbours
+  const d = roomBuf.ch[0], n = d.length;
+  let step = 0; for (let i = 1; i < n; i++) step = Math.max(step, Math.abs(d[i] - d[i - 1]));
+  if (Math.abs(d[0] - d[n - 1]) > step * 1.5) fail('the room tone loop clicks at its seam');
+}
 // a variant made with another seed is another sound
-const a = S.renderCrowd('yeah', 1).ch[0], b = S.renderCrowd('yeah', 2).ch[0];
+const a = S.renderApplause('clapM', 1).ch[0], b = S.renderApplause('clapM', 2).ch[0];
 let diff = 0; for (let i = 0; i < Math.min(a.length, b.length); i++) diff += Math.abs(a[i] - b[i]);
-if (diff < 10) fail('two seeds give the same "yeah"');
+if (diff < 10) fail('two seeds give the same applause');
+// no human voices: no voice synthesis is left, and no reaction plays anything but applause and whistles
+for (const name of ['voice', 'renderCrowd', 'crowdJob', 'CROWD_KINDS', 'murmurJob']) if (name in S) fail(`synth.js still exports ${name} (a human voice)`);
+{
+  const PEOPLE = new Set([...S.APPLAUSE_SIZES, 'whistle']);
+  for (const kind of ['strike', 'spare', 'splitSpare', 'gutter', 'split', 'nearMiss', 'miss'])
+    for (const size of [1, 2, 3, 4, 5]) for (const human of [true, false])
+      for (const l of plan({ kind, family: kind === 'strike' ? 'strike' : kind.includes('pare') ? 'spare' : 'bad', size }, human))
+        if (!PEOPLE.has(l.bank)) fail(`${kind}/${size}: the reaction plays ${l.bank}, not applause or a whistle`);
+}
 // a bigger crash on another lane is louder
 const loud = (buf) => { let e = 0; for (const v of buf.ch[0]) e += v * v; return e; };
 if (!(loud(S.renderFarCrash(10, 5)) > loud(S.renderFarCrash(2, 5)))) fail('a far strike is not louder than two pins');
@@ -138,24 +158,24 @@ function expect(label, ball, kind, size, human = true) {
 }
 {
   const g = bowl([ALL & ~P(10), P(10)]);          // a 9 with the 10 pin left, then the spare
-  expect('near miss: 10 pin left (ringing)', g[0], 'nearMiss', 2); expect('spare', g[1], 'spare', 1);
+  expect('near miss: 10 pin left (no reaction)', g[0], 'none'); expect('spare', g[1], 'spare', 1);
 }
 {
   const g = bowl([ALL & ~P(5), 0]);              // the 5 pin left, then missed
-  expect('near miss: 5 pin left', g[0], 'nearMiss', 1); expect('missed spare', g[1], 'miss', 1);
+  expect('near miss: 5 pin left (no reaction)', g[0], 'none'); expect('missed spare (no reaction)', g[1], 'none');
 }
 {
   const g = bowl([ALL & ~P(7, 10), P(7, 10)]);     // the 7-10 split, converted
-  expect('split left (7-10)', g[0], 'split', 1); expect('converted split', g[1], 'splitSpare', 2);
+  expect('split left (7-10, no reaction)', g[0], 'none'); expect('converted split', g[1], 'splitSpare', 2);
   if (!globCheckSplit(P(7, 10))) fail('7-10 is not a split for the engine');
 }
 {
   const g = bowl([0, ALL]);                        // a gutter ball, then all ten: a spare
-  expect('gutter ball', g[0], 'gutter', 1); expect('ten on the second ball', g[1], 'spare', 1);
+  expect('gutter ball (no reaction)', g[0], 'none'); expect('ten on the second ball', g[1], 'spare', 1);
 }
 {
   const g = bowl([ALL & ~P(4, 7), P(4)]);          // 4-7 left, only the 4 taken: one pin of two left
-  expect('near miss on a spare (7 left of 4-7)', g[1], 'nearMiss', 1);
+  expect('near miss on a spare (7 left of 4-7, no reaction)', g[1], 'none');
 }
 {
   const g = bowl([P(1, 3, 5, 6, 9, 10), P(2)]);     // an ordinary open frame: 2-4-7-8 left, then the 2
@@ -173,7 +193,7 @@ console.table(cases);
 
 // the human's reaction is louder and bigger than a machine player's
 const sum = (L) => L.reduce((s, l) => s + l.gain, 0);
-for (const kind of ['strike', 'spare', 'gutter', 'split', 'nearMiss', 'miss', 'splitSpare']) {
+for (const kind of ['strike', 'spare', 'splitSpare']) {
   for (const size of kind === 'strike' ? [1, 2, 3, 4, 5] : [1]) {
     const r = { kind, family: kind === 'strike' ? 'strike' : kind.includes('pare') ? 'spare' : 'bad', size };
     const h = plan(r, true), m = plan(r, false);
@@ -192,7 +212,7 @@ if (!flashFor({ kind: 'strike', size: 3 }, true) || flashFor({ kind: 'strike', s
 // early: every pin down on a full rack is a strike of the guessed streak; a gutter on a leave is a miss
 if (earlyClassify({ before: ALL, streak: 2 }, 'allDown').size !== 3) fail('early turkey guess');
 if (earlyClassify({ before: P(7, 10) }, 'allDown', true).kind !== 'splitSpare') fail('early converted split');
-if (earlyClassify({ before: P(3) }, 'gutter').kind !== 'miss') fail('early miss');
+if (earlyClassify({ before: P(3) }, 'gutter').kind !== 'none') fail('a ball in the gutter is still judged early (the people have no voice to groan with)');
 
 // ---- 3. the strikes-in-a-row guess before a ball, against the engine ------------------------------
 console.log('\n3. The strikes-in-a-row guess (before the ball) against the engine (after it)');

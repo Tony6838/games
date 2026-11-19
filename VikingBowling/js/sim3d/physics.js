@@ -255,7 +255,11 @@ export class LanePhysics {
       b.collisionFilterMask = 0;
       b.position.set(this.laneX + params.x0, R, z0);
       b.velocity.set(0, 0, -params.speed);
-      b.angularVelocity.set(-params.speed / R, 0, 0);        // rolling straight up the approach
+      // rolling straight up the approach, already turning with its side rotation (as launch() gives
+      // it, about the direction of travel), so the spin shows from the release (only drawn: the
+      // carried ball touches nothing)
+      const side = params.side || 0;
+      b.angularVelocity.set(-params.speed / R, side * 0.3, side);
       b.wakeUp();
       this.inGutter = false;
       this.forced = null;

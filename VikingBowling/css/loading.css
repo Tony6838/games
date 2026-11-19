@@ -1,0 +1,41 @@
+/* The load bar on the splash while the game downloads and starts (js/loading.js): a dark track
+   in the menu cards' line colour with a gold fill that grows with the load, and "Laddar … 42 %"
+   under it in the title's font. The fill is as wide as the track and moved left by the part not
+   yet loaded. Its movement and the sheen that sweeps the track are transform animations, which
+   the browser runs off the main thread, so they go on while main.js builds the hall and the page
+   cannot draw; for that the fill has no CSS transition (two animations of one property on one
+   element are run on the main thread, and then stand still exactly then). Until main.js marks
+   <html> with .vbgReady, the splash's flags, text box and OK button are left out: empty, the text
+   box was a dark bar that looked like a progress bar that never moved. */
+html:not(.vbgReady) #splash .langRow,
+html:not(.vbgReady) #splash .infoBox,
+html:not(.vbgReady) #splash #okBtn { display: none; }
+.vbgReady .loadBar { display: none; }
+
+.loadBar { width: min(420px, 74vw); display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 10px; }
+.loadTrack { position: relative; width: 100%; height: 12px; border-radius: 999px; overflow: hidden; isolation: isolate;
+  background: rgba(5, 10, 20, 0.9); border: 1px solid #3A5684; box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.6); }
+.loadFill { position: absolute; inset: 0; border-radius: inherit; transform: translateX(-98%);
+  background: linear-gradient(180deg, var(--goldHover), var(--gold) 55%, #C3932F); box-shadow: 0 0 10px rgba(226, 181, 80, 0.5);
+  animation: loadCreep 12s cubic-bezier(0.3, 0.5, 0.5, 1) 1s forwards; }
+/* until js/loading.js has the real figures, and when it never gets to draw them (on a fast or
+   cached load main.js starts building the hall at once): the fill creeps on by itself, slowly,
+   so that the real figures rarely find it ahead of them */
+@keyframes loadCreep { from { transform: translateX(-98%); } to { transform: translateX(-20%); } }
+.loadTrack::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0.5) 50%, rgba(255, 255, 255, 0) 70%);
+  animation: loadSheen 1.6s linear infinite; }
+@keyframes loadSheen { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.loadText { min-height: 1.3em; font-family: var(--fontCond); font-weight: 700; font-size: 17px; letter-spacing: 0.05em;
+  color: #C9D3E3; text-align: center; text-shadow: 0 1px 4px #000; }
+.loadPct { display: inline-block; min-width: 3.2em; text-align: left; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+/* the game did not start (a file that did not load, an error): a red bar and what to do */
+.loadBar.failed .loadFill { background: var(--red); box-shadow: none; }
+.loadBar.failed .loadTrack::after { display: none; }
+.loadBar.failed .loadText { color: #FFB3B5; letter-spacing: 0.02em; }
+.loadBar.failed .loadPct { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .loadTrack::after { display: none; }
+}

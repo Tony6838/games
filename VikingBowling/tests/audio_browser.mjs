@@ -5,12 +5,15 @@
 //        node tests/audio_browser.mjs http://127.0.0.1:8790/games/VikingBowling/ out
 // Checks, with the browser's own autoplay rules (no autoplay flag):
 //   * no AudioContext and no sound before the first gesture; the context runs after it
-//   * every sound renders (when idle) without an error
+//   * every sound renders (when idle) without an error; no human voice is rendered (no murmur of
+//     talkers, no cheers or groans), and the room tone runs
 //   * full games in 3D (EUR and AMR, the player's balls by the game's test throws, the machine
 //     players' as they bowl): the reactions in the log follow each ball's result, the early ones
-//     come before the ball is scored, the crash grows with the pins that fall, far lanes are heard
+//     come before the ball is scored, the crash grows with the pins that fall, far lanes are heard,
+//     and every sound played is from a bank that is not a voice
 //   * each reaction played on its own through the shared game events, with the result made by the
-//     game's engine, and recorded from the output: a WAV per reaction, with its loudness
+//     game's engine, and recorded from the output: a WAV per reaction, with its loudness; a bad
+//     ball (gutter, split, a pin left, a missed spare) plays nothing over the room tone
 //   * mute and volume work and are remembered over a reload; muted, no AudioContext starts
 //   * the frame time with the sound on and muted, on the low detail level
 //   * no JS exception and no console error
@@ -111,10 +114,22 @@ if (after.probe.contexts.length !== 1) problems.push('expected one AudioContext 
 else if (!after.probe.contexts[0].afterGesture) problems.push('the AudioContext was not created inside the gesture');
 if (after.state !== 'running') problems.push('the AudioContext is ' + after.state + ' after the gesture');
 console.log('2. after the first gesture:', JSON.stringify(after));
-const ready = await js(`const t0 = performance.now(); while (app.sound.jobs.length && performance.now() - t0 < 30000) await sleep(100); return { ms: Math.round(performance.now() - t0), left: app.sound.jobs.length, banks: app.sound.readiness(), log: app.sound.log.filter(e => e.type === 'ready' || e.type === 'murmur') }`);
+const ready = await js(`const t0 = performance.now(); while (app.sound.jobs.length && performance.now() - t0 < 30000) await sleep(100); return { ms: Math.round(performance.now() - t0), left: app.sound.jobs.length, banks: app.sound.readiness(), log: app.sound.log.filter(e => e.type === 'ready' || e.type === 'roomTone') }`);
 report.render = ready;
 console.log('   rendered when idle in', ready.ms, 'ms;', JSON.stringify(ready.banks));
 if (ready.left) problems.push('sounds still rendering after 30 s');
+// no human voices: none of the old voice banks or the murmur of talkers exists; the room tone runs
+const VOICE_BANKS = ['yeah', 'cheer', 'roar', 'whoa', 'oh', 'aww', 'ooh', 'sigh', 'murmur'];
+const voiceBanks = VOICE_BANKS.filter((n) => n in ready.banks);
+if (voiceBanks.length) problems.push('voice banks rendered: ' + voiceBanks.join(', '));
+if (ready.banks.roomTone !== true) problems.push('the room tone does not run');
+// every buffer played from now on, by bank, so the games can show that no voice is played (taken
+// off again before the frame time is measured)
+await js(`
+  const s = app.sound, play = s.play.bind(s);
+  window.__played = {};
+  s.play = function (buf, o = {}) { let name = buf ? '?' : 'none ready'; if (buf) for (const [n, b] of s.banks) if (b.slots.includes(buf)) { name = n; break; } window.__played[name] = (window.__played[name] || 0) + 1; return play(buf, o); };
+  return true;`);
 
 // A recorder on the output (before the limiter), and the game's events, for the rest of the test
 await js(`
@@ -246,6 +261,15 @@ report.gameAmrAnalysis = analyse(logAmr, 'AMR');
 console.log('   full game AMR:', JSON.stringify(amr));
 console.log('   ', JSON.stringify(report.gameAmrAnalysis));
 if (!amr.finished) problems.push('the AMR game did not finish');
+// what the two games played, by bank: the lane, the machine and the far lanes, the applause, and no voice
+const played = await js(`return window.__played`);
+report.playedInGames = played;
+console.log('   played in the games, by bank:', JSON.stringify(played));
+for (const n of VOICE_BANKS) if (played[n]) problems.push(`a voice was played in the games: ${n} x${played[n]}`);
+for (const n of ['clack', 'thud', 'ballHit', 'pit', 'cushion', 'newRack', 'farRoll']) if (!played[n]) problems.push(`no ${n} was played in the games`);
+if (!Object.keys(played).some((n) => n.startsWith('clap'))) problems.push('no applause was played in the games');
+for (const L of [logEur, logAmr]) for (const r of L.log.filter((e) => e.type === 'reaction'))
+  if (r.layers.some((b) => VOICE_BANKS.includes(b))) problems.push(`a reaction with a voice: ${r.kind} ${r.layers.join('+')}`);
 
 // ---- 4. each reaction, through the shared game events, with the engine's result ---------------------
 // The balls are scored by the game's own engine; the events are emitted exactly as lanegame.js
@@ -298,14 +322,22 @@ console.log('4. each reaction (recorded from the output, before the limiter):');
 console.table(reactionRows);
 report.reactions = reactionRows;
 const row = (n) => reactionRows.find((r) => r.case === n) || {};
-const expectKind = { strike: 'strike x1', double: 'strike x2', turkey: 'strike x3', perfect_game: 'strike x5', spare: 'spare', converted_split: 'splitSpare', gutter: 'gutter', split_left: 'split', near_miss_10pin: 'nearMiss', near_miss_5pin: 'nearMiss', missed_spare: 'miss', machine_strike: 'strike x1', machine_turkey: 'strike x3', machine_gutter: 'gutter', machine_spare: 'spare' };
-for (const [n, k] of Object.entries(expectKind)) { if (row(n).reaction !== k) problems.push(`${n}: reaction ${row(n).reaction}, expected ${k}`); if (!row(n).played) problems.push(`${n}: nothing played`); }
-// loudness: the loudest 50 ms of the recording (its RMS over 4 s is mostly the hall's murmur)
+// a bad ball gets no reaction: its reactions were voices only (an "oh", a sigh, an "ooh", an "aww")
+const expectKind = { strike: 'strike x1', double: 'strike x2', turkey: 'strike x3', perfect_game: 'strike x5', spare: 'spare', converted_split: 'splitSpare', gutter: 'none', split_left: 'none', near_miss_10pin: 'none', near_miss_5pin: 'none', missed_spare: 'none', machine_strike: 'strike x1', machine_turkey: 'strike x3', machine_gutter: 'none', machine_spare: 'spare' };
+for (const [n, k] of Object.entries(expectKind)) {
+  if (row(n).reaction !== k) problems.push(`${n}: reaction ${row(n).reaction}, expected ${k}`);
+  if (k !== 'none' && !row(n).played) problems.push(`${n}: nothing played`);
+  if (k !== 'none' && row(n).layers.split('+').some((b) => VOICE_BANKS.includes(b))) problems.push(`${n}: a voice in the reaction (${row(n).layers})`);
+}
+// loudness: the loudest 50 ms of the recording (its RMS over 4 s is mostly the hall's room tone)
 const loud = (n) => row(n).loudest50ms || 0;
 if (!(loud('turkey') > loud('strike'))) problems.push('a turkey is not louder than a strike');
 if (!(loud('perfect_game') > loud('turkey'))) problems.push('a perfect game is not louder than a turkey');
 if (!(loud('strike') > loud('machine_strike') * 1.5)) problems.push("the player's strike is not clearly louder than a machine player's");
-if (!(loud('gutter') > loud('machine_gutter') * 1.5)) problems.push("the player's gutter ball is not clearly louder than a machine player's");
+// a bad ball: nothing over the room tone (a voice or applause would be ten times louder than this)
+for (const n of ['gutter', 'split_left', 'near_miss_10pin', 'near_miss_5pin', 'missed_spare', 'machine_gutter'])
+  if (!(loud(n) < 0.01)) problems.push(`${n}: something was heard over the room tone (loudest 50 ms ${loud(n)})`);
+if (!(loud('machine_spare') > 0.01)) problems.push('the quietest reaction (a machine player\'s spare) is not above the 0.01 used for "nothing heard"');
 // variety: the same reaction twice is not the same sound
 await js(`window.__recStart(); const c = window.__cases.find((x) => x.name === 'strike'); for (const [type, d] of c.list) window.vikingEvents.emit(type, d); return true;`);
 await sleep(4200);
@@ -342,7 +374,7 @@ if (unmuted.on !== true || unmuted.state !== 'running') problems.push('unmuting 
 
 // ---- 6. the frame time, sound on and muted (low detail) ---------------------------------------------
 // (the recorder off: its callbacks run on the main thread, and only while the sound runs)
-await js(`app.show('menu'); if (window.__recNode) window.__recNode.disconnect(); return true;`);
+await js(`app.show('menu'); if (window.__recNode) window.__recNode.disconnect(); delete app.sound.play; return true;`);
 const fps = {};
 for (const on of [true, false]) {
   await js(`app.sound.on = ${on}; return true;`);

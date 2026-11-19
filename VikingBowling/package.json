@@ -5,6 +5,7 @@
   "scripts": {
     "vendor": "node tools/vendor.mjs",
     "manifest": "node tools/make_manifest.mjs",
+    "loadsizes": "node tools/make_loadsizes.mjs",
     "serve": "node tests/serve.mjs 8000",
     "test:bots": "node tests/bot_stats.mjs 20000 1",
     "test:vbst": "node tests/vbst_formats.mjs 7",
@@ -12,6 +13,7 @@
     "test:physics": "node tests/physics_tune.mjs",
     "test:warmup": "node tests/warmup_test.mjs",
     "test:bumpers": "node tests/bumper_test.mjs",
+    "test:loading": "node tests/loading_test.mjs",
     "tvmedia": "node tools/make_tv_media.mjs"
   },
   "license": "SEE LICENSE IN LICENSE",

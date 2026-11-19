@@ -6,16 +6,16 @@
 // the arrays into AudioBuffers) and in node (tests/audio_test.mjs writes them to WAV files).
 // Every render takes a seed, so a variant can be made again and a new seed gives a new variant.
 //
-//   the crowd      renderCrowd(kind)      wordless shouts from formant-filtered voices: "yeah",
-//                                         "woo", "whoa", "oh", "aww", "ooh", sighs; whistles
-//                  renderApplause(size)   single claps (filtered noise bursts), one clapper at a time
+//   the people     renderApplause(size)   single claps (filtered noise bursts), one clapper at a time
+//                  renderWhistle()        a two-finger whistle (a pure tone, no voice)
+//                  (no human voices: the people are heard only clapping and whistling)
 //   the lane       renderImpact(type)     modal synthesis: a pin's clack, a pin on the deck, the
 //                                         ball meeting a pin, the kickback, the pit, the cushion
 //                  renderRollTexture()    the noise the rolling ball is filtered from (in real time)
 //   the machine    renderPinsetter(kind)  sweep, deadwood, a new rack set or the leave respotted
 //                  renderBallReturn()     the return track, the lift, the clack on the rack
 //                  renderBumper(up)       the bumper rails rising or lowering
-//   the hall       murmurJob()            the hall's murmur: distant talkers, laughs, room tone
+//   the hall       renderRoomTone()       the hall's room tone: the ventilation, far below the rest
 //                  renderImpulse()        the hall's reverb (an impulse response)
 //                  renderFarRoll(), renderFarCrash(pins)   a ball on another lane
 //                  renderChime(up)        the lane console's soft two-tone chime
@@ -60,13 +60,6 @@ class Biquad {
   }
 }
 const onePole = (fc, sr) => 1 - Math.exp(-TAU * fc / sr);
-
-// A band-limited sawtooth (polyBLEP)
-function blep(t, dt) {
-  if (t < dt) { t /= dt; return t + t - t * t - 1; }
-  if (t > 1 - dt) { t = (t - 1) / dt; return t * t + t + t + 1; }
-  return 0;
-}
 
 // The value of a contour [[u, v0, v1, ...], ...] at u (0..1), linearly between the points
 function at(pts, u) {
@@ -129,104 +122,7 @@ function fadeTail(buf, seconds = 0.08) {
   for (const c of buf.ch) for (let i = 0; i < f; i++) c[n - 1 - i] *= i / f;
 }
 
-// ---- voices ----------------------------------------------------------------------------------
-// The vowels' first three formants (Hz, an adult male voice; Peterson & Barney 1952). A female
-// voice has them about 16 % higher.
-const V = {
-  i: [270, 2290, 3010], e: [530, 1840, 2480], ae: [660, 1720, 2410], a: [730, 1090, 2440],
-  aw: [620, 1000, 2500], o: [470, 820, 2450], u: [300, 870, 2240], uh: [640, 1190, 2390], n: [260, 1300, 2300]
-};
-const VOWEL_LIST = ['i', 'e', 'ae', 'a', 'aw', 'o', 'u', 'uh'];
-
-// One voice: a sawtooth (the vocal folds) plus breath noise through three formant filters,
-// with a pitch contour, vibrato, a slow random wander of the pitch and an amplitude contour.
-//   o: { t0, dur, f0: [[u, Hz]], formants: [[u, F1, F2, F3]], amp: [[u, a]], k (formant scale),
-//        breath 0..1, vib (semitones), vibRate (Hz), jitter, gain, pan, lp (Hz, distance) }
-export function voice(buf, o, rand) {
-  const sr = buf.sr, L = buf.ch[0], R = buf.ch[1];
-  const n = Math.round(o.dur * sr), s0 = Math.round(o.t0 * sr);
-  const [pl, pr] = panGains(o.pan || 0), g = o.gain ?? 1;
-  const f1 = new Biquad(), f2 = new Biquad(), f3 = new Biquad();
-  const k = o.k || 1, g2 = o.g2 ?? 0.55, g3 = o.g3 ?? 0.3, breath = o.breath ?? 0.15;
-  const vibD = o.vib ?? 0.2, vibR = o.vibRate ?? 5.5, vibPh = rand() * TAU, jitK = o.jitter ?? 1;
-  const lpA = o.lp ? onePole(o.lp, sr) : 0;
-  let ph = rand(), jit = 0, env = 0, a = 0, f0 = 100, shim = 1, lpY = 0;
-  const envK = 1 - Math.exp(-1 / (0.012 * sr));
-  for (let i = 0; i < n; i++) {
-    const j = s0 + i;
-    if (j >= L.length) break;
-    if ((i & 31) === 0) {
-      const u = i / n;
-      const fm = at(o.formants, u);
-      f1.set('bp', fm[1] * k, fm[1] * k / 90, sr);
-      f2.set('bp', fm[2] * k, fm[2] * k / 120, sr);
-      f3.set('bp', fm[3] * k, fm[3] * k / 170, sr);
-      jit += (rand() - 0.5) * 0.25 - jit * 0.03;
-      const st = vibD * Math.sin(vibPh + TAU * vibR * i / sr) + jit * jitK;
-      f0 = at(o.f0, u)[1] * Math.pow(2, st / 12);
-      a = at(o.amp, u)[1];
-      shim = 1 + (rand() - 0.5) * 0.15;
-    }
-    env += (a * shim - env) * envK;
-    const dt = f0 / sr;
-    ph += dt; if (ph >= 1) ph -= 1;
-    const saw = 2 * ph - 1 - blep(ph, dt);
-    const src = saw * (1 - breath) + (rand() * 2 - 1) * breath * 1.2;
-    let y = f1.run(src) + g2 * f2.run(src) + g3 * f3.run(src);
-    if (lpA) { lpY += lpA * (y - lpY); y = lpY; }
-    y *= env * g;
-    if (j < 0) continue;
-    if (R) { L[j] += y * pl; R[j] += y * pr; } else L[j] += y;
-  }
-}
-
-// A short hiss ("s" at the end of "yes", a consonant in the murmur)
-function fricative(buf, t0, dur, f, gain, pan, rand) {
-  const sr = buf.sr, n = Math.round(dur * sr), s0 = Math.round(t0 * sr);
-  const bp = new Biquad().set('bp', Math.min(f, sr * 0.42), 1.4, sr);
-  const [pl, pr] = panGains(pan), L = buf.ch[0], R = buf.ch[1];
-  for (let i = 0; i < n; i++) {
-    const j = s0 + i;
-    if (j >= L.length) break;
-    const e = Math.sin(Math.PI * i / n);
-    const y = bp.run(rand() * 2 - 1) * e * gain;
-    if (j < 0) continue;
-    if (R) { L[j] += y * pl; R[j] += y * pr; } else L[j] += y;
-  }
-}
-
-// The words of the crowd, as pitch, vowel and loudness contours. base: the voice's pitch (Hz)
-function utter(kind, base, rand) {
-  const r = (a, b) => a + (b - a) * rand();
-  const P = (pts) => pts.map(([u, m]) => [u, base * m]);
-  switch (kind) {
-    case 'yeah': return { dur: r(0.42, 0.8), f0: P([[0, 1], [0.22, 1.32], [0.6, 1.22], [1, 0.88]]),
-      formants: [[0, ...V.i], [0.18, ...V.e], [0.45, ...V.ae], [1, ...V.a]], amp: [[0, 0], [0.07, 1], [0.65, 0.85], [1, 0]], breath: 0.14 };
-    case 'yeahLong': return { dur: r(1.0, 1.7), f0: P([[0, 1], [0.15, 1.4], [0.7, 1.32], [1, 0.9]]),
-      formants: [[0, ...V.i], [0.1, ...V.e], [0.25, ...V.ae], [1, ...V.a]], amp: [[0, 0], [0.05, 1], [0.75, 0.9], [1, 0]], breath: 0.16 };
-    case 'yes': return { dur: r(0.32, 0.45), f0: P([[0, 1.05], [0.3, 1.35], [1, 1.1]]), s: true,
-      formants: [[0, ...V.i], [0.25, ...V.e], [1, ...V.e]], amp: [[0, 0], [0.1, 1], [0.75, 0.8], [0.9, 0], [1, 0]], breath: 0.12 };
-    case 'woo': return { dur: r(0.7, 1.3), f0: P([[0, 1.15], [0.3, 1.75], [0.75, 1.85], [1, 1.35]]),
-      formants: [[0, ...V.u], [1, 330, 850, 2350]], amp: [[0, 0], [0.12, 1], [0.8, 0.9], [1, 0]], breath: 0.12, g2: 0.35, g3: 0.15 };
-    case 'whoa': return { dur: r(0.8, 1.2), f0: P([[0, 0.95], [0.45, 1.5], [1, 1.2]]),
-      formants: [[0, ...V.u], [0.25, ...V.o], [0.6, ...V.a], [1, ...V.a]], amp: [[0, 0], [0.1, 1], [0.8, 0.9], [1, 0]], breath: 0.16 };
-    case 'aah': return { dur: r(1.5, 2.5), f0: P([[0, 1], [0.2, 1.3], [0.8, 1.25], [1, 0.95]]),
-      formants: [[0, ...V.ae], [0.2, ...V.a], [1, ...V.a]], amp: [[0, 0], [0.1, 1], [0.8, 0.85], [1, 0]], breath: 0.3 };
-    case 'oh': return { dur: r(0.75, 1.15), f0: P([[0, 1.22], [0.18, 1.3], [1, 0.78]]),
-      formants: [[0, ...V.o], [1, 430, 780, 2450]], amp: [[0, 0], [0.08, 1], [0.5, 0.7], [1, 0]], breath: 0.25, g2: 0.4 };
-    case 'ohno': return { dur: r(1.0, 1.3), f0: P([[0, 1.2], [0.2, 1.3], [0.45, 1.1], [0.55, 1.15], [1, 0.75]]),
-      formants: [[0, ...V.o], [0.42, ...V.o], [0.5, ...V.n], [0.58, ...V.o], [1, ...V.o]],
-      amp: [[0, 0], [0.06, 1], [0.4, 0.8], [0.5, 0.2], [0.58, 0.85], [1, 0]], breath: 0.22, g2: 0.4 };
-    case 'aww': return { dur: r(1.0, 1.5), f0: P([[0, 1.12], [0.15, 1.35], [1, 0.74]]),
-      formants: [[0, ...V.aw], [1, 600, 950, 2450]], amp: [[0, 0], [0.08, 1], [0.55, 0.75], [1, 0]], breath: 0.2 };
-    case 'ooh': return { dur: r(0.65, 1.0), f0: P([[0, 1], [0.4, 1.45], [1, 1.25]]),
-      formants: [[0, ...V.u], [1, 420, 820, 2400]], amp: [[0, 0], [0.1, 1], [0.8, 0.9], [1, 0]], breath: 0.15, g2: 0.4 };
-    case 'sigh': return { dur: r(1.0, 1.5), f0: P([[0, 1.05], [1, 0.72]]),
-      formants: [[0, 650, 1300, 2500], [1, 520, 1100, 2400]], amp: [[0, 0], [0.22, 1], [0.6, 0.6], [1, 0]], breath: 0.7 };
-    default: return utter('yeah', base, rand);
-  }
-}
-
+// ---- the people: a whistle ----------------------------------------------------------------------
 // A two-finger whistle: a pure tone that rises, holds and falls (or the "wheet-whoo")
 function whistle(buf, t0, gain, pan, rand) {
   const sr = buf.sr, dur = 0.7 + rand() * 0.45, n = Math.round(dur * sr), s0 = Math.round(t0 * sr);
@@ -252,53 +148,17 @@ function whistle(buf, t0, gain, pan, rand) {
   }
 }
 
-// The crowd's reactions. Each is a small group of voices (men about 140-195 Hz and women about
-// 235-320 Hz when excited, 60/40), starting at their own reaction time, at their own place.
-//   [kind, count, delay from, delay to, words...]   later: a second shout of some of them
-const CROWD = {
-  yeah:  { dur: 1.5, groups: [[2, 3, 0.03, 0.28, ['yeah', 'yeah', 'yes', 'woo']]] },
-  cheer: { dur: 2.4, groups: [[5, 6, 0.0, 0.32, ['yeahLong', 'yeah', 'woo', 'yes', 'yeah']], [1, 2, 0.65, 1.0, ['woo', 'yeah']]] },
-  roar:  { dur: 4.0, groups: [[9, 11, 0.0, 0.5, ['aah', 'yeahLong', 'woo', 'yeah', 'aah']], [5, 6, 0.8, 2.3, ['woo', 'yeah', 'yeahLong', 'yes']],
-    [5, 6, 0.1, 0.8, ['aah', 'yeahLong'], 1600]], whistles: [0.35, 1.5] },
-  whoa:  { dur: 2.0, groups: [[3, 4, 0.0, 0.15, ['whoa']], [2, 2, 0.7, 1.0, ['yeah', 'woo']]] },
-  oh:    { dur: 1.7, groups: [[2, 3, 0.0, 0.2, ['oh', 'ohno', 'oh']], [0, 1, 0.3, 0.5, ['sigh']]] },
-  aww:   { dur: 1.9, groups: [[3, 4, 0.0, 0.18, ['aww', 'aww', 'oh']]] },
-  ooh:   { dur: 1.4, groups: [[3, 3, 0.0, 0.15, ['ooh']]] },
-  sigh:  { dur: 1.9, groups: [[2, 2, 0.0, 0.25, ['sigh']], [0, 1, 0.1, 0.3, ['oh']]] },
-  whistle: { dur: 1.4, groups: [], whistles: [0.02] }
-};
-export const CROWD_KINDS = Object.keys(CROWD);
-// how loud each is (the loudest 50 ms, RMS): a bigger crowd is louder as well as fuller
-const CROWD_LOUDNESS = { yeah: 0.16, cheer: 0.2, roar: 0.25, whoa: 0.2, oh: 0.17, aww: 0.18, ooh: 0.16, sigh: 0.14, whistle: 0.15 };
+// A whistle from the group, as a buffer of its own (1.4 s, stereo; its place in the group by the seed)
+export function renderWhistle(seed, sr = 16000) {
+  const rand = rng(seed);
+  const buf = makeBuf(sr, 1.4, 2);
+  whistle(buf, 0.02 + rand() * 0.15, 0.25, (rand() - 0.5) * 1.2, rand);
+  fadeTail(buf, 0.1);
+  return normalize(buf, 0.15);
+}
 
 // Run a render job (a generator that yields between its parts and returns the buffer) at once
 export function runJob(it) { let r; do { r = it.next(); } while (!r.done); return r.value; }
-
-export function renderCrowd(kind, seed, sr = 16000) { return runJob(crowdJob(kind, seed, sr)); }
-// ...a voice at a time, so the browser can render it in small idle slices
-export function* crowdJob(kind, seed, sr = 16000) {
-  const spec = CROWD[kind] || CROWD.yeah, rand = rng(seed);
-  const buf = makeBuf(sr, spec.dur, 2);
-  for (const [lo, hi, d0, d1, words, lp] of spec.groups) {
-    const count = lo + Math.floor(rand() * (hi - lo + 1));
-    for (let v = 0; v < count; v++) {
-      const female = rand() < 0.4;
-      const base = female ? 235 + rand() * 85 : 140 + rand() * 55;
-      const u = utter(words[Math.floor(rand() * words.length)], base, rand);
-      const t0 = d0 + rand() * (d1 - d0);
-      const dur = Math.min(u.dur, spec.dur - t0 - 0.05);
-      if (dur < 0.2) continue;
-      const pan = (rand() - 0.5) * 1.3;
-      const gain = (lp ? 0.35 : 0.6) + rand() * 0.4;
-      voice(buf, { ...u, t0, dur, k: female ? 1.16 : 1, pan, gain, lp, vib: 0.15 + rand() * 0.2, vibRate: 4.8 + rand() * 1.5 }, rand);
-      if (u.s) fricative(buf, t0 + dur * 0.82, 0.13, 5200, 0.25 * gain, pan, rand);
-      yield;
-    }
-  }
-  for (const w of spec.whistles || []) whistle(buf, w + rand() * 0.15, 0.25, (rand() - 0.5) * 1.2, rand);
-  fadeTail(buf, 0.1);
-  return normalize(buf, CROWD_LOUDNESS[kind] || 0.2);
-}
 
 // ---- applause -----------------------------------------------------------------------------------
 // One clap: a noise burst (1 ms attack, 4-9 ms decay) through the clapper's own band (the
@@ -585,52 +445,16 @@ export function renderFarCrash(pins, seed, sr = 22050) {
 }
 
 // ---- the hall ---------------------------------------------------------------------------------------
-// The hall's murmur, rendered talker by talker (a generator: the caller runs one step at a time
-// when the browser is idle). Each talker speaks in phrases of syllables - a vowel, a pitch that
-// falls through the phrase, now and then a hiss - with pauses, and now and then laughs; far
-// away (dulled) and somewhere in the hall. Under it the room tone. A seamless loop.
-export function* murmurJob(seed, out, { sr = 11025, seconds = 12, talkers = 9 } = {}) {
+// The hall's room tone: the ventilation, far below everything else (a one-pole 160 Hz lowpass of
+// white noise, about -44 dBFS RMS). A seamless loop, stereo.
+export function renderRoomTone(seed, { sr = 11025, seconds = 12 } = {}) {
   const rand = rng(seed), fade = 2;
   const buf = makeBuf(sr, seconds + fade, 2);
-  const total = seconds + fade;
-  for (let k = 0; k < talkers; k++) {
-    const female = rand() < 0.45;
-    const base = female ? 185 + rand() * 50 : 100 + rand() * 40;
-    const g = 0.25 + 0.75 * Math.pow(rand(), 1.5), pan = (rand() - 0.5) * 1.6, lp = 900 + rand() * 900;
-    let t = rand() * 2;
-    while (t < total - 0.3) {
-      const phrase = 0.8 + rand() * 3, rate = 3.8 + rand() * 2;
-      const end = Math.min(total - 0.2, t + phrase);
-      if (rand() < 0.05) {                                          // a laugh
-        const n = 4 + Math.floor(rand() * 3);
-        for (let h = 0; h < n && t < end; h++) {
-          voice(buf, { t0: t, dur: 0.16, f0: [[0, base * 1.5], [1, base * 1.35]], formants: [[0, ...V.a], [1, ...V.a]],
-            amp: [[0, 0], [0.25, 1], [1, 0]], breath: 0.45, k: female ? 1.16 : 1, gain: g, pan, lp, vib: 0 }, rand);
-          t += 0.19 + rand() * 0.03;
-        }
-      } else {
-        const s0 = t;
-        while (t < end) {
-          const d = (1 / rate) * (0.7 + rand() * 0.6);
-          const decl = 1.15 - 0.25 * (t - s0) / phrase;
-          const f = base * decl * (0.92 + rand() * 0.16);
-          const v1 = V[VOWEL_LIST[Math.floor(rand() * VOWEL_LIST.length)]], v2 = V[VOWEL_LIST[Math.floor(rand() * VOWEL_LIST.length)]];
-          voice(buf, { t0: t, dur: d, f0: [[0, f * 1.04], [1, f * 0.96]], formants: [[0, ...v1], [1, ...v2]],
-            amp: [[0, 0], [0.3, 1], [0.7, 0.8], [1, 0]], breath: 0.18, k: female ? 1.16 : 1, gain: g, pan, lp, vib: 0, jitter: 0.5 }, rand);
-          if (rand() < 0.3) fricative(buf, t, 0.05, 2400, 0.08 * g, pan, rand);
-          t += d;
-        }
-      }
-      t += 0.3 + rand() * 1.6;
-    }
-    yield k;
-  }
-  // the room tone: ventilation, far below everything else
   const lp = onePole(160, sr);
   for (let c = 0; c < 2; c++) {
     const ch = buf.ch[c];
     let y = 0;
-    for (let i = 0; i < ch.length; i++) { y += lp * ((rand() * 2 - 1) - y); ch[i] += y * 0.05; }
+    for (let i = 0; i < ch.length; i++) { y += lp * ((rand() * 2 - 1) - y); ch[i] = y * 0.05; }
   }
   // a seamless loop: the extra seconds are crossfaded into the start
   const n = Math.round(seconds * sr), f = Math.round(fade * sr);
@@ -642,8 +466,7 @@ export function* murmurJob(seed, out, { sr = 11025, seconds = 12, talkers = 9 } 
       else dst[i] = src[i];
     }
   }
-  normalize(res, 0.12);
-  out.buf = res;
+  return res;
 }
 
 // The hall's reverb: a few early reflections and a dense tail that decays (RT60) and dulls

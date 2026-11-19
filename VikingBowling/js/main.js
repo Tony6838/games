@@ -19,6 +19,7 @@ import { gameCard, formatCard, formatSymbolFor } from './menucards.js';
 // the TV wall, the lane consoles, the bumpers and the warm-up (js/game/wallgame.js)
 import { installWallGame, WARM_IDS, warmChoice } from './game/wallgame.js';
 import { withBumperMark, withoutBumperMark } from './engine/correction.js';
+import { ModeHint } from './game/modehint.js';     // can the player throw now, and how (the hint near the ball)
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -97,16 +98,19 @@ class App {
       onThrow: (p) => this.onThrow(p),
       onAim: (p) => this.onAim(p),
       onWeak: () => this.toast(t('weak')),
-      onMisplace: () => this.toast(t('placeHint'), 3500, 'hint'),
+      // whether a throw can come now (js/game/modehint.js): the hint near the ball, "wait for your turn"
+      onMode: (m, info) => this.modeHint && this.modeHint.set(m, info),
+      onBlocked: (at) => this.modeHint && this.modeHint.blocked(at),
       // the throw by swinging the phone (sim3d/motion.js): its hints, "use the swipe instead"
       onHint: (key, ms) => this.toast(t(key), ms || 4000, 'hint'),
       onChooseSwipe: () => { this.settings.throwMode = 'swipe'; this.save(); this.input.setMode('swipe'); this.syncThrowUi(); this.swipeStatus(); },
       onModeChange: () => { this.syncThrowUi(); this.swipeStatus(); },     // motion control failed (the swipe) or came back
       onHintClear: () => { clearTimeout(this.toastT); $('#toast').classList.remove('show'); },
-      // the swing's aim marker over the arrows is drawn through the scene's camera
+      // the swing's aim marker over the arrows and the hand on the ball are drawn through the scene's camera
       aimView: () => (this.throwLane ? { camera: this.scene.camera, laneX: this.throwLane.laneX } : null)
     });
     this.input.setMode(this.settings.throwMode);
+    this.modeHint = new ModeHint(this, $('#play'));
     this.activeLane = null;
     this.instantBot = new MachinePlayer({ name: 'auto', average: 185 });   // for app.instant (automated runs)
     this.last = performance.now();
@@ -704,4 +708,5 @@ export { escapeHtml };
 
 const app = new App();
 app.syncMenu();
+document.documentElement.classList.add('vbgReady');    // the splash's texts are in: they take the load bar's place (js/loading.js)
 loadConsoleTexts().then(() => app.applyTexts());

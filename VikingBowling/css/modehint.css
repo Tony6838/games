@@ -1,0 +1,25 @@
+/* Whether the player can throw now, and how (js/game/modehint.js): a small hint near the ball at
+   the player's turn, "wait for your turn" when the lane is pressed while no throw can come; and
+   the hand that grips the ball while it is held (js/sim3d/input.js). Placed by the script, clear
+   of the HUD, the ball and the aim line; never takes the pointer. */
+.modeHint { position: absolute; left: 0; top: 0; z-index: 3; box-sizing: border-box; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 2px; width: max-content;
+  padding: 6px 12px 7px; border-radius: 14px; background: rgba(10, 19, 34, 0.84); border: 1px solid rgba(226, 181, 80, 0.8);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45); text-align: center; line-height: 1.2;
+  opacity: 0; visibility: hidden; transition: opacity 0.25s, visibility 0s linear 0.25s; }
+.modeHint.show { opacity: 1; visibility: visible; transition: opacity 0.25s; }
+.modeHint .mhMain, .modeHint .mhSub { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.modeHint .mhMain { color: var(--gold); font-weight: 700; font-size: 15px; }
+.modeHint .mhSub { color: #C9D3E3; font-size: 13px; font-weight: 500; }
+.modeHint svg { flex: none; width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.modeHint.wait { border-color: var(--line); }
+.modeHint.wait .mhMain { color: var(--text); font-weight: 600; }
+/* a wide screen: the two parts on one line */
+@media (min-width: 900px) and (min-height: 521px) { .modeHint:not(.wait) { flex-direction: row; gap: 14px; } }
+
+/* the hand: over the swipe trail (5) and, made after it, over the swing button (7) - the ball sits
+   under the button's glass with the swing - and under the HUD (8) */
+.gripHand { position: fixed; left: 0; top: 0; width: 140px; height: 190px; z-index: 7; pointer-events: none;
+  transform-origin: 70px 60px; display: none; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45)); }
+.gripHand.show { display: block; }
+.gripHand svg { display: block; width: 100%; height: 100%; }

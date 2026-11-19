@@ -54,16 +54,18 @@ level), `?detail=high` or `?detail=low` (the hall's detail level, see "The hall"
    cards" below); the chosen card has the gold frame. A card is a button, so a tap, a
    click, or Tab and Enter/Space chooses it.
 3. Type your name. The machine players get generated names; **Nya namn** draws new ones.
-4. Bowl: swipe up towards the pins and let go (see "The throw" below).
-   * the **speed** of the swipe is the speed of the ball,
-   * its **direction** is the line,
-   * a **curve at the end** gives hook (curve left: hooks left, as a right-hander's ball),
-   * a **pull-back** first (drag the ball back towards you, then swipe forward) adds power;
-     letting go during the pull-back cancels the throw.
+4. Bowl: touch the ball - a hand grips it - then push or swipe towards the pins and let go
+   (see "The throw" below). The moment you let go decides:
+   * the finger's **speed** as it lets go is the speed of the ball,
+   * its **direction** as it lets go is the line,
+   * a **curve** just before letting go spins the ball, which hooks in the back end (curve
+     left: hooks left, as a right-hander's ball); on a phone, **twisting the phone** as you let
+     go spins it too (counterclockwise: hooks left).
 
-   To choose where you stand, **press and hold** on the lane until a ring appears, then drag:
-   the ball moves across the approach and back from the foul line (up to 4.4 m). The arrow
-   keys do the same (←/→ across, ↑/↓ forward and back). A hint shows the gestures once.
+   To choose where you stand, **drag the ball slowly** and let go: it moves across the approach
+   and back from the foul line (up to 4.4 m) and stays where you let go. The arrow keys do the
+   same (←/→ across, ↑/↓ forward and back). At your turn a short hint near the ball says how;
+   a press on the lane while you cannot throw says to wait for your turn.
    The ball can end in the gutter. With **Siktlinje** on, the ball's predicted path is
    drawn while you swipe. After every ball its speed is shown at the bottom right in km/h.
 
@@ -78,9 +80,10 @@ level), `?detail=high` or `?detail=low` (the hall's detail level, see "The hall"
 6. **Inspelning** (warm-up) in the options: none, balls, frames or minutes before the game; the
    balls are not scored and the lane TV shows the practice box (see "The warm-up"). **Bumpers**:
    tick the box under your name, or a machine player's, on the names screen (see "Bumpers").
-7. The screen button opens the **lane console** of each lane in play, VBS's own web console:
-   Korrigera (correct a score), Ändra spelare (names, order, bumpers), Avsluta inspelning (end the
-   warm-up), Reset/Set (see "The lane console").
+7. The **Banterminal** button (*Lane console* in English) opens the **lane console** of each lane
+   in play, VBS's own web console: Korrigera (correct a score), Ändra spelare (names, order,
+   bumpers), Avsluta inspelning (end the warm-up), Reset/Set (see "The lane console"). The start
+   help says so too.
 8. After the game: the summary (open play) or the standings after every serie and the
    end result (VBS-T).
 
@@ -158,6 +161,18 @@ outside it (see "The scoring proof").
 * The swipe input (`js/sim3d/input.js`), the machine players (`js/ai/bots.js`), the
   flow and the screens (`js/main.js`, `index.html`, `css/game.css`) and the game's own
   texts in five languages (`js/i18n.js`).
+* The load bar on the splash (`js/loading.js`, `css/loading.css`): until the game has
+  started, the splash shows the helmet, the title and a gold bar with "Laddar … n %" instead
+  of the flags, the help and **OK** (empty, the help box looked like a progress bar that never
+  moved). The figure is the share, by size, of the files the splash waits for that have
+  arrived (the browser's resource timing against `js/loadsizes.js`: the static import graph
+  of the page's modules, its style sheets and the helmet, each with its size), and fills 85 %
+  of the bar. The rest is `main.js` building the hall, when the page cannot draw: the bar
+  then moves on by an animation the browser runs off the main thread, and the number fades
+  out. A file that does not load turns the bar red: "Spelet kunde inte laddas …". After a
+  change to the JavaScript, run `node tools/make_loadsizes.mjs` (`npm run loadsizes`);
+  `tests/loading_test.mjs` says when the list is out of date (an old list only makes the
+  bar's steps uneven).
 * The sound of the hall and its people, all synthesised in the browser (`js/audio/`, see
   "The sound").
 * A machine player's ball is planned and bowled in 3D so the pins fall as its drawn
@@ -319,26 +334,67 @@ one long task of about half a second per run with the CPU slowed four times.
 
 ## The throw
 
-`js/sim3d/input.js` turns a gesture into a throw; two gestures that cannot be mistaken for
-each other:
+`js/sim3d/input.js` turns a gesture into a throw. A press on the lane **grips the ball at
+once**: a hand holds it (an SVG drawn for the game over the ball, thumb and two fingers in the
+holes, following the ball as the camera sees it). Everything is decided **when the finger
+lifts**, by its release velocity: how it moved over the last **70 ms** before the lift (four
+samples of a 60 Hz touch screen; a longer window mixes a late flick with the drag before it).
 
 | Gesture | What it does |
 |---|---|
-| press and move at once, up towards the pins | throws: speed, line and hook from the forward swipe |
-| press, drag back towards you first, then swipe up | throws with a pull-back: up to 0.9 m/s more, for a pull-back of 30 mm at 400 mm/s or more (less for a shorter or slower one) |
-| press, drag back, let go before pushing forward | nothing (cancelled) |
-| a forward swipe shorter than 17 mm or slower than 50 mm/s | "För svagt" (too weak), as before |
-| press and **hold still for 0.4 s** (a ring appears), then drag | places the ball: across the lane and up to 4.4 m back from the foul line; never throws |
-| a quick sideways slide (how the ball was moved before) | nothing, and a hint says how to move the ball |
+| push or swipe up towards the pins and let go while moving | throws: speed and line from the release velocity, spin from the curve near the release |
+| drag slowly (the ball follows the finger while it moves slower than 120 mm/s) and let go | no throw: the ball stays where it was let go - that is how you choose where to stand (across the lane, up to 4.4 m back from the foul line) |
+| let go moving sideways (more than 50° off straight up the screen) or backwards | no throw; the ball stays |
+| stop, then lift (no movement in the last 100 ms) | no throw; the ball stays |
+| a forward release slower than 50 mm/s | no throw (it is a slow drag); the ball stays |
+| a quick forward flick shorter than 17 mm | "För svagt" (too weak); the ball stays |
 | ←/→, ↑/↓ | move the ball across, forward and back |
 
-**Speed.** The finger's speed over the last 120 ms of the forward swipe is measured in
+A quick stroke does not drag the ball with it (the clutch slips above 120 mm/s): a throw starts
+from where the ball stood, and the stance stays there for the next ball. The pull-back power of
+the earlier swipe is gone: dragging back now moves the ball, and only the release counts.
+
+**Line.** The direction of the release velocity, 0 straight up the screen, times 0.05 (at most
+0.06 rad): 10 degrees off straight is 0.0087 rad, 16 cm at the head pin; the pocket for a
+straight ball from the middle is a release 4 degrees to the right. A curve turns the release
+direction as well as spinning the ball, so a hook is released aimed right and curved left, as a
+bowler plays out and lets the ball come back.
+
+**Spin.** The heading's turn between the two halves of the path's last 30 mm before the release:
+a dead zone of 0.05 rad (3 degrees), then 28 rad/s of side rotation per radian, scaled with speed
+as below (`sideFactor`); a straight push gives none. On a phone, a **twist of the phone** at the
+release adds to it: the rotation about the axis through the screen over the last 180 ms
+(counterclockwise as you see the screen = a right-hander's release = hook left), mapped as the
+swing's wrist turn (8 degree dead zone, then 18 rad/s per radian); curve and twist together are
+clamped to 20 rad/s before `sideFactor`. The twist is read from `devicemotion` only where the
+events come without asking (Android) or were allowed on this page already (iOS, the swing's
+card) - never a permission prompt - and only while a throw can come. The axis: what the swing's
+tracker found from its data (`FRAMES`), else Chromium's order (`rotationRate.gamma`, checked with
+the sensor emulation: a gyroscope z of +3 rad/s arrives as gamma +171.9 deg/s), and the standard's
+`alpha` on iPhone and iPad (not tried on a device). Without the sensor the spin is the curve's.
+A gentle curve (15 degrees over the end) gives about 5 rad/s on a 7 m/s ball, 17 cm of hook at
+the pins; the drawn ball turns with its side rotation from the release on (also while it is
+carried up the approach from a stance behind the foul line).
+
+**On the screen** (`js/game/modehint.js`, `css/modehint.css`): at the player's turn a short hint
+near the ball - under it, or beside it when the status line is right below it (a phone on its
+side), clear of the status line, the buttons, the TVs, the ball speed and the aim line - says
+**Ta tag i klotet och släpp i kastriktningen · Dra långsamt för att flytta** (with the swing:
+**Kasta med den stora knappen · Dra klotet långsamt ovanför knappen för att flytta det**, above
+the swing button). It shows at once at the first three turns of a page; later it comes back at
+once after a gesture that did not throw (the ball moved, a tap, too weak) and the next two turns
+after "too weak", and otherwise after 5 s of a turn without a throw. While the ball is held the
+hand is the sign; while no throw can come (the ball rolling, the pins, the pinsetter, a machine
+player's turn, the console or another screen) there is no hint, and a press on the lane shows
+**Vänta tills det är din tur** above the finger for a moment.
+
+**Speed.** The finger's release speed (above) is measured in
 millimetres per second, CSS pixels divided by the device's pixels per millimetre (about 6 on
 a phone, 5.2 on a tablet, 4 on a desktop or laptop touch screen; a mouse counts as a finger
 on a phone), so the same finger speed gives the same ball on a phone, a tablet and a desktop,
 in portrait and in landscape (`tests/swipe_test.mjs`: within 3.4 % over nine real devices).
 The launch speed follows the finger speed on a logarithmic curve, `3.3 + 1.42 ln(f / 50)` m/s,
-from 50 mm/s (slower is too weak) to 2000 mm/s:
+from 50 mm/s (a slower release does not throw) to 2000 mm/s:
 
 | Finger speed (mm/s) | ≈ CSS px/s on a phone | Launch (m/s) | Foul line to head pin (s) | Ball speed shown (km/h) |
 |---|---|---|---|---|
@@ -357,8 +413,8 @@ The speed is timed by the events' own clock: a slow device that handles a swipe'
 and in bursts throws exactly as fast, and a rest before a quick flick (a still finger sends no
 events) is not counted as part of it.
 
-**Hook.** The swipe's curve gives up to 20 rad/s of side rotation, scaled by
-`0.69 (v / 7.05)^0.6` for a ball of launch speed v: a quicker arm turns the ball more, but
+**Hook.** The curve (and a phone's twist) gives up to 20 rad/s of side rotation, scaled by
+`0.69 (v / 7.05)^0.6` for a ball of launch speed v (`sideFactor`): a quicker arm turns the ball more, but
 less than in proportion, so the same curve hooks further and enters the pins at a steeper
 angle on a slower ball, and a faster ball drives through straighter.
 
@@ -407,8 +463,9 @@ and hold, **aim** (the button says **SIKTA**: turn the phone a little, and a mar
 lane's arrows, with the aim line, until it stands on the arrow you want), swing the arm back (that
 locks the aim: **SVINGA!**), swing it forward, and **lift the thumb at the bottom of the swing**:
 letting go of the button is letting go of the ball, and the sensors alone never throw.
-The volume keys are not used (browsers do not give them to pages). Placing the ball works as
-with the swipe: hold still above the button until the ring shows, then drag, or the arrow keys.
+The volume keys are not used (browsers do not give them to pages). Moving the ball works as
+with the swipe: grip it above the button, drag it slowly and let go, or the arrow keys (a quick
+release on the lane does not throw: a hint says to use the button).
 
 **When.** The **Kast** setting (open play and VBS-T): **Auto** (the default) swings on a phone or
 tablet (the browser says Android, iPhone, iPad or iPod) that delivers motion events and swipes
@@ -524,8 +581,8 @@ it the first time.
    ball curves left at the end; clockwise: it curves right.
 7. Let go clearly early (arm still behind you): the ball goes a little right; clearly late
    (arm out in front): a little left; at the bottom: straight.
-8. Hold above the button until the ring shows and drag: the ball moves on the approach. A swipe
-   up on the lane does not throw and says how to throw.
+8. Touch the lane above the button (the hand grips the ball), drag slowly and let go: the ball
+   moves on the approach. A swipe up on the lane does not throw and says how to throw.
 9. Settings: **Kast: Svep**: the button is gone and the swipe throws; **Visa svingdemo** plays the
    demo again. On an iPhone, deny the permission once (Safari settings): the game falls back to
    the swipe with a note.
@@ -560,9 +617,10 @@ answered with `ClubLogos/Empty.png`. No file of TakTV is changed.
 ## The sound
 
 The hall and its people are heard: the player's ball rolling down the lane, the pins, the
-pinsetter, the ball coming back, the murmur of the hall, the other lanes, and the friends
-on the settee who cheer a strike and groan at a 10 pin left standing. **Every sound is
-synthesised in the browser** (`js/audio/`, Web Audio); no sound file is loaded.
+pinsetter, the ball coming back, the hall's ventilation, the other lanes, and the friends
+on the settee who applaud a strike. **No human voices are heard**: no murmur of talkers, no
+cheers or groans. **Every sound is synthesised in the browser** (`js/audio/`, Web Audio); no
+sound file is loaded.
 
 **Where the sounds come from.** VBS's own sounds were looked for first, in an installed
 Viking 4.4 (`C:\Viking2001`: `web\screen`, `v3gfx`, `GameConsole`, `Voice` (GSVoice), the
@@ -574,11 +632,11 @@ name points to a sound library and whose licence is not known. The RedPin videos
 GSVoice's announcements and ComTV's `MISS*.wav` / `HAL*.wav` are not installed. So nothing
 is copied: every sound is synthesised, and no CC0 or other outside sound is used.
 
-**Size.** The scripts add 81 KB (24 KB gzipped): `js/audio/synth.js`, `hallaudio.js`,
+**Size.** The scripts add 68 KB (22 KB gzipped): `js/audio/synth.js`, `hallaudio.js`,
 `reactions.js`, `moments.js` and `css/audio.css`. No media files. The sounds are rendered
-after the first tap in the browser's idle time, a voice or a few clappers at a time (ready
-within about 0.6 s on the test PC, 4.5 s with its CPU slowed four times as a phone's), and
-take about 12 MB of memory. A crowd variant made anew after use waits while a ball is out.
+after the first tap in the browser's idle time, a few clappers at a time (ready within about
+0.5 s on the test PC, 2-3 s with its CPU slowed four times as a phone's), and take about 9 MB
+of memory. An applause or whistle variant made anew after use waits while a ball is out.
 
 **Frame cost** (headless Edge on the test PC, the low detail level, full games): the sound's own
 work in a frame takes a median of under 0.1 ms, 0.2 ms at the 95th percentile and at most 0.9 ms,
@@ -592,14 +650,14 @@ mixing itself runs on the browser's audio thread, not in the frames.
 
 | When | What is heard | How it is made |
 |---|---|---|
-| always, after the first tap | the hall's murmur: distant talkers, now and then a laugh, the ventilation | a 12 s seamless loop of 9 talkers (7 on a phone): phrases of syllables through formant filters, a falling pitch, pauses; dulled by distance, placed around the hall |
+| always, after the first tap | the hall's room tone: the ventilation, far below everything else (no talkers) | a 12 s seamless loop of low-passed noise (160 Hz, about -44 dBFS) |
 | the player's ball | its roll, from the real speed (level, brightness) and position (fainter towards the pins), with a beat at its rotation rate (about 10 per second at 7 m/s); a hollow rattle in the gutter | looped noise, filtered every frame from the physics; the ball carried up the approach is quieter |
 | a machine player's release | the ball landing on the lane | a low thud |
 | the ball at the pins | an impact for every hit the physics reports: the ball meeting a pin, a pin against a pin, a pin falling on the deck, against the kickback, into the pit, the ball into the cushion. More pins falling, more impacts: in two full games a ball averaged 2 impacts with no pin down, 13 for one pin, 48 for seven and 68 for a strike (at most 8 a frame, 5 on a phone: the loudest) | modal synthesis: the pin's decaying modes (0.7-6 kHz, damped in 6-55 ms) and a click; a pin on the deck, the kickback and the pit lower and duller |
 | the ball at rest | the pinsetter: the sweep drops, the rake takes the deadwood to the pit, the deck sets a new rack (after a strike or a frame) or lifts and respots the leave; then the ball comes back on the return, with a clack on the rack | motors (the 100 Hz mains hum and a gliding gearbox whine), metal clunks, scraping, pin knocks; from the pin deck, 18 m away, with more reverb |
-| the hall's far lanes | when the hall shows a ball on a lane further away (`hall.js`, every 3.5-9.5 s), it is heard rolling, its pins crash as the hall's pins fall (louder for more pins), its pinsetter sweeps as the hall's rake does, and after a strike its bowlers sometimes cheer | the hall's own events are read each frame (nothing in `hall.js` is changed); placed left or right by the lane's place |
+| the hall's far lanes | when the hall shows a ball on a lane further away (`hall.js`, every 3.5-9.5 s), it is heard rolling, its pins crash as the hall's pins fall (louder for more pins), and its pinsetter sweeps as the hall's rake does | the hall's own events are read each frame (nothing in `hall.js` is changed); placed left or right by the lane's place |
 | the bumpers | the rails rising or lowering (a motor, two stops); a ball against a rail | from the shared game events `bumpersUp`, `bumpersDown`, `bumperHit` |
-| the warm-up | a soft rising chime and the machine setting a rack at the start, a falling chime at the end; no crowd during practice balls | `practiceStart`, `practiceEnd` |
+| the warm-up | a soft rising chime and the machine setting a rack at the start, a falling chime at the end; no applause during practice balls | `practiceStart`, `practiceEnd` |
 | the end of a game | a short round of applause | `gameEnd` |
 
 Every sound has a place: its distance from the bowler (at the foul line of the playing lane)
@@ -608,44 +666,37 @@ a 1.4 s decay that dulls with time, as a large room with carpet and ceiling tile
 
 ### The people
 
-After each ball the people react (`js/audio/reactions.js`). The player's friends react in full;
-a machine player's ball gets a smaller, quieter reaction (at most 0.6 of the level, fewer
-layers), so the player's stand out. The voices are wordless (yeah, woo, whoa, oh, aww, ooh,
-sighs) so they suit all five languages: groups of men and women, each with their own pitch,
-reaction time and place, made from a vocal-fold sawtooth and breath through three formant
-filters, with vibrato and a wandering pitch. The applause is single claps, one clapper at a
-time, each with their own hands (the band of a clap, 0.9-2.5 kHz) and pace (4-6 a second).
+After a strike or a spare the people applaud (`js/audio/reactions.js`). **They have no
+voices**: no cheers, no groans, and so no reaction at all to a bad ball. The player's friends
+react in full; a machine player's ball gets a smaller, quieter reaction (at most 0.6 of the
+level, fewer layers), so the player's stand out. The applause is single claps, one clapper at a
+time, each with their own hands (the band of a clap, 0.9-2.5 kHz) and pace (4-6 a second); a
+big ball also gets a two-finger whistle (a pure tone that rises and falls, not a voice).
 
 | Ball | The player | A machine player |
 |---|---|---|
-| strike | "yeah!" and applause | a few claps |
-| double | a cheer and more applause | claps and a "yeah" |
-| turkey | a cheer, a whistle, a bigger round | a "yeah" and applause |
-| four or more in a row | a roar, a whistle, the round | as a turkey |
-| perfect game | the hall: a roar, whistles, a cheer, everyone clapping for 6 s | a cheer and a round |
+| strike | applause | a few claps |
+| double | more applause | a few claps |
+| turkey | a bigger round and a whistle | applause |
+| four or more in a row | the round, louder, and a whistle | as a turkey |
+| perfect game | the hall: everyone clapping for 6 s, two whistles | a round |
 | RedPin strike | at least as a turkey | at least as a turkey |
-| spare | a "yeah" and a few claps | a few claps |
-| converted split | "whoa!", applause, a whistle | a "yeah" and claps |
-| gutter ball | "ohh" / "oh no" | a quiet "oh" |
-| missed spare, foul | a sigh | a quiet sigh |
-| split left | a tense "oooh" | a quiet "ooh" |
-| near miss: one pin left on the first ball | a groan, "awww"; louder for a 10 or a 7 left alone | a quiet groan |
-| one pin left of a spare | a groan | a quiet groan |
-| an ordinary open frame | nothing | nothing |
+| spare | a few claps | a few claps |
+| converted split | applause and a whistle | a few claps |
+| gutter ball, split, a pin left, missed spare, foul, open frame | nothing (only the ball and the pins) | nothing |
 
-Each reaction is picked from several variants (two or three of each, made anew with a new
-seed after each use), played a little faster or slower and louder or softer each time, so it
-never repeats.
+Each reaction is picked from its variants (two of each, one of the perfect game's round, made
+anew with a new seed after each use), played a little faster or slower and louder or softer each time, so it never
+repeats.
 
 **When.** What the hall can already see is answered at once, from the physics: every pin of
-the rack down (a strike, or a spare; a converted split when the leave was a split) and a ball
-dropping into the gutter. In two full games these reactions came 0.6 s or more (median 1.5 s)
-before the ball was scored. The rest (a split, a near miss, a miss) waits for the pins to settle and
-the ball to be scored, and comes from the shared game events (`js/game/events.js`: `ball`,
-`strike`, `spare`, `split`, `gutter`, `miss`). When the scored ball turns out bigger than the
-first guess (a turkey where the physics only knew the strikes before it), the bigger
-reaction's extra layers are added; in No Tap and Mini Bowling, where a ball the physics does
-not see as all down can be a strike, the reaction comes with the score.
+the rack down (a strike, or a spare; a converted split when the leave was a split). In two
+full games these reactions came 0.6 s or more (median 1.5 s) before the ball was scored. The
+scored ball comes from the shared game events (`js/game/events.js`: `ball`, `strike`,
+`spare`). When the scored ball turns out bigger than the first guess (a turkey where the
+physics only knew the strikes before it), the bigger reaction's extra layers are added; in No
+Tap and Mini Bowling, where a ball the physics does not see as all down can be a strike, the
+reaction comes with the score.
 
 **The lights.** On a big ball for the player the lights over the lane pair (the pin-deck lamp
 and the lamps behind the valances, `scene.gameLights()`) brighten for a moment and fade back
@@ -722,7 +773,7 @@ live TakTV page.
 ## The lane console
 
 Each lane in play has its lane console (`js/game/consolehost.js`): the console button in the HUD
-(the screen icon) opens VBS's own web console page over the game, with a tab per lane. The page is
+opens VBS's own web console page over the game, with a tab per lane. The page is
 `web/screen/console/touchconsoleLaneGame.html` = `touchconsoleLane.html` with one script tag
 (`js/standin/console-standin.js`) and the phone sizing below, and its scripts are Viking 4.4's. The stand-in
 answers the page as LoadCom's console service does (`Slave/LOADCOM/LoadComWebInterface.cpp`):
@@ -767,6 +818,19 @@ Korrigera, a ball's cell, a digit, Spara, the lane checked):
 
 The console's own tab bar in the game is 40 px high, its close button 44 x 44.
 
+**The button.** It carries the console's own word as its label (`conButton`: Banterminal, Lane
+console, Baneterminal, Ratapääte), beside a lane tablet with the dock's Korrigera pencil, in the
+dock's look: a raised blue button with a gold icon. A bare screen icon among four other icons was
+not recognised as the lane console. It is the last of the HUD's buttons: the end of the row at the
+top (landscape, desktop), the foot of the column upright (furthest from the small TVs above it), and
+with the swing button the last row of its grid, across both columns, straight above the button
+(102-119 px wide: Ratapääte to Baneterminal). The start help has a line on it (`howToConsole`), and the console hint
+(`conHint`) and the help use the dock's own words in each language (`dock.correct`,
+`dock.changePlayer`, `dock.endPractice` in `web/screen/console/lang/`). The HUD's buttons draw above the small TVs
+(`.hudBtns` z-index 3), because on a short upright screen (a phone's browser with its bars, 375 x 548
+or 390 x 664) the strip of small TVs reached the column and hid the menu, ⏩, sound and full-screen buttons;
+a small TV shown large still covers them.
+
 **Played in headless Edge** (`node tests/wall_play.mjs`, real taps and swipes, from
 `/games/VikingBowling/`; the screenshots are kept outside the published folder):
 
@@ -774,7 +838,7 @@ The console's own tab bar in the game is 40 px high, its close button 44 x 44.
 |---|---|---|
 | `open` | 1280 x 800, 390 x 844 (touch) | warm-up of 2 balls: the lane in practice (`laneStatus` 11), the TV's practice layout, a practice ball not scored; the player and a machine player with bumpers (`+C` in the lane file, the rails up for the player); End practice on the console (the serie starts with bowler 1, `laneStatus` back to 2); a ball at the gutter with the bumpers up stays out of it; Korrigera: the player's first ball changed (the lane, `GCI_CHANGED`, the TV's lane file); Ändra spelare: a third bowler given bumpers; the TV's animations played (`Strike.webm`, `Spare.webm`, `Split.webm` among them); the HUD laid out without overlaps; no exception or console error |
 | `vbst` | 1280 x 800 | Banpoängsmatch 4+4: 4 lanes on the TV wall (TakTV and 3 small TVs, 4 overhead TVs); the other lanes bowled at the player's pace; serie 1 played out, serie 2 on other lanes - the large TV followed the player (lane 1 -> 3) |
-| `layout` | 1920 x 1080, 1280 x 800, 800 x 1280, 390 x 844, 844 x 390 (touch except the first) | Banpoängsmatch 8+8 on 8 lanes: 8 lanes, 7 small TVs, all in their warm-up; a ball; a small TV shown large inside the screen; the console of lane 8 (tabs scroll on a phone), Korrigera on it; nothing cut off or overlapping |
+| `layout` | 1920 x 1080, 1280 x 800, 800 x 1280, 390 x 844, 844 x 390 (touch except the first) | Banpoängsmatch 8+8 on 8 lanes: 8 lanes, 7 small TVs, all in their warm-up; a ball; a small TV shown large inside the screen; the console of lane 8 (tabs scroll on a phone), Korrigera on it; nothing cut off or overlapping; every HUD button inside the screen with nothing on top of it, the console button labelled (all scenarios) |
 | `minutes` | 844 x 390 (touch) | a 1-minute warm-up: the clock running, practice balls, the stop picture (`GCI_PracticeOver`, `maskPicture` 3; the 30 s shortened to 20 s for the test by `app.practiceStopMs`), then the serie |
 
 The only failed requests in these runs are the five harmless 404s listed under "Known gaps".
@@ -998,7 +1062,9 @@ teams, points, pins, leader) is printed by the test.
 
 | Test | What |
 |---|---|
-| `node tests/swipe_test.mjs` | the gesture -> throw mapping with synthetic pointer events, each with its own `timeStamp`: the ball speed rises with the finger speed on the curve above (and the old mapping beside it), a too slow or too short swipe is too weak; the same finger speed gives the same ball on nine real phones, tablets and touch screens in portrait and landscape (real pixel densities, within 4 %) and with a mouse; a pull-back adds power up to its cap, letting go during it cancels, a pause at its bottom or a rest before a quick flick does not slow the throw; a long press places the ball (clamped to the approach) and never throws, a flick that began within the hold time is a throw however late its events are handled, a sideways slide shows the hint, the arrow keys move the ball; standing 4 m back gives the same lane speed and line; a curve left hooks left and the same curve hooks further and enters steeper on a slower ball; on a slow device (6, 10 and 20 frames a second: the events handled in bursts, coalesced, the pointer-up a frame late) a swipe throws exactly as fast as at full frame rate; a touch whose pointer stream the browser cancels while it goes on delivering touch events still throws |
+| `node tests/loading_test.mjs [kbps=3000] [outDir]` | the load bar on the splash in headless Edge on a throttled connection (starts its own `tests/serve.mjs`): `js/loadsizes.js` names exactly the files the splash waits for; while the game loads the bar shows "Laddar … n %", n only grows and passes 50 %, and the flags, help and **OK** wait; when the game has started the bar is gone, the splash is complete and OK, Fortsätt and Starta reach the play screen with no exception; the text follows the language chosen last time ("Loading … n%"); a file that does not load turns the bar red with "Spelet kunde inte laddas …" |
+| `node tests/swipe_test.mjs` | the grip-and-release throw with synthetic pointer events, each with its own `timeStamp`: the ball speed rises with the release speed on the curve above, a release slower than 50 mm/s does not throw and a short quick flick is too weak; the same finger speed gives the same ball on nine real phones, tablets and touch screens in portrait and landscape (real pixel densities, within 4 %) and with a mouse; the release decides (a stroke that slows or speeds up at the end, a turn at the end sets the line), a pull-back adds nothing; a straight push gives no spin and a straight line; a slow drag and lift moves the ball without a throw (also forward), a sideways or backward release, a finger that stopped before it lifted and a tap never throw; a quick stroke throws from where the ball stood and leaves the stance there, a slow drag first moves it; the drag is clamped to the approach, the modes the hints get, the arrow keys; standing 4 m back gives the same lane speed and line; a curve left spins the ball to hook left in the back end (right: right), a little, and the same curve hooks further and enters steeper on a slower ball; the phone's twist (the turn over the last 180 ms, its dead zone and scale, counterclockwise left, clockwise right, added to the curve and clamped, none without a sensor); on a slow device (6, 10 and 20 frames a second: the events handled in bursts, coalesced, the pointer-up a frame late) a swipe throws exactly as fast as at full frame rate, a rest before a quick flick does not slow it; a touch whose pointer stream the browser cancels while it goes on delivering touch events still throws |
+| `node tests/grip_browser.mjs <w> <h> <touch 0\|1> [lang] [outDir] [baseUrl]` | the grip throw in headless Edge with real pointer input: the hint near the ball (clear of the ball, the aim line, the status line, the buttons, the TVs and the ball speed), the hand on the ball at the press and while it is dragged, a slow drag that moves the ball without a throw, a sideways release, a straight push (no spin), a curved swipe (side spin, the body turning about its direction of travel, the path hooking in the back end), "wait for your turn" while the ball rolls and during a machine player's turn; touch: the phone's twist through Chromium's sensor emulation (counterclockwise, clockwise, still); screenshots in outDir |
 | `node tests/physics_tune.mjs` | pin action at the classic impact points (pocket, light, high, head-on, Brooklyn, straight ball); the low level's budget for the pin crash only takes time away (exactly one sub-step a frame when it runs out at once; the pocket hit's strike rate stepped that way) |
 | `node tests/warmup_test.mjs` | the warm-up in balls, frames and minutes as OpenPlay plays it (nothing on the sheet / the frame on the sheet and wiped / the clock, the stop picture and the serie), the turn passed, End practice on the console (only on a lane practising; an American pair ends both lanes, bowlers 0 and 8), a tenth-frame game after a warm-up (ball 0 by OpenPlay's own end, ball 18 by End practice), and **not scored**: the same game balls give the same sheet and totals with and without a warm-up (EUR and AMR, balls and frames); the game's ball loop (`LaneGame` with a stand-in App): a ball still rolling when End practice or the clock ends the warm-up is not scored (balls, frames, minutes, the player's ball and a machine player's) |
 | `node tests/bumper_test.mjs [throws=120]` | balls released at the gutters (both sides, hook and none, 3.5-8.5 m/s): with the bumpers up **none ends in the gutter**, nearly all meet a bumper and take pins, the ball's centre stays inside the rails; the same balls with the bumpers down go into the gutter and touch no rail; a second ball into the same rail is heard as the first (the bumper-hit clock starts again at each release); the slowest balls (3.3-4.2 m/s) at the rails all reach the pins (none ended short while still rolling; a ball that has stopped moving forward is ended where it is); machine players with bumpers throw **no gutter ball** in 20,000 first balls at averages 80, 100 and 130, and without bumpers draw exactly as before; the `+C` mark as `IsBowlerUsingBumper` reads it, players.json's `bump`, and Ändra spelare setting and clearing it |
@@ -1007,8 +1073,8 @@ teams, points, pins, leader) is printed by the test.
 | `node tools/make_tv_media.mjs [baseUrl] [previewDir]` | makes the TV animations (not a test) |
 | `node tests/motion_test.mjs`, `tests/motion_browser.mjs`, `tests/motion_android.mjs` | throwing by swinging the phone: see "Throwing by swinging the phone" |
 | `node tests/shoot.mjs <spec>` | headless Edge screenshots (the specs used are described below) |
-| `node tests/audio_test.mjs [outDir]` | the sound, in node: renders every sound (no NaN, no clipping, no DC, each in its band; with `outDir` each is written as a WAV to listen to); balls scored by the game's engine give the right reactions (a strike, a double, a turkey, four in a row, a perfect game, a spare, a converted split, a gutter ball, a split, a near miss with the 10 and with the 5, one pin left of a spare, a missed spare, No Tap 9, an open frame: nothing); the player's reactions louder than a machine player's, a bigger strike bigger; the strikes-in-a-row guess made before the ball against the engine's count after it (8,732 strikes in five game types: 100 % the same) |
-| `node tests/audio_browser.mjs <url> <outDir> [mobile] [cpu] [quick]` | the sound in headless Edge with the browsers' own autoplay rules, the game served from a sub-path (`node tests/serve.mjs 8790 <folder holding games/VikingBowling>`, then `http://127.0.0.1:8790/games/VikingBowling/`): no AudioContext and no sound before the first gesture, one context created in it and running; every sound rendered; a full EUR and a full AMR game in 3D (the player by test throws, two machine players), where every scored ball with a reaction got it, the early reactions came 0.6 s or more (median 1.5 s) before the score, the impacts grew with the pins down and the far lanes were heard; every reaction played through the shared game events with the engine's result and recorded from the output as a WAV (a turkey louder than a strike, a perfect game louder than a turkey, the player's strike and gutter ball more than 1.5 times a machine player's, two strikes never the same sound); mute and volume, remembered over a reload, and no AudioContext while muted; the frame time with the sound on and muted on the low detail level; no exception or console error |
+| `node tests/audio_test.mjs [outDir]` | the sound, in node: renders every sound (no NaN, no clipping, no DC, each in its band; the room tone at its level and seamless; with `outDir` each is written as a WAV to listen to); no human voice: no voice synthesis left in `synth.js` and no reaction made of anything but applause and whistles; balls scored by the game's engine give the right reactions (a strike, a double, a turkey, four in a row, a perfect game, a spare, a converted split, No Tap 9; nothing for a gutter ball, a split, a near miss with the 10 and with the 5, one pin left of a spare, a missed spare, an open frame); the player's reactions louder than a machine player's, a bigger strike bigger; the strikes-in-a-row guess made before the ball against the engine's count after it (8,732 strikes in five game types: 100 % the same) |
+| `node tests/audio_browser.mjs <url> <outDir> [mobile] [cpu] [quick]` | the sound in headless Edge with the browsers' own autoplay rules, the game served from a sub-path (`node tests/serve.mjs 8790 <folder holding games/VikingBowling>`, then `http://127.0.0.1:8790/games/VikingBowling/`): no AudioContext and no sound before the first gesture, one context created in it and running; every sound rendered, no voice among them, the room tone running; a full EUR and a full AMR game in 3D (the player by test throws, two machine players), where every scored ball with a reaction got it, the early reactions came 0.6 s or more (median 1.5 s) before the score, the impacts grew with the pins down, the far lanes were heard and every sound played came from a bank that is not a voice; every reaction played through the shared game events with the engine's result and recorded from the output as a WAV (a turkey louder than a strike, a perfect game louder than a turkey, the player's strike more than 1.5 times a machine player's, a bad ball nothing over the room tone, two strikes never the same sound); mute and volume, remembered over a reload, and no AudioContext while muted; the frame time with the sound on and muted on the low detail level; no exception or console error |
 
 ## Screenshots
 
@@ -1114,8 +1180,8 @@ by `node tools/vendor.mjs`, because a static host (GitHub Pages) does not serve
 * The quiet life plays on lanes two to seven lanes from the game's lanes; the lanes right next
   to the player stay still, so that nothing moves beside the player's own ball.
 * **The sound** was checked by measurement (levels, bands, timing, the recordings in the
-  test), not yet by ear in a real hall. The crowd's voices are synthesised: at a distance and
-  in a group they pass, close up they sound made. There is no background music (a centre
+  test), not yet by ear in a real hall. There are no human voices (no murmur of talkers, no
+  cheers or groans), so the hall is quieter than a real centre. There is no background music (a centre
   usually has some). The pinsetter and the ball return are heard but not seen move on the
   game's own lanes (the pins are reset at once, as before). On a phone in silent
   mode iOS mutes Web Audio.

@@ -28,8 +28,10 @@ const T = {
     chooseLang: 'Välj språk', ok: 'OK, jag förstår', back: 'Tillbaka', start: 'Starta', next: 'Fortsätt', menu: 'Meny',
     infoTitle: 'Välkommen till Viking Bowling – onlinespel',
     infoText: 'Viking Bowling är till för träning, utbildning, demo och underhållning. Spelet simulerar Viking Bowlings poängsystem: samma poängräkning, spelformer, banTV och konsol som i bowlinghallarna.',
-    howTo: 'Så kastar du: svep uppåt mot käglorna och släpp. Ju snabbare svep, desto fortare klot; riktningen blir linjen och en böj i slutet ger skruv. Dra först klotet bakåt mot dig och svep sedan framåt för extra kraft. Flytta klotet: håll kvar fingret (eller musknappen) tills en ring syns och dra det åt sidan eller bakåt på ansatsen - eller använd piltangenterna. Klotet kan hamna i rännan.',
+    howTo: 'Så kastar du: tryck på klotet så greppar en hand det. Skjut eller svep mot käglorna och släpp - farten och riktningen när du släpper bestämmer kastet. En böj i slutet av svepet ger skruv, på en telefon också en vridning av telefonen när du släpper. Flytta klotet: dra det långsamt och släpp där du vill stå - eller använd piltangenterna. Klotet kan hamna i rännan.',
     copyright: '© 1995-2026 VBS Bowling AB. Alla rättigheter förbehållna.',
+    // the load bar on the splash while the game loads (js/loading.js)
+    loading: 'Laddar …', loadPct: '{n} %', loadFailed: 'Spelet kunde inte laddas. Ladda om sidan för att försöka igen.',
     fullscreen: 'Helskärm', exitFullscreen: 'Lämna helskärm', sound: 'Ljud',
     openPlay: 'Öppet spel', vbst: 'VBS-T tävling', playStyle: 'Spelstil', eur: 'EUR - europeiskt', amr: 'AMR - amerikanskt',
     eurHint: 'Hela serien på samma bana', amrHint: 'Banparet växlas varje ruta',
@@ -54,9 +56,12 @@ const T = {
     hcp: 'HCP', pins: 'Kägelpoäng', match: 'Match', draw: 'Oavgjort', wins: 'vinner', sitOut: 'vilar',
     tv: 'BanTV', bigTv: 'Stor TV', skip: 'Hoppa över', fast: 'Snabbt', simulate: 'Spela ut serien', seriesResult: 'Serieresultat',
     unavailable: 'Rörelsefilen saknas - formatet kan inte bokas, inte heller i Viking.', ball: 'Klot', speed: 'Fart',
-    // the throw (js/sim3d/input.js): the one-time hint, how to move the ball, the ball speed after a ball
-    throwHint: 'Svep uppåt för att kasta - ju snabbare svep, desto fortare klot. Dra först bakåt för extra kraft. Håll kvar en stund för att flytta klotet.',
-    placeHint: 'Flytta klotet: håll kvar tills ringen syns och dra. Kasta: svep uppåt.',
+    // the throw (js/sim3d/input.js): the one-time hint, the ball speed after a ball; the hint near the ball
+    // at the player's turn and "wait" when no throw can come (js/game/modehint.js)
+    throwHint: 'Tryck på klotet så greppar handen det. Skjut eller svep mot käglorna och släpp: farten och riktningen när du släpper bestämmer kastet, en böj ger skruv. Dra långsamt för att flytta klotet.',
+    hintGrip: 'Ta tag i klotet och släpp i kastriktningen', hintDrag: 'Dra långsamt för att flytta',
+    hintThrowMotion: 'Kasta med den stora knappen', hintDragMotion: 'Dra klotet långsamt ovanför knappen för att flytta det',
+    hintWait: 'Vänta tills det är din tur',
     ballSpeedKmh: 'Klotfart {v} km/h',
     // the throw by swinging the phone (js/sim3d/motion.js): the Kast setting, the splash line, the swing button, the first-use card, the hints
     throwInput: 'Kast', throwAuto: 'Auto', throwMotion: 'Svinga telefonen', throwSwipe: 'Svep',
@@ -100,6 +105,7 @@ const T = {
     bumpAmr: 'Amerikanskt spel: Viking reser inte bumpers när banorna växlas, så de står nere hela spelet - som i hallen.',
     conButton: 'Banterminal', conTitle: 'Banterminal',
     conHint: 'Banterminalen: Korrigera rättar poängen, Ändra spelare byter namn, ordning och bumpers, Avsluta inspelning startar spelet. Spelarna på banan väntar medan den är öppen.',
+    howToConsole: 'Banterminalen: knappen Banterminal öppnar banans egen terminal, som i hallen. Där rättar du poängen (Korrigera), ändrar spelare och bumpers (Ändra spelare) och avslutar inspelningen.',
     wallEmpty: 'Ingen spelar'
   },
   en: {
@@ -108,8 +114,10 @@ const T = {
     chooseLang: 'Choose language', ok: 'OK, I understand', back: 'Back', start: 'Start', next: 'Continue', menu: 'Menu',
     infoTitle: 'Welcome to the Viking Bowling online game',
     infoText: 'Viking Bowling is for training, education, demos and entertainment. The game simulates Viking Bowling\'s scoring system: the same scoring, game formats, lane TV and console as in the bowling centres.',
-    howTo: 'How to bowl: swipe up towards the pins and let go. The quicker the swipe, the faster the ball; its direction is the line and a curve at the end gives hook. Pull the ball back towards you first, then swipe forward, for extra power. To move the ball, hold your finger (or the mouse button) still until a ring appears and drag it sideways or back on the approach - or use the arrow keys. The ball can end up in the gutter.',
+    howTo: 'How to bowl: touch the ball (with a finger or the mouse) and a hand grips it. Push or swipe towards the pins and let go - the speed and direction at the moment you let go decide the throw. A curve at the end of the swipe spins the ball so it hooks; on a phone, twisting the phone as you let go spins it too. To move the ball, drag it slowly and let go where you want to stand - or use the arrow keys. The ball can end up in the gutter.',
     copyright: '© 1995-2026 VBS Bowling AB. All rights reserved.',
+    // the load bar on the splash while the game loads (js/loading.js)
+    loading: 'Loading …', loadPct: '{n}%', loadFailed: 'The game could not be loaded. Reload the page to try again.',
     fullscreen: 'Full screen', exitFullscreen: 'Leave full screen', sound: 'Sound',
     openPlay: 'Open play', vbst: 'VBS-T competition', playStyle: 'Play style', eur: 'EUR - European', amr: 'AMR - American',
     eurHint: 'The whole game on one lane', amrHint: 'The lane pair alternates every frame',
@@ -134,9 +142,12 @@ const T = {
     hcp: 'HCP', pins: 'Pinfall', match: 'Match', draw: 'Draw', wins: 'wins', sitOut: 'sits out',
     tv: 'Lane TV', bigTv: 'Big TV', skip: 'Skip', fast: 'Fast', simulate: 'Play out the game', seriesResult: 'Game result',
     unavailable: 'The movement file is missing - this format cannot be booked, not in Viking either.', ball: 'Ball', speed: 'Speed',
-    // the throw (js/sim3d/input.js): the one-time hint, how to move the ball, the ball speed after a ball
-    throwHint: 'Swipe up to bowl - the quicker the swipe, the faster the ball. Pull back first for extra power. Press and hold to move the ball.',
-    placeHint: 'To move the ball: hold still until the ring appears, then drag. To bowl: swipe up.',
+    // the throw (js/sim3d/input.js): the one-time hint, the ball speed after a ball; the hint near the ball
+    // at the player's turn and "wait" when no throw can come (js/game/modehint.js)
+    throwHint: 'Touch the ball and the hand grips it. Push or swipe towards the pins and let go: the speed and direction as you let go decide the throw, a curve gives spin. Drag slowly to move the ball.',
+    hintGrip: 'Grip the ball and let go in the direction of the throw', hintDrag: 'Drag slowly to move it',
+    hintThrowMotion: 'Bowl with the big button', hintDragMotion: 'Drag the ball slowly above the button to move it',
+    hintWait: 'Wait for your turn',
     ballSpeedKmh: 'Ball speed {v} km/h',
     // the throw by swinging the phone (js/sim3d/motion.js): the Kast setting, the splash line, the swing button, the first-use card, the hints
     throwInput: 'Throw', throwAuto: 'Auto', throwMotion: 'Swing the phone', throwSwipe: 'Swipe',
@@ -179,7 +190,8 @@ const T = {
     bumpHint: 'Bumpers: rails over the gutters that rise when a bowler with bumpers is up. The ball bounces back towards the pins instead of going into the gutter - good for children and beginners. Turn them on per bowler here or on the lane console (Change player).',
     bumpAmr: 'American play: Viking does not raise the bumpers when the lanes alternate, so they stay down all game - as in the hall.',
     conButton: 'Lane console', conTitle: 'Lane console',
-    conHint: 'The lane console: Correct fixes the score, Change player changes names, order and bumpers, End practice starts the game. The bowlers on the lane wait while it is open.',
+    conHint: 'The lane console: Correct fixes the score, Change players changes names, order and bumpers, End practice starts the game. The bowlers on the lane wait while it is open.',
+    howToConsole: 'The lane console: the Lane console button opens the lane\'s own console, as in the bowling hall. There you fix the score (Correct), change players and bumpers (Change players) and end the practice.',
     wallEmpty: 'Nobody playing'
   },
   da: {
@@ -188,8 +200,10 @@ const T = {
     chooseLang: 'Vælg sprog', ok: 'OK, jeg forstår', back: 'Tilbage', start: 'Start', next: 'Fortsæt', menu: 'Menu',
     infoTitle: 'Velkommen til Viking Bowling – onlinespil',
     infoText: 'Viking Bowling er til træning, uddannelse, demo og underholdning. Spillet simulerer Viking Bowlings pointsystem: samme pointberegning, spilformer, bane-TV og konsol som i bowlingcentrene.',
-    howTo: 'Sådan kaster du: stryg opad mod keglerne og slip. Jo hurtigere strøg, jo hurtigere kugle; retningen bliver linjen, og et sving til sidst giver skru. Træk først kuglen tilbage mod dig og stryg så fremad for ekstra kraft. Flyt kuglen: hold fingeren (eller museknappen) stille, til der kommer en ring, og træk den til siden eller tilbage på tilløbet - eller brug piletasterne. Kuglen kan havne i renden.',
+    howTo: 'Sådan kaster du: tryk på kuglen (med fingeren eller musen), så griber en hånd den. Skub eller stryg mod keglerne og slip - farten og retningen i det øjeblik, du slipper, bestemmer kastet. Et sving til sidst i strøget giver skru, så kuglen drejer; på en telefon giver det også skru at dreje telefonen, når du slipper. Flyt kuglen: træk den langsomt og slip, hvor du vil stå - eller brug piletasterne. Kuglen kan havne i renden.',
     copyright: '© 1995-2026 VBS Bowling AB. Alle rettigheder forbeholdes.',
+    // the load bar on the splash while the game loads (js/loading.js)
+    loading: 'Indlæser …', loadPct: '{n} %', loadFailed: 'Spillet kunne ikke indlæses. Genindlæs siden for at prøve igen.',
     fullscreen: 'Fuld skærm', exitFullscreen: 'Forlad fuld skærm', sound: 'Lyd',
     openPlay: 'Åbent spil', vbst: 'VBS-T turnering', playStyle: 'Spillestil', eur: 'EUR - europæisk', amr: 'AMR - amerikansk',
     eurHint: 'Hele serien på samme bane', amrHint: 'Baneparret skifter hver rude',
@@ -214,9 +228,12 @@ const T = {
     hcp: 'HCP', pins: 'Keglepoint', match: 'Kamp', draw: 'Uafgjort', wins: 'vinder', sitOut: 'holder pause',
     tv: 'Bane-TV', bigTv: 'Stor TV', skip: 'Spring over', fast: 'Hurtigt', simulate: 'Spil serien færdig', seriesResult: 'Serieresultat',
     unavailable: 'Bevægelsesfilen mangler - formatet kan ikke bookes, heller ikke i Viking.', ball: 'Kugle', speed: 'Fart',
-    // the throw (js/sim3d/input.js): the one-time hint, how to move the ball, the ball speed after a ball
-    throwHint: 'Stryg opad for at kaste - jo hurtigere strøg, jo hurtigere kugle. Træk først tilbage for ekstra kraft. Tryk og hold for at flytte kuglen.',
-    placeHint: 'Flyt kuglen: hold stille, til ringen kommer, og træk. Kast: stryg opad.',
+    // the throw (js/sim3d/input.js): the one-time hint, the ball speed after a ball; the hint near the ball
+    // at the player's turn and "wait" when no throw can come (js/game/modehint.js)
+    throwHint: 'Tryk på kuglen, så griber hånden den. Skub eller stryg mod keglerne og slip: farten og retningen, når du slipper, bestemmer kastet, et sving giver skru. Træk langsomt for at flytte kuglen.',
+    hintGrip: 'Tag fat i kuglen og slip i kasteretningen', hintDrag: 'Træk langsomt for at flytte den',
+    hintThrowMotion: 'Kast med den store knap', hintDragMotion: 'Træk kuglen langsomt over knappen for at flytte den',
+    hintWait: 'Vent, til det er din tur',
     ballSpeedKmh: 'Kuglefart {v} km/h',
     // the throw by swinging the phone (js/sim3d/motion.js): the Kast setting, the splash line, the swing button, the first-use card, the hints
     throwInput: 'Kast', throwAuto: 'Auto', throwMotion: 'Sving telefonen', throwSwipe: 'Strøg',
@@ -259,7 +276,8 @@ const T = {
     bumpHint: 'Bumpers: skinner over renderne, der hæver sig, når en spiller med bumpers er på. Kuglen springer tilbage mod keglerne i stedet for at gå i renden - godt for børn og begyndere. Slå dem til for hver spiller her eller på baneterminalen (Ændre spiller).',
     bumpAmr: 'Amerikansk spil: Viking hæver ikke bumpers, når banerne skifter, så de er nede hele spillet - som i hallen.',
     conButton: 'Baneterminal', conTitle: 'Baneterminal',
-    conHint: 'Baneterminalen: Korriger retter pointene, Ændre spiller skifter navne, rækkefølge og bumpers, Afslut indspilning starter spillet. Spillerne på banen venter, mens den er åben.',
+    conHint: 'Baneterminalen: Ret scoren retter pointene, Skift spiller skifter navne, rækkefølge og bumpers, Stop optagelse starter spillet. Spillerne på banen venter, mens den er åben.',
+    howToConsole: 'Baneterminalen: knappen Baneterminal åbner banens egen terminal, som i bowlinghallen. Her retter du pointene (Ret scoren), skifter spillere og bumpers (Skift spiller) og afslutter indspilningen.',
     wallEmpty: 'Ingen spiller'
   },
   no: {
@@ -268,8 +286,10 @@ const T = {
     chooseLang: 'Velg språk', ok: 'OK, jeg forstår', back: 'Tilbake', start: 'Start', next: 'Fortsett', menu: 'Meny',
     infoTitle: 'Velkommen til Viking Bowling – nettspill',
     infoText: 'Viking Bowling er for trening, opplæring, demo og underholdning. Spillet simulerer Viking Bowlings poengsystem: samme poengberegning, spillformer, bane-TV og konsoll som i bowlinghallene.',
-    howTo: 'Slik kaster du: sveip oppover mot keglene og slipp. Jo raskere sveip, desto raskere kule; retningen blir linjen, og en bue til slutt gir skru. Dra først kula tilbake mot deg og sveip så fremover for ekstra kraft. Flytt kula: hold fingeren (eller museknappen) i ro til en ring vises, og dra den sidelengs eller bakover på tilløpet - eller bruk piltastene. Kula kan havne i renna.',
+    howTo: 'Slik kaster du: trykk på kula (med fingeren eller musa), så griper en hånd den. Skyv eller sveip mot keglene og slipp - farten og retningen i det øyeblikket du slipper, bestemmer kastet. En bue på slutten av sveipet gir skru, så kula svinger; på en telefon gir det også skru å vri telefonen når du slipper. Flytt kula: dra den sakte og slipp der du vil stå - eller bruk piltastene. Kula kan havne i renna.',
     copyright: '© 1995-2026 VBS Bowling AB. Alle rettigheter forbeholdt.',
+    // the load bar on the splash while the game loads (js/loading.js)
+    loading: 'Laster …', loadPct: '{n} %', loadFailed: 'Spillet kunne ikke lastes. Last inn siden på nytt for å prøve igjen.',
     fullscreen: 'Fullskjerm', exitFullscreen: 'Avslutt fullskjerm', sound: 'Lyd',
     openPlay: 'Åpent spill', vbst: 'VBS-T turnering', playStyle: 'Spillestil', eur: 'EUR - europeisk', amr: 'AMR - amerikansk',
     eurHint: 'Hele serien på samme bane', amrHint: 'Baneparet veksler hver rute',
@@ -294,9 +314,12 @@ const T = {
     hcp: 'HCP', pins: 'Keglepoeng', match: 'Kamp', draw: 'Uavgjort', wins: 'vinner', sitOut: 'står over',
     tv: 'Bane-TV', bigTv: 'Stor TV', skip: 'Hopp over', fast: 'Raskt', simulate: 'Spill ut serien', seriesResult: 'Serieresultat',
     unavailable: 'Bevegelsesfilen mangler - formatet kan ikke bookes, heller ikke i Viking.', ball: 'Kule', speed: 'Fart',
-    // the throw (js/sim3d/input.js): the one-time hint, how to move the ball, the ball speed after a ball
-    throwHint: 'Sveip oppover for å kaste - jo raskere sveip, desto raskere kule. Dra først bakover for ekstra kraft. Trykk og hold for å flytte kula.',
-    placeHint: 'Flytt kula: hold i ro til ringen vises, og dra. Kast: sveip oppover.',
+    // the throw (js/sim3d/input.js): the one-time hint, the ball speed after a ball; the hint near the ball
+    // at the player's turn and "wait" when no throw can come (js/game/modehint.js)
+    throwHint: 'Trykk på kula, så griper hånden den. Skyv eller sveip mot keglene og slipp: farten og retningen når du slipper, bestemmer kastet, en bue gir skru. Dra sakte for å flytte kula.',
+    hintGrip: 'Ta tak i kula og slipp i kasteretningen', hintDrag: 'Dra sakte for å flytte den',
+    hintThrowMotion: 'Kast med den store knappen', hintDragMotion: 'Dra kula sakte over knappen for å flytte den',
+    hintWait: 'Vent til det er din tur',
     ballSpeedKmh: 'Kulefart {v} km/h',
     // the throw by swinging the phone (js/sim3d/motion.js): the Kast setting, the splash line, the swing button, the first-use card, the hints
     throwInput: 'Kast', throwAuto: 'Auto', throwMotion: 'Sving telefonen', throwSwipe: 'Sveip',
@@ -339,7 +362,8 @@ const T = {
     bumpHint: 'Bumpers: skinner over rennene som reiser seg når en spiller med bumpers står for tur. Kula spretter tilbake mot keglene i stedet for å gå i renna - bra for barn og nybegynnere. Slå dem på per spiller her eller på baneterminalen (Endre spiller).',
     bumpAmr: 'Amerikansk spill: Viking hever ikke bumpers når banene veksler, så de står nede hele spillet - som i hallen.',
     conButton: 'Baneterminal', conTitle: 'Baneterminal',
-    conHint: 'Baneterminalen: Korriger retter poengene, Endre spiller bytter navn, rekkefølge og bumpers, Avslutt innspill starter spillet. Spillerne på banen venter mens den er åpen.',
+    conHint: 'Baneterminalen: Korriger retter poengene, Endre spillere bytter navn, rekkefølge og bumpers, Avslutt oppvarming starter spillet. Spillerne på banen venter mens den er åpen.',
+    howToConsole: 'Baneterminalen: knappen Baneterminal åpner banens egen terminal, som i bowlinghallen. Der retter du poengene (Korriger), endrer spillere og bumpers (Endre spillere) og avslutter oppvarmingen.',
     wallEmpty: 'Ingen spiller'
   },
   fi: {
@@ -348,8 +372,10 @@ const T = {
     chooseLang: 'Valitse kieli', ok: 'OK, ymmärrän', back: 'Takaisin', start: 'Käynnistä', next: 'Jatka', menu: 'Valikko',
     infoTitle: 'Tervetuloa Viking Bowlingiin – verkkopeli',
     infoText: 'Viking Bowling on tarkoitettu harjoitteluun, opetukseen, esittelyyn ja viihteeksi. Peli simuloi Viking Bowlingin pistelaskujärjestelmää: sama pistelasku, pelimuodot, rata-TV ja konsoli kuin keilahalleissa.',
-    howTo: 'Näin heität: pyyhkäise ylös kohti keiloja ja päästä irti. Mitä nopeampi pyyhkäisy, sitä nopeampi pallo; suunta on linja ja kaarre lopussa antaa koukun. Vedä pallo ensin taaksepäin itseäsi kohti ja pyyhkäise sitten eteenpäin, niin saat lisää voimaa. Pallon siirto: pidä sormi (tai hiiren painike) paikallaan, kunnes rengas tulee näkyviin, ja vedä pallo sivulle tai taaksepäin vauhdinottoalueella - tai käytä nuolinäppäimiä. Pallo voi päätyä kouruun.',
+    howTo: 'Näin heität: kosketa palloa, niin käsi tarttuu siihen. Työnnä tai pyyhkäise kohti keiloja ja päästä irti - nopeus ja suunta irrotushetkellä ratkaisevat heiton. Kaarre pyyhkäisyn lopussa antaa kierrettä, puhelimella myös puhelimen kääntäminen irrotushetkellä. Pallon siirto: vedä sitä hitaasti ja päästä irti siihen, missä haluat seistä - tai käytä nuolinäppäimiä. Pallo voi päätyä kouruun.',
     copyright: '© 1995-2026 VBS Bowling AB. Kaikki oikeudet pidätetään.',
+    // the load bar on the splash while the game loads (js/loading.js)
+    loading: 'Ladataan …', loadPct: '{n} %', loadFailed: 'Peliä ei voitu ladata. Lataa sivu uudelleen ja yritä uudestaan.',
     fullscreen: 'Koko näyttö', exitFullscreen: 'Poistu koko näytöstä', sound: 'Ääni',
     openPlay: 'Vapaa peli', vbst: 'VBS-T kilpailu', playStyle: 'Pelityyli', eur: 'EUR - eurooppalainen', amr: 'AMR - amerikkalainen',
     eurHint: 'Koko sarja samalla radalla', amrHint: 'Ratapari vaihtuu joka ruudussa',
@@ -374,9 +400,12 @@ const T = {
     hcp: 'HCP', pins: 'Kaatopisteet', match: 'Ottelu', draw: 'Tasapeli', wins: 'voittaa', sitOut: 'tauolla',
     tv: 'Rata-TV', bigTv: 'Iso TV', skip: 'Ohita', fast: 'Nopeasti', simulate: 'Pelaa sarja loppuun', seriesResult: 'Sarjan tulos',
     unavailable: 'Liikkumatiedosto puuttuu - muotoa ei voi varata, ei Vikingissäkään.', ball: 'Pallo', speed: 'Nopeus',
-    // the throw (js/sim3d/input.js): the one-time hint, how to move the ball, the ball speed after a ball
-    throwHint: 'Heitä pyyhkäisemällä ylös - mitä nopeampi pyyhkäisy, sitä nopeampi pallo. Vedä ensin taaksepäin, niin saat lisää voimaa. Paina ja pidä siirtääksesi palloa.',
-    placeHint: 'Pallon siirto: pidä paikallaan, kunnes rengas näkyy, ja vedä. Heitto: pyyhkäise ylös.',
+    // the throw (js/sim3d/input.js): the one-time hint, the ball speed after a ball; the hint near the ball
+    // at the player's turn and "wait" when no throw can come (js/game/modehint.js)
+    throwHint: 'Kosketa palloa, niin käsi tarttuu siihen. Työnnä tai pyyhkäise kohti keiloja ja päästä irti: nopeus ja suunta irrotushetkellä ratkaisevat heiton, kaarre antaa kierrettä. Siirrä palloa vetämällä hitaasti.',
+    hintGrip: 'Tartu palloon ja päästä irti heiton suuntaan', hintDrag: 'Siirrä vetämällä hitaasti',
+    hintThrowMotion: 'Heitä isolla painikkeella', hintDragMotion: 'Siirrä palloa vetämällä sitä hitaasti painikkeen yläpuolella',
+    hintWait: 'Odota vuoroasi',
     ballSpeedKmh: 'Pallon nopeus {v} km/h',
     // the throw by swinging the phone (js/sim3d/motion.js): the Kast setting, the splash line, the swing button, the first-use card, the hints
     throwInput: 'Heitto', throwAuto: 'Automaattinen', throwMotion: 'Heilauta puhelinta', throwSwipe: 'Pyyhkäisy',
@@ -419,7 +448,8 @@ const T = {
     bumpHint: 'Kaiteet: kourujen päälle nousevat kiskot, kun kaidepelaajan vuoro alkaa. Pallo kimpoaa takaisin keiloja kohti eikä mene kouruun - hyvä lapsille ja aloittelijoille. Kytke ne pelaajakohtaisesti tästä tai ratapäätteeltä (Muuta pelaajaa).',
     bumpAmr: 'Amerikkalainen peli: Viking ei nosta kaiteita ratojen vaihtuessa, joten ne ovat alhaalla koko pelin - kuten hallissa.',
     conButton: 'Ratapääte', conTitle: 'Ratapääte',
-    conHint: 'Ratapääte: Korjaa korjaa pisteet, Muuta pelaajaa vaihtaa nimet, järjestyksen ja kaiteet, Lopeta harjoitus aloittaa pelin. Radan pelaajat odottavat, kun se on auki.',
+    conHint: 'Ratapääte: Tuloksen korjaus korjaa pisteet, Pelaajamuutokset vaihtaa nimet, järjestyksen ja kaiteet, Lopeta harjoitus aloittaa pelin. Radan pelaajat odottavat, kun se on auki.',
+    howToConsole: 'Ratapääte: Ratapääte-painike avaa radan oman päätteen kuten keilahallissa. Siinä korjaat pisteet (Tuloksen korjaus), muutat pelaajia ja kaiteita (Pelaajamuutokset) ja lopetat harjoituksen.',
     wallEmpty: 'Ei pelaajia'
   }
 };

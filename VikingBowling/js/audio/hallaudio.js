@@ -8,11 +8,12 @@
 //     against a pin, a pin falling on the deck, against the kickback, into the pit - so the
 //     crash grows with the pins that fall (js/sim3d/physics.js is only read, never changed)
 //   * the pinsetter's sweep and reset after every ball, and the ball coming back on the return
-//   * the hall: a low murmur, and the balls, crashes and pinsetters of the lanes further away,
-//     in step with the hall's own far-lane life (js/sim3d/hall.js, read only)
-//   * the people: applause, cheers, sighs and groans after a ball (js/audio/reactions.js), from
+//   * the hall: its room tone (the ventilation), and the balls, crashes and pinsetters of the
+//     lanes further away, in step with the hall's own far-lane life (js/sim3d/hall.js, read only)
+//   * the people: applause and whistles after a strike or a spare (js/audio/reactions.js), from
 //     the shared game events (js/game/events.js) and, for what the hall can already see while
-//     the pins settle (every pin down, a ball in the gutter), from the physics at once
+//     the pins settle (every pin down), from the physics at once. No human voices: no murmur of
+//     talkers, no cheers or groans
 //   * the bumpers rising and lowering, and the console's chime at the warm-up
 //
 // Every sound is synthesised (js/audio/synth.js) when the browser is idle; nothing is loaded.
@@ -22,7 +23,7 @@
 // convolver; a sound's distance sets its level, pan and how much of it is reverb.
 // ---------------------------------------------------------------------------
 import { LANE } from '../sim3d/physics.js';
-import { GCI, globCheckSplit } from '../engine/openplay.js';
+import { globCheckSplit } from '../engine/openplay.js';
 import { gameEvents } from '../game/events.js';
 import * as S from './synth.js';
 import { classify, earlyClassify, plan, upgrade, flashFor, strikeStreak, countPins } from './reactions.js';
@@ -32,28 +33,24 @@ const isPhone = () => {
   try { return matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600; } catch (e) { return false; }
 };
 const PHONE = isPhone();
-const MAX_VOICES = PHONE ? 28 : 48, MAX_HITS_PER_FRAME = PHONE ? 5 : 8;
+const MAX_VOICES = PHONE ? 28 : 48, MAX_HITS_PER_FRAME = PHONE ? 5 : 8;   // voices: sounds playing at once
 const LISTENER_Z = 1.2;              // the bowler, just behind the foul line
-const CROWD_GAIN = 1.3, ROLL_GAIN = 0.85, MURMUR_GAIN = 0.55;
+const CROWD_GAIN = 1.3, ROLL_GAIN = 0.85, ROOM_GAIN = 0.55;
 
 // The banks of sounds: how many variants, how each is made, and whether a used variant is made
-// anew (with a new seed) so the crowd never repeats itself. In the order they are rendered.
+// anew (with a new seed) so the applause and whistles never repeat. In the order they are rendered.
 const BANKS = [
   ['clack', 8, (s) => S.renderImpact('clack', s)], ['ballHit', 4, (s) => S.renderImpact('ballHit', s)],
   ['thud', 5, (s) => S.renderImpact('thud', s)], ['kick', 3, (s) => S.renderImpact('kick', s)],
   ['pit', 3, (s) => S.renderImpact('pit', s)], ['cushion', 2, (s) => S.renderImpact('cushion', s)],
   ['drop', 2, (s) => S.renderImpact('drop', s)],
-  ['yeah', 3, (s) => S.crowdJob('yeah', s), true], ['clapM', 2, (s) => S.applauseJob('clapM', s), true],
-  ['clapS', 2, (s) => S.applauseJob('clapS', s), true], ['oh', 2, (s) => S.crowdJob('oh', s), true],
-  ['aww', 2, (s) => S.crowdJob('aww', s), true], ['ooh', 2, (s) => S.crowdJob('ooh', s), true],
-  ['sigh', 2, (s) => S.crowdJob('sigh', s), true], ['cheer', 2, (s) => S.crowdJob('cheer', s), true],
-  ['whistle', 2, (s) => S.crowdJob('whistle', s), true], ['whoa', 2, (s) => S.crowdJob('whoa', s), true],
-  ['clapL', 2, (s) => S.applauseJob('clapL', s), true],
+  ['clapM', 2, (s) => S.applauseJob('clapM', s), true], ['clapS', 2, (s) => S.applauseJob('clapS', s), true],
+  ['whistle', 2, (s) => S.renderWhistle(s), true], ['clapL', 2, (s) => S.applauseJob('clapL', s), true],
   ['newRack', 2, (s) => S.renderPinsetter('newRack', s)], ['respot', 2, (s) => S.renderPinsetter('respot', s)],
   ['ballReturn', 2, (s) => S.renderBallReturn(s)],
   ['farRoll', 2, (s) => S.renderFarRoll(s)], ['farCrashBig', 2, (s) => S.renderFarCrash(10, s)],
   ['farCrashMid', 2, (s) => S.renderFarCrash(6, s)], ['farCrashSmall', 2, (s) => S.renderFarCrash(2, s)],
-  ['roar', 1, (s) => S.crowdJob('roar', s), true], ['clapXL', 1, (s) => S.applauseJob('clapXL', s), true],
+  ['clapXL', 1, (s) => S.applauseJob('clapXL', s), true],
   ['bumperUp', 1, (s) => S.renderBumper(true, s)], ['bumperDown', 1, (s) => S.renderBumper(false, s)],
   ['chimeUp', 1, () => S.renderChime(true)], ['chimeDown', 1, () => S.renderChime(false)]
 ];
@@ -217,7 +214,7 @@ export class HallAudio {
     for (const [name, n, make, fresh] of BANKS) {
       this.banks.set(name, { slots: new Array(n).fill(null), pending: new Array(n).fill(false), make, fresh: !!fresh });
       for (let i = 0; i < n; i++) { const seed = this.seed + k++ * 7919; this.queue(() => this.fill(name, i, seed)); }
-      if (name === 'clapL') this.queue(() => this.murmurStep());          // the hall's murmur, talker by talker
+      if (name === 'clapL') this.queue(() => this.roomToneStep());        // the hall's room tone
     }
     this.applyRunState();
   }
@@ -236,9 +233,9 @@ export class HallAudio {
   }
 
   // ---- rendering when idle ------------------------------------------------------------------------
-  // Jobs run in the browser's idle time, a small step at a time (a voice, a few clappers, a
-  // talker). A refill (a crowd variant made anew after use) waits while a ball is out and just
-  // after a reaction, so it never competes with the frames that matter.
+  // Jobs run in the browser's idle time, a small step at a time (a few clappers). A refill (a
+  // variant made anew after use) waits while a ball is out and just after a reaction, so it
+  // never competes with the frames that matter.
   queue(fn, refill = false) { this.jobs.push({ fn, it: null, refill }); this.kick(); }
   busy() {
     const app = this.app, L = app && app.rendering && app.activeLane, st = L && L.physics && L.physics.state;   // a ball moves only while the 3D view is drawn
@@ -273,26 +270,24 @@ export class HallAudio {
     if (r && typeof r.next === 'function') r = yield* r;
     if (this.ctx) b.slots[slot] = this.toBuffer(r);
   }
-  *murmurStep() {
-    const out = {};
-    yield* S.murmurJob(this.seed ^ 0x5eed, out, { talkers: PHONE ? 7 : 9 });
-    if (out.buf && this.ctx) this.startMurmur(this.toBuffer(out.buf));
+  roomToneStep() {
+    if (this.ctx) this.startRoomTone(this.toBuffer(S.renderRoomTone(this.seed ^ 0x5eed)));
   }
-  startMurmur(buf) {
+  startRoomTone(buf) {
     const c = this.ctx;
     const src = c.createBufferSource();
     src.buffer = buf; src.loop = true;
     const g = c.createGain();
     g.gain.value = 0;
-    g.gain.setTargetAtTime(MURMUR_GAIN, c.currentTime, 1.2);
+    g.gain.setTargetAtTime(ROOM_GAIN, c.currentTime, 1.2);
     src.connect(g); g.connect(this.amb);
     const w = c.createGain(); w.gain.value = 0.3; g.connect(w); w.connect(this.verb);
     src.start();
-    this.murmur = { src, g };
-    this.logEvent('murmur', { seconds: buf.duration });
+    this.roomTone = { src, g };
+    this.logEvent('roomTone', { seconds: buf.duration });
   }
 
-  // A ready variant of a bank, not the one played last; a crowd variant is made anew after use
+  // A ready variant of a bank, not the one played last; an applause or a whistle is made anew after use
   pick(name) {
     const b = this.banks.get(name);
     if (!b) return null;
@@ -419,7 +414,7 @@ export class HallAudio {
     const p = c.player || null;
     this.ball = {
       laneNo: L ? L.number : null, human: !!(c.who && c.who.human), first: c.first !== false,
-      before: c.before == null ? 0x3FF : c.before, scoreMode: p ? p.scoreMode | 0 : 0, streak: strikeStreak(p),
+      before: c.before == null ? 0x3FF : c.before, streak: strikeStreak(p),
       early: null, confirmed: null, hits: 0, impacts: 0, cushion: false, done: false
     };
     this.rollState = 'idle';
@@ -463,11 +458,6 @@ export class HallAudio {
   onGutter(L) {
     const b = L.physics.ball.position;
     this.impact('kick', 0.6, b.x, b.z, 0);                    // the drop into the gutter
-    const B = this.ball;
-    if (B && !B.early && B.laneNo === L.number && !(B.scoreMode & GCI.SCORING_MINI) && !this.practice.has(L.number) && !this.instant()) {
-      B.early = earlyClassify(B, 'gutter');
-      setTimeout(() => this.react(B.early, B.human, L.number, 'early'), 250);
-    }
   }
   // Every frame while the ball is out: an impact for every sudden change of a pin's velocity
   watchPins(L, dt) {
@@ -551,8 +541,7 @@ export class HallAudio {
   }
 
   // The hall's far-lane life (hall.js): a new ball on another lane is heard rolling, its pins
-  // crash when the hall's ball reaches them, its pinsetter sweeps when the hall's rake does, and
-  // now and then the bowlers over there cheer a strike.
+  // crash when the hall's ball reaches them, and its pinsetter sweeps when the hall's rake does.
   watchFarLanes() {
     const hall = this.app && this.app.scene && this.app.scene.hall;
     if (!hall || !hall.racks || typeof hall.racks.values !== 'function') return;
@@ -567,8 +556,6 @@ export class HallAudio {
       if (pins > 0) this.play(this.pick(pins >= 9 ? 'farCrashBig' : pins >= 4 ? 'farCrashMid' : 'farCrashSmall'),
         { when: now + lead + ev.hit, gain: 1.6 * far.gain, pan: far.pan, wet: far.wet + 0.15, lp: 6000 });
       this.play(this.pick(ev.reset ? 'newRack' : 'respot'), { when: now + lead + ev.hit + FAR_SWEEP_AT - 0.3, gain: 0.9 * far.gain, pan: far.pan, wet: far.wet + 0.2, lp: 5000 });
-      if (pins === 10 && rack.standing === 0x3FF && Math.random() < 0.35)
-        this.play(this.pick('yeah'), { when: now + lead + ev.hit + 0.5, gain: 0.35 * near.gain, pan: near.pan, wet: 0.5, lp: 2200, bus: this.crowd });
       this.logEvent('farLane', { x: Math.round(x * 100) / 100, pins, reset: !!ev.reset });
     }
   }
@@ -600,7 +587,7 @@ export class HallAudio {
   // The shared game events (js/game/events.js): the events of one ball arrive together; they are
   // gathered and judged once, after the emitting code has finished
   listenGame() {
-    for (const type of ['ball', 'strike', 'spare', 'split', 'gutter', 'miss']) gameEvents.on(type, (e) => this.collect(e));
+    for (const type of ['ball', 'strike', 'spare']) gameEvents.on(type, (e) => this.collect(e));
     gameEvents.on('bumpersUp', (e) => this.bumpers(e, true));
     gameEvents.on('bumpersDown', (e) => this.bumpers(e, false));
     gameEvents.on('bumperHit', (e) => this.bumperHit(e));
@@ -709,7 +696,7 @@ export class HallAudio {
   readiness() {
     const r = {};
     for (const [name, b] of this.banks) r[name] = b.slots.filter(Boolean).length + '/' + b.slots.length;
-    r.murmur = !!this.murmur;
+    r.roomTone = !!this.roomTone;
     return r;
   }
 }
