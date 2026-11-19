@@ -7,6 +7,8 @@
 // the oil ends (40 ft pattern), so a ball released with side rotation goes straight in
 // the oil, hooks in the dry back end and rolls out. Once the slip is gone the ball
 // rolls and stops hooking. The same model runs in tests/physics_tune.mjs (node).
+// A standing pin is held by the deck for a slow ball (pinHold): a slower ball deflects more
+// off the pins and carries less, a faster one drives through.
 //
 // Units: metres, kilograms, seconds. x across the lane (0 = middle, + = right as the
 // bowler sees it), y up, z down the lane (0 = foul line, the pins at -18.288).
@@ -28,6 +30,16 @@ export const LANE = {
   pinMass: 1.55,
   pinHeight: 0.381,
   laneSpacing: 1.0541 + 2 * 0.235 + 0.16   // lane centre to lane centre
+};
+
+// The bumpers (hall bumper rails): the rail's face 12 mm outside the lane edge, so a ball's centre
+// stays 0.43 m from the middle at most and never drops into the gutter; 14 cm high, from 25 cm
+// past the foul line to 20 cm before the end of the pin deck (a ball dropping into the pit is clear
+// of the rail's end). A padded rail gives the ball back about half its speed across the lane.
+// Down, the rail lies in the gutter, below the reach of the ball.
+export const BUMPER = {
+  face: 1.0541 / 2 + 0.012, halfWidth: 0.05, height: 0.14, downY: -0.6,
+  z0: -0.25, z1: -(18.288 + 0.868 - 0.2), restitution: 0.45, friction: 0.12
 };
 
 // Pin spots, bit (n-1) for pin n: x, z (head pin first)
@@ -54,7 +66,10 @@ const PIN_SAMPLES = [0.02, 0.06, 0.10, 0.12, 0.15, 0.19, 0.24, 0.30, 0.345];
 // Contact constants (tests/physics_tune.mjs varies them)
 export const TUNE = {
   pinPinFriction: 0.15, pinPinRestitution: 0.85, pinLaneFriction: 0.18, pinLaneRestitution: 0.2,
-  wallRestitution: 0.6, pinLinearDamping: 0.05, pinAngularDamping: 0.12, ballPinRestitution: 0.75
+  wallRestitution: 0.6, pinLinearDamping: 0.05, pinAngularDamping: 0.12, ballPinRestitution: 0.75,
+  // the deck's hold on a standing pin (ballPinContacts): a ball meeting it slower than
+  // pinHoldSpeed (m/s) meets a pin that is effectively 1 + pinHold * (pinHoldSpeed / speed - 1) times heavier
+  pinHold: 2.0, pinHoldSpeed: 6.0
 };
 // [y0, y1, r0, r1] - the collision pieces, from the profile above
 const PIN_PIECES = [
@@ -128,6 +143,26 @@ export class LanePhysics {
     // the pit: a floor well below the deck, the cushion at the back
     box(W / 2 + G + 0.1, 0.05, 0.6, 0, -0.35, deckEnd - 0.6, M.wall);
     box(W / 2 + G + 0.1, 0.5, 0.05, 0, 0.2, deckEnd - 0.95, M.wall);
+    // the bumpers: a padded rail over each gutter, its face just outside the lane edge, from a
+    // little past the foul line to the end of the pin deck. Down (in the gutter, out of reach)
+    // until setBumpers(true) raises them; a ball meeting one comes back onto the lane.
+    M.bumper = new CANNON.Material('bumper');
+    cm(M.ball, M.bumper, BUMPER.friction, BUMPER.restitution);
+    cm(M.pin, M.bumper, 0.2, 0.4);
+    this.bumperBodies = [-1, 1].map((side) => {
+      const b = box(BUMPER.halfWidth, BUMPER.height / 2, (BUMPER.z0 - BUMPER.z1) / 2,
+        side * (BUMPER.face + BUMPER.halfWidth), BUMPER.downY, (BUMPER.z0 + BUMPER.z1) / 2, M.bumper);
+      b.addEventListener('collide', (e) => {
+        if (e.body !== this.ball || !this.bumpersUp) return;
+        const speed = Math.hypot(this.ball.velocity.x, this.ball.velocity.z);
+        if (this.time - (this.lastBumperHit || -1) < 0.25) return;
+        this.lastBumperHit = this.time;
+        this.events.push({ type: 'bumper', t: this.time, speed, side });
+        if (this.onBumper) this.onBumper(speed, side);
+      });
+      return b;
+    });
+    this.bumpersUp = false;
 
     // the ball
     this.ball = new CANNON.Body({ mass: LANE.ballMass, material: M.ball, shape: new CANNON.Sphere(LANE.ballRadius) });
@@ -163,6 +198,17 @@ export class LanePhysics {
     this.events = [];
   }
 
+  // The bumpers up (true) or down; the rails are solid at once, the 3D model rises on its own time
+  setBumpers(up) {
+    up = !!up;
+    if (up === this.bumpersUp) return;
+    this.bumpersUp = up;
+    for (const b of this.bumperBodies) {
+      b.position.y = up ? BUMPER.height / 2 : BUMPER.downY;
+      b.aabbNeedsUpdate = true;
+    }
+  }
+
   // Put the standing pins on their spots, the others away
   resetPins(standing) {
     this.pins.forEach((p, i) => {
@@ -195,8 +241,40 @@ export class LanePhysics {
   // right-hander's ball does), roll (0..1, how much of a full forward roll the ball has).
   // forced: { leave: mask } - a machine player's ball: these pins stand whatever happens,
   // the others fall (late if the ball's pin action left them up).
-  release({ x0, speed, angle, side, roll = 0.5, forced = null }) {
+  // z0: where the bowler stands, metres behind the foul line. The stance is only where the
+  // bowler starts: the ball is carried straight up the approach on that board (state
+  // 'approach', drawn rolling at the release speed, without touching the lane's physics) and
+  // released at the foul line, as a bowler walks up to the line. So the lane, the line, the
+  // hook, the speed and the aim line are the same wherever the bowler stands.
+  release(params) {
+    const z0 = params.z0 || 0;
+    if (z0 > 0.1 && !params.forced) {
+      const b = this.ball, R = LANE.ballRadius;
+      this.carried = { ...params };
+      b.type = CANNON.Body.KINEMATIC;
+      b.collisionFilterMask = 0;
+      b.position.set(this.laneX + params.x0, R, z0);
+      b.velocity.set(0, 0, -params.speed);
+      b.angularVelocity.set(-params.speed / R, 0, 0);        // rolling straight up the approach
+      b.wakeUp();
+      this.inGutter = false;
+      this.forced = null;
+      this.state = 'approach';
+      this.time = 0;
+      this.impactTime = null;
+      this.entry = null;
+      this.path = [];
+      this.events = [];
+      return;
+    }
+    this.launch(params);
+  }
+
+  // The release at the foul line
+  launch({ x0, speed, angle, side, roll = 0.5, forced = null }) {
     const b = this.ball;
+    b.type = CANNON.Body.DYNAMIC;
+    this.carried = null;
     b.position.set(this.laneX + x0, LANE.ballRadius + 0.002, -0.05);
     b.velocity.set(Math.sin(angle) * speed, 0, -Math.cos(angle) * speed);
     // forward roll about the axis across the direction of travel, plus side rotation
@@ -214,9 +292,14 @@ export class LanePhysics {
     b.wakeUp();
     this.inGutter = false;
     this.forced = forced;
+    this.nudged = false;                  // every machine player's ball gets its late-falling pins
     this.state = 'rolling';
     this.time = 0;
+    this.lastBumperHit = -1;              // the clock starts again: the last ball's bumper hit must not mute this one's
+    this.stillFor = 0;                    // how long the ball has not been moving forward (watch)
     this.impactTime = null;
+    this.entry = null;
+    this.releaseZ = b.position.z;
     this.path = [];
     this.maxSpeed = speed;
     this.events = [];
@@ -238,7 +321,8 @@ export class LanePhysics {
     const b = this.ball, R = LANE.ballRadius;
     const x = b.position.x - this.laneX, z = b.position.z;
     const onLane = Math.abs(x) <= LANE.width / 2 && z > -LANE.pitEdge && b.position.y < R + 0.01;
-    if (!this.inGutter && b.position.y < R + 0.01 && Math.abs(x) > LANE.width / 2 - 0.004 && z > -LANE.pitEdge + 0.3) {
+    // (at the lane's level: a ball that has gone over the pit's edge and fallen is not a gutter ball)
+    if (!this.inGutter && b.position.y < R + 0.01 && b.position.y > -0.1 && Math.abs(x) > LANE.width / 2 - 0.004 && z > -LANE.pitEdge + 0.3) {
       this.inGutter = true;
       this.events.push({ type: 'gutter', t: this.time });
       // a gutter ball cannot reach the pins: it runs below the deck
@@ -314,21 +398,41 @@ export class LanePhysics {
         pb.invInertiaWorld.vmult(rxn, tmp);
         const angTerm = tmp.cross(rp).dot(nvec);
         const e = TUNE.ballPinRestitution;
-        const j = -(1 + e) * vn / (1 / LANE.ballMass + 1 / LANE.pinMass + angTerm);
+        const hold = this.pinHold(p, b.velocity.vsub(vPin).length());
+        const j = -(1 + e) * vn / (1 / LANE.ballMass + (1 / LANE.pinMass + angTerm) / hold);
         const J = nvec.scale(j);
         // the ball stays on the deck: only the horizontal part of its impulse
         b.velocity.x += J.x / LANE.ballMass;
         b.velocity.z += J.z / LANE.ballMass;
         pb.wakeUp();
-        pb.velocity.vsub(J.scale(1 / LANE.pinMass), pb.velocity);
+        // the pin leaves as a free pin would: the deck under it holds it back by the rest
+        const Jp = hold > 1 ? nvec.scale(-(1 + e) * vn / (1 / LANE.ballMass + 1 / LANE.pinMass + angTerm)) : J;
+        pb.velocity.vsub(Jp.scale(1 / LANE.pinMass), pb.velocity);
         const dw = new CANNON.Vec3();
-        pb.invInertiaWorld.vmult(rp.cross(J.scale(-1)), dw);
+        pb.invInertiaWorld.vmult(rp.cross(Jp.scale(-1)), dw);
         pb.angularVelocity.vadd(dw, pb.angularVelocity);
         if (!p.hitByBall) { p.hitByBall = true; this.events.push({ type: 'hit', pin: p.n, t: this.time, speed: -vn }); }
       }
       // push the pin out of the ball (the ball is heavier and stays on the deck)
       pb.position.vsub(nvec.scale(overlap * 0.8), pb.position);
     }
+  }
+
+  // The deck's hold on a pin the ball meets at `speed` (m/s, the ball's speed against the pin),
+  // as a factor on the pin's mass (and rotational inertia) in the ball's impulse. A standing pin
+  // is pressed onto the deck by its weight and held by the friction under its base; during the
+  // contact the deck pushes back on the ball through the pin. A ball that comes in hard throws
+  // the pin off its base at once and meets it as a free body (factor 1 from pinHoldSpeed up); a
+  // slow one is resisted for the whole contact and pushed aside more: a slower ball deflects more
+  // off the pins and so carries less, a faster one drives through. The pin itself leaves as a free
+  // pin would (the deck holds it back by the difference), and a pin that is already moving or
+  // tipping is a free body. A phenomenological model of the deck, sized so that a 5 m/s ball
+  // (about 4 m/s at the pins) meets a standing pin about twice as heavy and a 7-8 m/s ball a free
+  // one. Energy is only lost, never made: the ball loses more, the pin gets what a free pin gets.
+  pinHold(p, speed) {
+    const b = p.body;
+    if (!this.isStanding(p) || b.velocity.length() > 0.4) return 1;
+    return 1 + TUNE.pinHold * Math.max(0, TUNE.pinHoldSpeed / Math.max(speed, 1.0) - 1);
   }
 
   // Pin against pin, by the same impulse method: each pin is its axis with the radius of
@@ -420,20 +524,33 @@ export class LanePhysics {
   }
 
   // Advance the simulation by dt (seconds). Returns the state.
-  step(dt) {
+  // budgetMs: stop after this much time and drop the rest of dt. The simulation then runs slower than
+  // real time for that frame instead of holding the frame up - the pin crash on a phone's CPU (the low
+  // detail level, main.js). The sub-steps themselves are unchanged: the physics is the same, the crash
+  // only takes longer.
+  step(dt, budgetMs = 0) {
     let left = dt;
+    const t0 = budgetMs > 0 ? performance.now() : 0;
     while (left > 1e-9) {
       const h = Math.min(this.dt, left);
-      if (this.state !== "idle" && this.state !== "done") { this.applyLaneFriction(h); this.ballPinContacts(); this.pinPinContacts(); }
+      const carried = this.state === 'approach';
+      if (!carried && this.state !== "idle" && this.state !== "done") { this.applyLaneFriction(h); this.ballPinContacts(); this.pinPinContacts(); }
       this.world.step(h);
       left -= h;
+      if (carried) {
+        // up the approach to the foul line, then the release
+        if (this.ball.position.z <= -0.05) this.launch(this.carried);
+        continue;
+      }
       this.time += h;
-      this.watch();
+      this.watch(h);
+      if (budgetMs > 0 && performance.now() - t0 > budgetMs) break;
     }
     return this.state;
   }
 
-  watch() {
+  // h: the sub-step just taken (s)
+  watch(h = this.dt) {
     const b = this.ball;
     if (this.state === 'rolling') {
       if (this.path.length === 0 || this.time - this.path[this.path.length - 1].t > 0.03)
@@ -441,10 +558,14 @@ export class LanePhysics {
       if (b.position.z < -LANE.headPin + 0.25) {
         this.state = 'deck';
         this.impactTime = this.time;
-        this.entry = { x: b.position.x - this.laneX, vx: b.velocity.x, vz: b.velocity.z, speed: Math.hypot(b.velocity.x, b.velocity.z) };
+        this.entry = { x: b.position.x - this.laneX, z: b.position.z, vx: b.velocity.x, vz: b.velocity.z, speed: Math.hypot(b.velocity.x, b.velocity.z) };
         this.events.push({ type: 'pins', t: this.time });
       }
-      if (this.time > 9) { this.state = 'deck'; this.impactTime = this.time; }
+      // A slow ball - one going from rail to rail with the bumpers up can take well over 9 s - rolls
+      // on until it reaches the pins. It ends short of them only once it has stopped moving forward
+      // (stood still, or rocks across the lane) for half a second, or at a generous safety cap.
+      this.stillFor = -b.velocity.z < 0.05 ? (this.stillFor || 0) + h : 0;
+      if (this.state === 'rolling' && (this.stillFor > 0.5 || this.time > 45)) { this.state = 'deck'; this.impactTime = this.time; }
     } else if (this.state === 'deck') {
       const since = this.time - this.impactTime;
       if (this.forced && since > 1.2 && !this.nudged) this.nudgeForced();
@@ -484,6 +605,13 @@ export class LanePhysics {
       Math.abs(x) < LANE.width / 2 + 0.02 && b.position.z > -LANE.pitEdge;
   }
 
+  // The ball's average speed (m/s) from the release at the foul line to the pins, as a
+  // lane's ball-speed sensors measure it; null if the ball never reached them
+  laneSpeed() {
+    if (this.impactTime == null || !this.entry || !(this.impactTime > 0)) return null;
+    return (this.releaseZ - this.entry.z) / this.impactTime;
+  }
+
   // The pins standing after the ball (bit n-1 = pin n)
   standingMask() {
     let m = 0;
@@ -496,6 +624,7 @@ export class LanePhysics {
   // aiming a machine player's ball and for the aiming aid). Uses the same model.
   static predict(params, maxTime = 6) {
     const sim = LanePhysics._predictor || (LanePhysics._predictor = new LanePhysics({ laneX: 0 }));
+    sim.setBumpers(!!params.bumpers);
     sim.resetPins(0);
     sim.release({ ...params, forced: null });
     const path = [];

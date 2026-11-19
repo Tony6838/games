@@ -14,6 +14,8 @@ import { OpenPlayGame, makeLane, makePlayer, GCI, countPins } from '../engine/op
 import { gameTotal } from '../engine/bowlingscore.js';
 import { MachinePlayer, generateNames, SKILLS } from '../ai/bots.js';
 import { LaneGame } from '../game/lanegame.js';
+import { warmChoice, vbstPractice } from '../game/warmup.js';
+import { withoutBumperMark } from '../engine/correction.js';
 import { t, lang } from '../i18n.js';
 
 export { PREDEFINED };
@@ -192,8 +194,9 @@ export function lanesFor(comp, fmt, group, s, { league, theme = 'Standard' }) {
   });
 }
 
-// Bowl every ball of the lanes of an engine with machine players (no 3D)
-export function simulateLanes(eng, rowOf) {
+// Bowl every ball of the lanes of an engine with machine players (no 3D). record: an array that
+// gets every ball as { lane, after } (the pins left standing), to be bowled again on another engine
+export function simulateLanes(eng, rowOf, record = null) {
   const rack = new Map(), kind = new Map();
   const lanes = eng.lanes.map((l) => l.laneNumber);
   let turn = lanes[0];
@@ -213,8 +216,84 @@ export function simulateLanes(eng, rowOf) {
     const res = eng.score(lane, after, 10 - countPins(after), 0, false);
     rack.set(lane, after);
     if (!res) break;
+    if (record) record.push({ lane, after });
   }
   eng.events.length = 0;
+}
+
+// A machine-bowled group of lanes shown at the pace of the player's own lanes: the serie is drawn
+// first (simulateLanes on a copy) and then bowled again on the lanes the TVs and the consoles show,
+// ball by ball, while the player bowls. A warm-up is bowled first (practice balls, not scored).
+// A console correction on such a lane changes its lane struct, and the result is read from it.
+export class PacedLanes {
+  constructor(lanes, rowOf, { isCFG = false, practice = null } = {}) {
+    this.rowOf = rowOf;
+    // (a lane of an American pair with nobody on it has no warm-up: it would never end it)
+    if (practice && practice.amount > 0) for (const pis of lanes) if (pis.noPlayers) { pis.practiceMethod = practice.method; pis.practiceAmount = practice.amount; }
+    const sim = structuredClone(lanes);
+    for (const pis of sim) { pis.practiceMethod = 0; pis.practiceAmount = 0; }
+    const simEng = new OpenPlayGame({ lanes: sim, isCFG });
+    simEng.startGame();
+    this.balls = [];
+    simulateLanes(simEng, rowOf, this.balls);
+    this.eng = new OpenPlayGame({ lanes, isCFG });
+    this.eng.startGame();
+    this.lanes = lanes;
+    this.next = 0;
+    this.rack = new Map(); this.kind = new Map();
+    this.turn = lanes[0].laneNumber;
+    this.overAt = 0;
+  }
+  get numbers() { return this.lanes.map((l) => l.laneNumber); }
+  warm() { return this.lanes.some((l) => this.eng.isWarmUp(l.laneNumber)); }
+  progress() { return this.balls.length ? this.next / this.balls.length : 1; }
+  done() { return this.next >= this.balls.length && !this.warm(); }
+
+  // One step: a practice ball while the warm-up lasts, else the next ball of the serie.
+  // Answers the lane that changed, or 0.
+  step(stopMs = 30000) {
+    const eng = this.eng;
+    if (this.warm()) {
+      // a warm-up on time ends by its clock (the stop picture, then the serie)
+      const timed = this.lanes.find((p) => p.practiceMethod === GCI.PRACTICE_MINUTES);
+      if (timed) {
+        if (!this.overAt && eng.practiceSecondsLeft(timed.laneNumber) <= 0) { eng.practiceClockOver(); this.overAt = Date.now(); return timed.laneNumber; }
+        if (this.overAt && Date.now() - this.overAt >= stopMs) { eng.practiceClockFinish(); this.overAt = 0; return timed.laneNumber; }
+      }
+      const nums = this.numbers;
+      const order = nums.length > 1 ? [this.turn, nums.find((n) => n !== this.turn)] : nums;
+      // only a lane still in its warm-up bowls a practice ball: in an American pair one lane can end
+      // its warm-up (in frames) before the other, and a ball bowled on it now would be a serie ball
+      // that is not the drawn serie's
+      const lane = order.find((n) => eng.isWarmUp(n) && eng.activeOn(n));
+      if (!lane) return 0;
+      if (nums.length > 1) this.turn = nums.find((n) => n !== lane);
+      const a = eng.activeOn(lane);
+      const r = this.rowOf(a.player);
+      const bot = (r && r.bot) || new MachinePlayer({ name: 'x', average: 150 });
+      const first = eng.nextBallIsFirst(lane);
+      const before = first ? 0x3FF : (this.rack.get(lane) ?? 0x3FF);
+      let after;
+      if (first) { const f = bot.firstBall(); after = f.standing; this.kind.set(lane, f.kind); }
+      else after = bot.secondBall(before, this.kind.get(lane)) & before;
+      eng.scoreBall(lane, after, 10 - countPins(after), 0, false);
+      this.rack.set(lane, eng.nextBallIsFirst(lane) ? 0x3FF : after);
+      return lane;
+    }
+    // the warm-up has just ended: the pair's bowlers up as at the start (RefreshGame)
+    if (this.wasWarm !== false && this.eng.isCrosslane() && this.next === 0) this.eng.refreshGame(this.eng.m_laneNumber);
+    this.wasWarm = false;
+    if (this.next >= this.balls.length) return 0;
+    const b = this.balls[this.next++];
+    eng.scoreBall(b.lane, b.after, 10 - countPins(b.after), 0, false);
+    eng.events.length = 0;
+    return b.lane;
+  }
+  // The rest at once: the warm-up ended as End practice ends it, every ball left bowled
+  flush() {
+    for (const l of this.numbers) if (this.eng.isWarmUp(l)) this.eng.endPracticeFromConsole(l);
+    while (this.next < this.balls.length) this.step();
+  }
 }
 
 // Plays a whole competition with machine players only (the human row too): the tests use it
@@ -283,7 +362,8 @@ export class VbstSession {
     app.loadcom.vbstValues = (league) => (this.os && league === this.league ? onScoringIni(this.os, this.comp, this.serie || 0, (r) => this.live(r)) : null);
     for (let s = 0; s < this.comp.numGames && !this.stopped; s++) {
       this.serie = s;
-      await this.playSerie(s);
+      // a serie that fails stops the competition: the other lanes' pace timer with it
+      try { await this.playSerie(s); } catch (e) { this.stop(); throw e; }
       if (this.stopped) return;
       this.comp.endSerie(s);
       // the serie's points are awarded now: push the lane TV again, so its OnScoring
@@ -296,19 +376,63 @@ export class VbstSession {
 
   rowByPlayer(p) { return this.comp.rows.find((r) => r.id === p.playerIdNumber); }
 
-  // A row's game as it stands: the player's own lanes live, other lanes at the same pace
-  live(r) {
-    if (r.livePlayer && this.humanRows && this.humanRows.has(r)) {
-      const p = r.livePlayer;
-      return { score: p.score, activeSquare: p.activeSquare, finished: p.activeSquare >= 21 || (p.activeSquare >= 20 && p.score[18] + p.score[19] < 10) };
+  // Who bowls a lane's player: the competition's row, or - for a bowler added on the lane console
+  // (Ändra spelare), who has no row - a machine player of the game's level, kept per playerIdNumber
+  // so that it bowls the same way the whole serie. Its games are not the competition's: nothing is
+  // recorded for it (recordFrom).
+  botRow(p) {
+    const r = p && this.rowByPlayer(p);
+    if (r) return r;
+    if (!p) return null;
+    if (!this.addedRows) this.addedRows = new Map();
+    let a = this.addedRows.get(p.playerIdNumber);
+    if (!a) {
+      const name = withoutBumperMark(p.playerName) || '?';
+      const skill = SKILLS.find((k) => k.id === this.app.settings.skill) || SKILLS[0];
+      a = { name, human: false, added: true, bot: new MachinePlayer({ name, average: skill.avg }) };
+      this.addedRows.set(p.playerIdNumber, a);
     }
-    const sim = this.simulated && this.simulated.get(r);
-    if (!sim) return null;
-    const prog = this.progress();
-    if (prog >= 1) return { score: sim.score, activeSquare: sim.activeSquare, finished: true };
-    const as = Math.min(sim.activeSquare, Math.floor(prog * 21));
-    return { score: sim.score.map((v, i) => (i < as ? v : 0)), activeSquare: as, finished: false };
+    return a;
   }
+
+  // A row's game as it stands on its lane: the player's own lanes and the other lanes, which are
+  // bowled at the player's pace (PacedLanes) - every row that bowls this serie has a live lane struct
+  live(r) {
+    if (!r.livePlayer || !this.liveRows || !this.liveRows.has(r)) return null;
+    const p = r.livePlayer;
+    return { score: p.score, activeSquare: p.activeSquare, finished: p.activeSquare >= 21 || (p.activeSquare >= 20 && p.score[18] + p.score[19] < 10) };
+  }
+
+  // The warm-up of a serie: VBS-T starts one before serie 1 only (CShiftSettings::CreateGCI: the
+  // first serie, or a restart with "Inspelning"); the format's own setting, or the one chosen
+  practiceFor(s) {
+    if (s !== 0) return null;
+    const v = this.app.settings.warmV;
+    return v && v !== 'format' ? warmChoice(v) : vbstPractice(this.fmt.header);
+  }
+
+  // The other lanes keep up with the player: a ball of a paced group whenever it is behind the
+  // player's own progress by more than a ball or two, a practice ball while it warms up
+  startPacing() {
+    const app = this.app;
+    clearInterval(this.paceTimer);
+    this.paceTimer = setInterval(() => {
+      if (this.stopped || !this.paced) return;
+      const target = Math.min(1, this.progress() + 0.05);
+      for (const g of this.paced) {
+        if (g.done()) continue;
+        if (!g.warm() && g.progress() > target) continue;
+        const wasWarm = g.warm();
+        const lane = g.step(app.practiceStopMs || 30000);
+        if (!lane) continue;
+        app.loadcom.changed(lane);
+        // the small TV's own little animation for a strike or a spare on that lane
+        const ex = wasWarm ? 0 : g.eng.getPlayerInfoStruct(lane).exciter;
+        if (app.tvWall && (ex === GCI.EXCITER_STRIKE || ex === GCI.EXCITER_SPARE || ex === GCI.EXCITER_SPMAKE)) app.tvWall.flash(lane, ex === GCI.EXCITER_STRIKE ? 'STRIKE' : 'SPARE');
+      }
+    }, app.fast ? 350 : 900);
+  }
+  stopPacing() { clearInterval(this.paceTimer); this.paceTimer = 0; }
 
   progress() {
     if (!this.humanRows || !this.humanRows.size) return 1;
@@ -323,39 +447,59 @@ export class VbstSession {
     const human = comp.rows[this.humanIndex];
     const hg = groups.find((g) => g.some((l) => l.rows.includes(human)));
     const theme = app.settings.theme;
-    this.simulated = new Map();
+    const isCFG = /cfg/i.test(theme);
+    const practice = this.practiceFor(s);
+    // (the machine players of the other lanes: a bowler added there on the console bowls too)
+    const rowOf = (p) => this.botRow(p);
     this.humanRows = new Set();
+    this.liveRows = new Set();
+    // every other group of lanes: drawn now, bowled on its TVs at the player's pace
+    this.paced = [];
     for (const g of groups) {
       if (g === hg) continue;
       const lanes = lanesFor(comp, this.fmt, g, s, { league: this.league, theme });
-      const eng = new OpenPlayGame({ lanes, isCFG: /cfg/i.test(theme) });
-      eng.startGame();
-      simulateLanes(eng, (p) => this.rowByPlayer(p));
-      for (const pis of lanes) for (let i = 0; i < pis.noPlayers; i++) {
-        const p = pis.player[i];
-        this.simulated.set(this.rowByPlayer(p), { score: p.score.slice(), activeSquare: p.activeSquare });
-        this.recordFrom(p, s, eng.isCFG());
-      }
+      for (const pis of lanes) for (let i = 0; i < pis.noPlayers; i++) this.liveRows.add(this.rowByPlayer(pis.player[i]));
+      this.paced.push(new PacedLanes(lanes, rowOf, { isCFG, practice }));
     }
-    if (!hg) { await this.restScreen(s); return; }
+    const finishPaced = () => {
+      this.stopPacing();
+      for (const g of this.paced) {
+        g.flush();
+        for (const pis of g.lanes) for (let i = 0; i < pis.noPlayers; i++) this.recordFrom(pis.player[i], s, isCFG);
+      }
+    };
+    if (!hg) { finishPaced(); await this.restScreen(s); return; }
     const lanes = lanesFor(comp, this.fmt, hg, s, { league: this.league, theme });
-    for (const pis of lanes) for (let i = 0; i < pis.noPlayers; i++) this.humanRows.add(this.rowByPlayer(pis.player[i]));
-    const eng = new OpenPlayGame({ lanes, isCFG: /cfg/i.test(theme) });
+    for (const pis of lanes) for (let i = 0; i < pis.noPlayers; i++) { this.humanRows.add(this.rowByPlayer(pis.player[i])); this.liveRows.add(this.rowByPlayer(pis.player[i])); }
+    if (practice && practice.amount > 0) for (const pis of lanes) if (pis.noPlayers) { pis.practiceMethod = practice.method; pis.practiceAmount = practice.amount; }
+    const eng = new OpenPlayGame({ lanes, isCFG });
     eng.startGame();
     app.engine = eng;
     const slotLanes = lanes.map((pis, i) => ({ number: pis.laneNumber, laneX: app.slots[i].laneX, physics: app.physics[i], slot: i }));
     app.prepareLanes(slotLanes, eng);
+    // the other lanes on the stand-in LoadCom too (their TVs, their consoles), and the TV wall
+    for (const g of this.paced) {
+      g.lanes.forEach((pis) => {
+        const partner = g.lanes.length > 1 ? g.lanes.find((x) => x !== pis) : null;
+        app.loadcom.attach(pis.laneNumber, () => pis, () => partner, g.eng);
+      });
+    }
+    const all = groups.flatMap((g) => g.map((l) => l.lane));
+    if (app.wallSetup) app.wallSetup(all, slotLanes.map((L) => L.number));
+    this.startPacing();
     app.loadcom.settings.alwaysShowLaneSum = this.fmt.header.laneTotalAtBottomFormat ? 'Yes' : 'No';
     app.show('play');
     app.syncHud();
     app.toast(`${this.fmt.title} · ${t('serie')} ${s + 1}/${comp.numGames} · ${t('lane')} ${lanes.map((l) => l.laneNumber).join('-')}`, 3200);
     const who = (lane, index, p) => {
-      const r = this.rowByPlayer(p);
-      return { name: r.name, human: r.human, bot: r.bot || new MachinePlayer({ name: r.name, average: 150 }) };
+      const r = this.botRow(p);
+      return { name: r.name, human: !!r.human, bot: r.bot || new MachinePlayer({ name: r.name, average: 150 }) };
     };
     app.session = new LaneGame(app, { engine: eng, lanes: slotLanes, who });
     const done = await app.session.run();
-    if (!done) { this.stopped = true; return; }
+    if (!done) { this.stopPacing(); this.stopped = true; return; }
+    finishPaced();
+    for (const g of this.paced) for (const n of g.numbers) app.loadcom.changed(n);
     app.effect(t('seriesResult'), 'white');
     await new Promise((r) => setTimeout(r, 1500));
     for (const pis of lanes) for (let i = 0; i < pis.noPlayers; i++) this.recordFrom(pis.player[i], s, eng.isCFG());
@@ -395,7 +539,7 @@ export class VbstSession {
     document.querySelector('#standBody').innerHTML = standingsHtml(comp, st, final, note);
   }
 
-  stop() { this.stopped = true; if (this.app.session) this.app.session.stop(); }
+  stop() { this.stopped = true; this.stopPacing(); if (this.app.session) this.app.session.stop(); }
 }
 
 export function standingsHtml(comp, st, final, note) {

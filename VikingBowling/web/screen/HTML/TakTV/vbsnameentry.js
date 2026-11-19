@@ -40,8 +40,8 @@
 // a lane with BallWall set - and from an older slave or console, and the panel
 // is then exactly what it was. This panel is opaque over the console's own
 // picture, so in a Loki hall, where that TV is the only place the guest sees
-// the form, leaving the column out took it away altogether (Rovaniemi,
-// 2026-11-03).
+// the form, leaving the column out took it away altogether (seen at a
+// hall).
 //
 // The panel has as many boxes as the console's form shows: "pendingRows" when
 // a web console whose hall chose fewer than six name rows says so ("Antal

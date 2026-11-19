@@ -35,7 +35,13 @@ export const GCI = {
   LC_START_NOPLAY: 0x001, LC_START_OPENPLAY: 0x003, LC_START_TEAMPLAY: 0x004, LC_START_COMPETITION: 0x006,
   LC_START_SHORTGAME: 0x500, LC_START_NOTAP: 0x600, LC_START_369: 0x700, LC_START_AMERICAN: 0x4000,
   // lane status
-  Timeplay: 1, Gameplay: 2, ClosedIdle: 5, Tournament: 10, Practice: 11,
+  Timeplay: 1, Gameplay: 2, ClosedIdle: 5, Tournament: 10, Practice: 11, PracticeOver: 12,
+  // practice methods (GCI_PRACTICE_METHOD) and the bowler types TestBlind looks at
+  PRACTICE_NONE: 0, PRACTICE_MINUTES: 1, PRACTICE_FRAMES: 2, PRACTICE_BALLS: 3,
+  VAC_BOWLER: 3, BLIND_BOWLER: 4,
+  ONLINE_SEND_ALL: -1, ONLINE_SEND_NONE: -2,
+  // the message overlays (MASKPIC_*, LoadCom's maskPicture)
+  MASKPIC_STOP_PRACTICE: 3,
   // exciters
   EXCITER_NONE: 0, EXCITER_STRIKE: 1, EXCITER_SPARE: 2, EXCITER_ZERO: 3, EXCITER_SPLIT: 4,
   EXCITER_FAUL: 5, EXCITER_PIN: 6, EXCITER_SPMAKE: 7, EXCITER_OPEN: 8,
@@ -100,6 +106,12 @@ export function firstBallOfSerie(scoreMode) {
   if (scoreMode & GCI.SCORING_SHORTGAME_5) return 10;
   return 0;
 }
+
+// The ball speed: the game hands scoreBall km/h (what it measured on its lane), where OpenPlay gets
+// the pinsetter's value in mm/s. The fields OpenPlay sets from that raw value (the lane's
+// lastBallSpeed, the bowler's amrLeague.ballSpeed - what the lane TV shows with "Visa klotfart":
+// TakTV's convertBallSpeed reads it as mm/s) get mm/s; ballSpeed[] stays km/h x 100 as Score stores it.
+export const kmhToMmPerS = (kmh) => Math.round((+kmh || 0) / 0.0036);
 
 const z21 = () => new Array(21).fill(0);
 
@@ -377,6 +389,7 @@ export class OpenPlayGame {
   // every activeSquare 0, activePlayer 0.
   startGame() {
     this.checkShortGame();
+    this.practiceInit();                               // CGameAbstract::TestFrames_Init, each lane's own
     for (const pis of this.lanes) {
       for (let p = 0; p < pis.noPlayers; p++)
         if (pis.player[p].scoreMode & GCI.SCORING_10TH) pis.player[p].activeSquare = 18;
@@ -465,6 +478,292 @@ export class OpenPlayGame {
     return { exciter: GCI.EXCITER_NONE, numInARow };
   }
 
+  // ---- the warm-up (inspelning): Slave/OPENPLAY/TestFrames.cpp and CGame::Score's dispatch ----
+  // Per lane, as each lane's own OpenPlay keeps them: m_activeSquare (the square the serie
+  // starts on, captured before the tenth frame's 18), m_status (the lane status a game has once
+  // the practice is over). m_ballsElapsed is one counter for the pair, as TestBalls_Score counts
+  // both lanes' bowlers in cross lane play.
+  practiceInit(nowSec = Math.floor(this.clock() / 1000)) {
+    this.practice = { activeSquare: [], status: [], ballsElapsed: 0, clockFrom: nowSec };
+    this.lanes.forEach((pis, li) => {
+      this.practice.status[li] = pis.laneStatus;
+      if (pis.practiceAmount === 0) pis.practiceMethod = GCI.PRACTICE_NONE;
+      if (pis.practiceMethod === GCI.PRACTICE_MINUTES) {
+        for (let p = 0; p < 8; p++) pis.player[p].amrLeague.practiceElapsed = nowSec;    // the clock starts now
+      } else if (pis.practiceMethod === GCI.PRACTICE_BALLS || pis.practiceMethod === GCI.PRACTICE_FRAMES) {
+        for (let p = 0; p < 8; p++) pis.player[p].amrLeague.practiceElapsed = 0;
+      }
+      this.practice.activeSquare[li] = pis.player[0].activeSquare;
+    });
+  }
+
+  laneIndexOf(lane) { return this.lanes.indexOf(this.getPlayerInfoStruct(lane)); }
+  mStatus(lane) { const li = this.laneIndexOf(lane); return (this.practice && this.practice.status[li]) || GCI.Gameplay; }
+  mActiveSquare(lane) { const li = this.laneIndexOf(lane); return (this.practice && this.practice.activeSquare[li]) || 0; }
+
+  // A warm-up is being played on this lane (LanedataUtil::IsWarmUpBeingPlayed)
+  isWarmUp(lane) {
+    const pis = this.getPlayerInfoStruct(lane);
+    if (pis.laneStatus === GCI.PracticeOver) return true;
+    if (pis.practiceMethod === GCI.PRACTICE_NONE) return false;
+    return pis.practiceAmount !== 0 || pis.player[0].amrLeague.practiceElapsed !== 0;
+  }
+
+  // LanedataUtil::PracticeSecondsLeft (no waiting clock in the game: it starts with the game)
+  practiceSecondsLeft(lane, nowSec = Math.floor(this.clock() / 1000)) {
+    const pis = this.getPlayerInfoStruct(lane);
+    const used = nowSec - pis.player[0].amrLeague.practiceElapsed;
+    return pis.practiceAmount * 60 - (used > 0 ? used : 0);
+  }
+
+  // What is left of the warm-up, for the game's status line: balls (counted inside OpenPlay,
+  // in no lane file - the TV shows only the description), frames or seconds
+  practiceLeft(lane) {
+    const pis = this.getPlayerInfoStruct(lane);
+    switch (pis.practiceMethod) {
+      case GCI.PRACTICE_BALLS: {
+        let n = this.pis.noPlayers;
+        if (this.isCrosslane()) n = this.lanes[0].noPlayers + (this.lanes[1] ? this.lanes[1].noPlayers : 0);
+        return { method: pis.practiceMethod, left: Math.max(0, n * this.pis.practiceAmount - this.practice.ballsElapsed) };
+      }
+      case GCI.PRACTICE_FRAMES: return { method: pis.practiceMethod, left: Math.max(0, pis.practiceAmount - pis.player[0].amrLeague.practiceElapsed) };
+      case GCI.PRACTICE_MINUTES: return { method: pis.practiceMethod, left: Math.max(0, this.practiceSecondsLeft(lane)) };
+      default: return pis.laneStatus === GCI.PracticeOver ? { method: GCI.PRACTICE_MINUTES, left: 0 } : null;
+    }
+  }
+
+  // CGame::Score: the warm-up's balls go to TestFrames_Score / TestBalls_Score, every other ball
+  // to CGameAbstract::Score (score() above)
+  scoreBall(lane, pins, fallenPins, ballspeed = 0, fault = false) {
+    const pis = this.getPlayerInfoStruct(lane);
+    if (pis.practiceMethod !== GCI.PRACTICE_NONE && pis.practiceAmount === 0 && pis.player[0].amrLeague.practiceElapsed === 0)
+      pis.practiceMethod = GCI.PRACTICE_NONE;
+    switch (pis.practiceMethod) {
+      case GCI.PRACTICE_MINUTES:
+        return this.testFramesScore(lane, pins, fallenPins, ballspeed, fault);
+      case GCI.PRACTICE_FRAMES:
+        if (pis.player[0].amrLeague.practiceElapsed > pis.practiceAmount) {
+          pis.activePlayer = 0;
+          for (let p = 0; p < Math.min(8, pis.noPlayers); p++) {
+            pis.practiceMethod = GCI.PRACTICE_NONE;
+            pis.player[p].score.fill(0); pis.player[p].status.fill(0);
+            pis.player[p].activeSquare = 0;
+          }
+        }
+        return this.testFramesScore(lane, pins, fallenPins, ballspeed, fault);
+      case GCI.PRACTICE_BALLS:
+        return this.testBallsScore(lane, pins, fallenPins, ballspeed, fault);
+      default: {
+        pis.laneFinshFlag1 = 0; pis.laneFinshFlag2 = 0;
+        if (this.isCrosslane()) { const o = this.getPlayerInfoStruct(this.getOtherLane(lane)); o.laneFinshFlag1 = 0; o.laneFinshFlag2 = 0; }
+        return this.score(lane, pins, fallenPins, ballspeed, fault);
+      }
+    }
+  }
+
+  // CGameAbstract::Find1stValidPlayer / FindLastValidPlayer / CorrectActivePlayer / CleanPractice
+  find1stValidPlayer(firstPlayer, noPlayers) {
+    let v;
+    for (v = firstPlayer; v <= firstPlayer + noPlayers; v++) if (!this.testBlind(v)) break;
+    return v >= firstPlayer + noPlayers ? -1 : v;
+  }
+  findLastValidPlayer(firstPlayer, noPlayers) {
+    let v;
+    for (v = firstPlayer + noPlayers - 1; v >= firstPlayer; v--) if (!this.testBlind(v)) break;
+    return v < firstPlayer ? -1 : v;
+  }
+  correctActivePlayer(currentPlayer, noPlayers, lane) {
+    const firstPlayer = currentPlayer <= 7 ? 0 : 8;
+    const last = this.findLastValidPlayer(firstPlayer, noPlayers), first = this.find1stValidPlayer(firstPlayer, noPlayers);
+    if (last === -1 || first === -1) return currentPlayer;
+    while (this.getPlayer(currentPlayer) && this.getPlayer(currentPlayer).amrLeague.bowlerType === GCI.VAC_BOWLER) {
+      if (currentPlayer >= last) { currentPlayer = first; break; }
+      currentPlayer++;
+    }
+    if (currentPlayer >= firstPlayer + noPlayers) currentPlayer = first;
+    if (currentPlayer === first) this.cleanPractice(currentPlayer, lane);
+    return currentPlayer;
+  }
+  cleanPractice(currentPlayer, lane) {
+    const pis = this.getPlayerInfoStruct(lane);
+    const firstPlayer = currentPlayer <= 7 ? 0 : 8;
+    if (pis.activePlayer >= pis.noPlayers + firstPlayer - 1) {
+      pis.activePlayer = firstPlayer;
+      for (let player = 0; player < pis.noPlayers; player++) {
+        const p = this.getPlayer(player + firstPlayer);
+        p.score.fill(0); p.status.fill(0);
+        p.activeSquare = this.mActiveSquare(lane);
+      }
+      if (pis.practiceMethod === GCI.PRACTICE_FRAMES)
+        for (let player = 0; player < 8; player++) this.getPlayer(player + firstPlayer).amrLeague.practiceElapsed++;
+    }
+  }
+
+  // CGameAbstract::TestFrames_Score - a warm-up ball in frames or on time: the ball is written on
+  // the sheet (the TV's practice layout shows it), each finished frame passes the turn, and when
+  // the turn has gone round every bowler's balls are wiped and (frames) one frame is counted
+  testFramesScore(lane, pins, fallenPins, ballspeed, fault) {
+    const pis = this.getPlayerInfoStruct(lane);
+    const activePlayer = pis.activePlayer;
+    if (activePlayer === -1) return null;
+    const p = this.getPlayer(activePlayer);
+    if (!p) return null;
+    const activeSquare = p.activeSquare;
+    if (activeSquare < 0 || activeSquare > 20) return null;
+    p.cameraImageID[activeSquare] = 0;
+    p.amrLeague.ballSpeed = kmhToMmPerS(ballspeed);
+    if (fault) { p.status[activeSquare] |= GCI.FOUL; pins = 0x3FF; }
+    const first = isFirstBall(activeSquare, p.score);
+    if (globCheckSplit(pins & 0xFFFF) && first) p.status[activeSquare] |= GCI.SPLIT;
+    if (!first) {
+      const pre = p.score[activeSquare - 1];
+      if (pre > fallenPins) fallenPins = 0; else fallenPins -= pre;
+    }
+    p.score[activeSquare] = fallenPins & 0xFF;
+    if (first && p.score[activeSquare] === 10 && activeSquare < 18) p.activeSquare += 2;
+    else p.activeSquare++;
+    const { exciter, numInARow } = this.getExciter(pins, fallenPins, p, activeSquare, fault);
+    let frameEnded = false, ended = false;
+    if (this.moveActiveMark(pis.activePlayer)) {
+      frameEnded = true;
+      pis.activePlayer++;
+      if (lane % 2) pis.activePlayer = this.correctActivePlayer(pis.activePlayer % 8, pis.noPlayers, lane);
+      else pis.activePlayer = this.correctActivePlayer(pis.activePlayer, pis.noPlayers, lane);
+      const offset = this.isCrosslane() ? ((lane + 1) % 2) * 8 : 0;
+      if (pis.practiceMethod === GCI.PRACTICE_FRAMES && pis.player[0].amrLeague.practiceElapsed >= pis.practiceAmount) {
+        pis.practiceMethod = GCI.PRACTICE_NONE;
+        pis.activePlayer = offset;
+        pis.laneStatus = this.mStatus(lane);
+        for (let player = 0; player < pis.noPlayers; player++) {
+          const q = this.getPlayer(player + offset);
+          q.score.fill(0); q.status.fill(0);
+          q.activeSquare = this.mActiveSquare(lane);
+        }
+        ended = true;
+      }
+    }
+    pis.isAnyPlayerActive = pis.activePlayer >= 0 ? 1 : 0;
+    return { practice: true, practiceEnded: ended, lane, playerIndex: activePlayer, player: p, ballIndex: activeSquare,
+      firstBall: first, pins, fallenPins, ballPins: fallenPins, exciter, numInARow, frameEnded, gameFinished: false,
+      split: (p.status[activeSquare] & GCI.SPLIT) !== 0, noTapReset: false, redPinStrike: false };
+  }
+
+  // CGameAbstract::TestBalls_Score - a warm-up counted in balls: nothing is written on the sheet,
+  // every ball passes the turn, and after noPlayers x practiceAmount balls the serie starts
+  testBallsScore(lane, pins, fallenPins, ballspeed, fault) {
+    const pis = this.getPlayerInfoStruct(lane);
+    const activePlayer = pis.activePlayer;
+    if (activePlayer < 0) return null;
+    const p = this.getPlayer(activePlayer);
+    this.practice.ballsElapsed++;
+    const P = this.getPlayerInfoStruct();
+    let balls = P.noPlayers * P.practiceAmount - this.practice.ballsElapsed;
+    if (this.isCrosslane()) balls = (this.getPlayerInfoStruct(1).noPlayers + this.getPlayerInfoStruct(2).noPlayers) * P.practiceAmount - this.practice.ballsElapsed;
+    let ended = false;
+    if (balls < 1) {
+      const mLane = this.m_laneNumber;
+      P.practiceMethod = GCI.PRACTICE_NONE;
+      P.activePlayer = 0;
+      for (let player = 0; player < P.noPlayers; player++) {
+        P.player[player].score.fill(0); P.player[player].status.fill(0);
+        P.player[player].activeSquare = this.mActiveSquare(mLane);
+      }
+      P.laneStatus = this.mStatus(mLane);
+      if (this.isCrosslane()) {
+        const O = this.getPlayerInfoStruct(this.getOtherLane());
+        O.practiceMethod = GCI.PRACTICE_NONE;
+        O.activePlayer = 8;
+        O.laneStatus = this.mStatus(mLane);
+        for (let player = 0; player < P.noPlayers; player++) {
+          O.player[player].score.fill(0); O.player[player].status.fill(0);
+          O.player[player].activeSquare = this.mActiveSquare(mLane);
+        }
+      }
+      ended = true;
+    } else this.advancePracticePlayer(lane);
+    return { practice: true, practiceEnded: ended, lane, playerIndex: activePlayer, player: p, ballIndex: p ? p.activeSquare : 0,
+      firstBall: true, pins, fallenPins, ballPins: fallenPins, exciter: GCI.EXCITER_NONE, numInARow: 0, frameEnded: true,
+      gameFinished: false, split: false, noTapReset: false, redPinStrike: false };
+  }
+
+  // CGameAbstract::AdvancePracticePlayer
+  advancePracticePlayer(lane) {
+    const pis = this.getPlayerInfoStruct(lane);
+    if (!pis || pis.noPlayers <= 0) return;
+    const firstPlayer = pis.activePlayer <= 7 ? 0 : 8;
+    const lastPlayer = firstPlayer + pis.noPlayers - 1;
+    let next = pis.activePlayer + 1;
+    if (next > lastPlayer || next < firstPlayer) next = firstPlayer;
+    for (let guard = 0; guard < pis.noPlayers && this.testBlind(next); guard++) { next++; if (next > lastPlayer) next = firstPlayer; }
+    if (this.testBlind(next)) return;
+    pis.activePlayer = next;
+  }
+
+  // CGame::TestFrames_UpdateClock, the end of a warm-up on time: first the stop picture
+  // (GCI_PracticeOver, practiceAmount 0 - practice balls are still practice balls), 30 s later
+  // the score rows wiped and the serie started (practiceClockFinish)
+  practiceClockOver() {
+    const changed = [];
+    this.lanes.forEach((pis) => {
+      if (pis.practiceMethod !== GCI.PRACTICE_MINUTES || pis.laneStatus === GCI.PracticeOver) return;
+      pis.laneStatus = GCI.PracticeOver;
+      pis.practiceAmount = 0;
+      changed.push(pis.laneNumber);
+    });
+    return changed;
+  }
+  practiceClockFinish() {
+    const changed = [];
+    this.lanes.forEach((pis, li) => {
+      if (pis.practiceMethod !== GCI.PRACTICE_MINUTES) return;
+      pis.practiceMethod = GCI.PRACTICE_NONE;
+      pis.activePlayer = this.isCrosslane() ? ((pis.laneNumber + 1) % 2) * 8 : 0;
+      for (let player = 0; player < pis.noPlayers; player++) {
+        pis.player[player].score.fill(0); pis.player[player].status.fill(0);
+        pis.player[player].activeSquare = this.practice.activeSquare[li] || 0;
+      }
+      if (this.isCrosslane()) this.activateNextPlayer(pis.laneNumber, { v: 0 });    // practiceFinished: the cross lane branch ignores it
+      else pis.activePlayer = 0;
+      pis.isAnyPlayerActive = pis.activePlayer >= 0 ? 1 : 0;
+      pis.laneStatus = this.practice.status[li] || GCI.Gameplay;
+      changed.push(pis.laneNumber);
+    });
+    return changed;
+  }
+
+  // LoadCom's End practice (StopPractice -> StopPracticeOnLane -> EndPracticeOnLaneData): only
+  // a lane that is practising (IsPractising); the practice balls go (ResetLaneScoreOnly), every
+  // bowler starts the serie on its first ball (FirstBallOfSerie), serie and totals are kept. An
+  // American pair ends both lanes, the odd one with bowler 0 up, the even one with bowler 8.
+  // Returns the lanes it changed.
+  endPracticeFromConsole(lane) {
+    const ends = this.isCrosslane() ? [[this.m_oddLane, 0], [this.m_evenLane, 8]] : [[lane, 0]];
+    const changed = [];
+    for (const [l, active] of ends) {
+      const pis = this.getPlayerInfoStruct(l);
+      const practising = pis.practiceMethod !== GCI.PRACTICE_NONE || pis.laneStatus === GCI.Practice || pis.laneStatus === GCI.PracticeOver;
+      if (!practising) continue;
+      pis.playedPinPattern = 0;
+      for (let i = 0; i < 8; i++) {
+        const p = pis.player[i];
+        p.activeSquare = 0;
+        p.score.fill(0); p.cameraImageID.fill(0); p.status.fill(0); p.pinConfig.fill(0); p.timeOfThrow.fill(0); p.ballSpeed.fill(0);
+        p.activeSquare = firstBallOfSerie(p.scoreMode);
+      }
+      pis.practiceMethod = GCI.PRACTICE_NONE;
+      pis.practiceAmount = 0;
+      pis.playedPlayerID = GCI.ONLINE_SEND_ALL;
+      pis.activePlayer = active;
+      pis.isAnyPlayerActive = pis.noPlayers > 0 ? 1 : 0;
+      if (pis.laneStatus === GCI.Practice || pis.laneStatus === GCI.PracticeOver) pis.laneStatus = this.mStatus(l);
+      changed.push(l);
+    }
+    // the game's warm-up clock ends with it (OpenPlay's own clock thread would end it again
+    // 10-40 s later and wipe the balls bowled meanwhile; the game does not - see the README)
+    if (changed.length && this.practice) this.practice.endedByConsole = true;
+    return changed;
+  }
+
   // The bowler up on a lane: { index (0..15), player } or null.
   activeOn(lane) {
     const pis = this.getPlayerInfoStruct(lane);
@@ -495,7 +794,7 @@ export class OpenPlayGame {
     if (this.areAllGamesFinished(lane) && this.areAllGamesFinished(otherLane)) return null;
     if (!pActivePlayer || pActivePlayer.activeSquare < 0 || pActivePlayer.activeSquare >= 21) return null;
 
-    this.getPlayerInfoStruct(this.m_laneNumber).lastBallSpeed = ballspeed;
+    this.getPlayerInfoStruct(this.m_laneNumber).lastBallSpeed = kmhToMmPerS(ballspeed);
     const activeSquare = pActivePlayer.activeSquare;
     const bIsFirstBall = isFirstBall(activeSquare, pActivePlayer.score);
 
@@ -537,7 +836,7 @@ export class OpenPlayGame {
     }
 
     pActivePlayer.cameraImageID[activeSquare] = 0;
-    pActivePlayer.amrLeague.ballSpeed = ballspeed;
+    pActivePlayer.amrLeague.ballSpeed = kmhToMmPerS(ballspeed);
 
     if (fault) {
       pActivePlayer.status[activeSquare] |= GCI.FOUL;
@@ -656,7 +955,10 @@ export const PLAY_METHODS = {
 // Builds the lane(s) for an open play start and returns a started OpenPlayGame.
 //   names: [{name, ...}] in playing order; american: two lanes, split as the
 //   reception's F2 splits a booking (first half on the odd lane).
-export function startOpenPlay({ method, names, american = false, laneNumber = 1, redPinPercent = 0, rng, clock, protocol = 'Standard' }) {
+//   practiceMethod / practiceAmount: the warm-up the start carries in the lane file (the
+//   reception's F2 "Inspelning"): GCI.PRACTICE_BALLS / _FRAMES / _MINUTES and how many
+export function startOpenPlay({ method, names, american = false, laneNumber = 1, redPinPercent = 0, rng, clock, protocol = 'Standard',
+  practiceMethod = 0, practiceAmount = 0 }) {
   const pm = PLAY_METHODS[method] || PLAY_METHODS.normal;
   const lanes = american ? [makeLane(laneNumber), makeLane(laneNumber + 1)] : [makeLane(laneNumber)];
   const split = american ? Math.ceil(names.length / 2) : names.length;
@@ -668,6 +970,8 @@ export function startOpenPlay({ method, names, american = false, laneNumber = 1,
     pis.RedPin = redPinPercent > 0 ? 1 : 0;
     pis.competitionID = 0;
     pis.StartTime = 0;
+    pis.practiceMethod = practiceAmount > 0 ? practiceMethod : 0;
+    pis.practiceAmount = practiceAmount > 0 ? practiceAmount : 0;
     pis.booking_name = 'Viking Bowling';
     pis.noPlayers = groups[li].length;
     pis.activePlayer = groups[li].length ? 0 : -1;

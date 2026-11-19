@@ -111,7 +111,82 @@ async function handChecks() {
   else console.log('Check Korp 18: 18 points shared out over 3 lanes x 3 series - ok');
 }
 
+// --- the other lanes at the player's pace, and the lane console ---------------
+// American pairs with a warm-up in frames: one lane of a pair can end its warm-up before the other;
+// the lanes bowled at the player's pace (PacedLanes) must still bowl exactly the serie drawn for them
+async function pacedWarmupChecks() {
+  const { PacedLanes, lanesFor, VbstSession } = await import('../js/vbst/session.js');
+  const { OpenPlayGame, GCI, makePlayer } = await import('../js/engine/openplay.js');
+  const pinsDown = (m) => { let n = 10; for (let i = 0; i < 10; i++) if (m & (1 << i)) n--; return n; };
+  const sheet = (ls) => ls.map((pis) => Array.from({ length: pis.noPlayers }, (_, i) => pis.player[i].score.join(',') + '|' + pis.player[i].activeSquare).join(' ')).join(' / ');
+  let pairs = 0, differ = 0;
+  const bad = [];
+  for (const p of PREDEFINED) for (const amount of [1, 2, 3]) {
+    let fmt, movement;
+    try { ({ fmt, movement } = await resolveFormat(p.id, true, fetchMove)); } catch { continue; }
+    const players = makePlayers(fmt, { skillAvg: 175, humanName: 'Tester', rng });
+    const comp = new Competition({ header: fmt.header, rules: fmt.rules, movement, players, name: 'TEST' });
+    nameTeams(comp, fmt, 'sv', false);
+    pickHuman(comp, 'Tester');
+    const rowOf = (pl) => comp.rows.find((r) => r.id === pl.playerIdNumber);
+    for (const g of comp.groupsInSerie(0)) {
+      const lanes = lanesFor(comp, fmt, g, 0, { league: 'TEST.h001' });
+      if (lanes.length < 2) continue;
+      pairs++;
+      const plain = structuredClone(lanes);
+      const paced = new PacedLanes(lanes, rowOf, { practice: { method: GCI.PRACTICE_FRAMES, amount } });
+      let guard = 0;
+      while (!paced.done() && guard++ < 3000) paced.step();
+      // the drawn serie, bowled on the same lanes without a warm-up
+      const ref = new OpenPlayGame({ lanes: plain });
+      ref.startGame();
+      for (const b of paced.balls) ref.scoreBall(b.lane, b.after, pinsDown(b.after), 0, false);
+      if (guard >= 3000 || sheet(paced.lanes) !== sheet(plain)) { differ++; if (bad.length < 4) bad.push(`${p.id} f${amount} lanes ${lanes.map((l) => l.laneNumber).join('-')}`); }
+    }
+  }
+  if (differ) fail(`AMR warm-up in frames: ${differ} of ${pairs} lane pairs did not bowl the drawn serie (${bad.join(', ')})`);
+  else console.log(`Check AMR warm-up in frames (1-3) on the paced lanes: ${pairs} lane pairs of the predefined formats bowled exactly the drawn serie - ok`);
+
+  // a bowler added on the lane console (Ändra spelare) on the player's lane: the serie is bowled to
+  // the end with that bowler too (a machine player of the game's level), and the other lanes' pace
+  // timer stops with the serie
+  const { changePlayersInfo } = await import('../js/engine/correction.js');
+  const { MachinePlayer } = await import('../js/ai/bots.js');
+  const noop = () => {};
+  const phys = { state: 'idle', ball: { position: { set: noop }, velocity: { setZero: noop }, angularVelocity: { setZero: noop } }, resetPins: noop, setBumpers: noop };
+  for (const american of [false, true]) {
+    let added = null, err = null;
+    const app = {
+      settings: { theme: 'Standard', skill: 'league', name: 'Tester', warmV: 'format', style: american ? 'amr' : 'eur' },
+      slots: [{ laneX: 0 }, { laneX: 1.7 }], physics: [phys, phys], instant: true, instantBot: new MachinePlayer({ name: 'auto', average: 185, rng }), fast: true,
+      loadcom: { attach: noop, changed: noop, settings: {}, setMask: noop, playAnimation: noop },
+      wallSetup: noop, show: noop, syncHud: noop, toast: noop, effect: noop, pushTv: noop, syncLane: noop, focusLane: noop,
+      scene: { aimView: noop, portrait: false }, input: { disable: noop }, status: noop, sound: { startRoll: noop, stopRoll: noop }, speedo: noop, reactTo: noop,
+      // the console's Ändra spelare on the player's first lane, before its first ball: one bowler added
+      prepareLanes(slotLanes, eng) {
+        const lane = slotLanes[0].number, pis = eng.getPlayerInfoStruct(lane), q = { activePlayer: '0', game: String(pis.player[0].activeGame) };
+        const ids = [];
+        for (let i = 0; i < pis.noPlayers; i++) { q['player' + i + 'Name'] = pis.player[i].playerName; q['player' + i + 'ID'] = String(pis.player[i].playerIdNumber); ids.push(pis.player[i].playerIdNumber); }
+        q['player' + pis.noPlayers + 'Name'] = 'Nyspelare'; q['player' + pis.noPlayers + 'ID'] = '-1'; q.seen = ids.join(',');
+        const r = changePlayersInfo(eng, lane, q, makePlayer);
+        added = r.response.success === 'true' ? { lane, eng, index: pis.noPlayers - 1 } : null;
+      }
+    };
+    const { fmt, movement } = await resolveFormat('banp44', american, fetchMove);
+    const s = new VbstSession(app);
+    s.fmt = fmt; s.movement = movement; s.league = 'VBG_test.h001';
+    s.makeRobots(true);
+    s.humanIndex = pickHuman(s.comp, 'Tester');
+    try { await s.playSerie(0); } catch (e) { err = e; s.stop(); }
+    const pis = added && added.eng.getPlayerInfoStruct(added.lane), np = pis && pis.player[added.index];
+    const ok = !err && np && np.playerName === 'Nyspelare' && np.activeSquare >= 20 && !s.paceTimer;
+    if (!ok) fail(`banp44 ${american ? 'AMR' : 'EUR'}: a bowler added on the console: ${err ? 'error ' + String(err.message || err) : `bowled to ${np ? np.activeSquare : '-'}, pace timer ${s.paceTimer ? 'running' : 'stopped'}`}`);
+    else console.log(`Check banp44 ${american ? 'AMR' : 'EUR'}: a bowler added on the lane console bowls the serie to the end (${np.score.slice(0, np.activeSquare).reduce((a, v) => a + v, 0)} pins), no error, pace timer stopped - ok`);
+  }
+}
+
 await handChecks();
+await pacedWarmupChecks();
 const rows = [];
 for (const p of PREDEFINED) for (const am of [false, true]) rows.push(await runFormat(p.id, am));
 const autos = await loadAutoFormats();

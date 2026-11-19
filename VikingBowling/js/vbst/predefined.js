@@ -16,7 +16,7 @@ export const PREDEFINED = [
   {
     id: 'banp44', variant: 'BANP',
     title: tr('Banpoängsmatch 4+4, 4 banor', 'Lane points match 4+4, 4 lanes', 'Banepointkamp 4+4, 4 baner', 'Banepoengkamp 4+4, 4 baner', 'Ratapisteottelu 4+4, 4 rataa'),
-    sub: tr('2 lag · 4 serier · banpoäng + seriepoäng', '2 teams · 4 games · lane + game points', '2 hold · 4 serier', '2 lag · 4 serier', '2 joukkuetta · 4 sarjaa'),
+    sub: tr('2 lag · 4 serier · banpoäng + seriepoäng', '2 teams · 4 games · lane + game points', '2 hold · 4 serier · banepoint + seriepoint', '2 lag · 4 serier · banepoeng + seriepoeng', '2 joukkuetta · 4 sarjaa · ratapisteet + sarjapisteet'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'BANP 4+4', numGames: 4, numPlayers: 10, numReservPlayers: 2, moveMethod: 1, hcpType: 0, useStart: 0,
         movementFileName: 'Banpoäng4Man4Banor.ini', movementstartLane: 1, firstLane: 1, lastLane: 4, playStyle: am ? 1 : 0,
@@ -28,7 +28,7 @@ export const PREDEFINED = [
   {
     id: 'banp88x8', variant: 'BANP',
     title: tr('Banpoängsmatch 8+8, 8 banor', 'Lane points match 8+8, 8 lanes', 'Banepointkamp 8+8, 8 baner', 'Banepoengkamp 8+8, 8 baner', 'Ratapisteottelu 8+8, 8 rataa'),
-    sub: tr('2 lag · 4 serier · banparspoäng + seriepoäng', '2 teams · 4 games · lane pair + game points', '2 hold · 4 serier', '2 lag · 4 serier', '2 joukkuetta · 4 sarjaa'),
+    sub: tr('2 lag · 4 serier · banparspoäng + seriepoäng', '2 teams · 4 games · lane pair + game points', '2 hold · 4 serier · baneparpoint + seriepoint', '2 lag · 4 serier · baneparpoeng + seriepoeng', '2 joukkuetta · 4 sarjaa · rataparipisteet + sarjapisteet'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'BANP 8+8 8b', numGames: 4, numPlayers: 18, numReservPlayers: 2, moveMethod: 1, hcpType: 0, useStart: 0,
         movementFileName: am ? 'Banpoäng8Man8BanorAm.ini' : 'Banpoäng8Man8BanorEu.ini', movementstartLane: 1, firstLane: 1, lastLane: 8, playStyle: am ? 1 : 0,
@@ -40,7 +40,7 @@ export const PREDEFINED = [
   {
     id: 'banp88x4', variant: 'BANP',
     title: tr('Banpoängsmatch 8+8, 4 banor', 'Lane points match 8+8, 4 lanes', 'Banepointkamp 8+8, 4 baner', 'Banepoengkamp 8+8, 4 baner', 'Ratapisteottelu 8+8, 4 rataa'),
-    sub: tr('2 lag · 8 delserier · helserie-poäng från serie 5', '2 teams · 8 half games · full-game points from game 5', '2 hold · 8 serier', '2 lag · 8 serier', '2 joukkuetta · 8 sarjaa'),
+    sub: tr('2 lag · 8 delserier · helserie-poäng från serie 5', '2 teams · 8 half games · full-game points from game 5', '2 hold · 8 delserier · helseriepoint fra serie 5', '2 lag · 8 delserier · helseriepoeng fra serie 5', '2 joukkuetta · 8 osasarjaa · kokosarjan pisteet sarjasta 5'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'BANP 8+8 4b', numGames: 8, numPlayers: 18, numReservPlayers: 2, moveMethod: 1, hcpType: 0, useStart: 0,
         movementFileName: am ? 'Banpoäng8Man4BanorAm.ini' : 'Banpoäng8Man4BanorEu.ini', movementstartLane: 1, firstLane: 1, lastLane: 4, playStyle: am ? 1 : 0,
@@ -53,7 +53,7 @@ export const PREDEFINED = [
   {
     id: 'banp88x6', variant: 'BANP',
     title: tr('Banpoängsmatch 8+8, 6 banor', 'Lane points match 8+8, 6 lanes', 'Banepointkamp 8+8, 6 baner', 'Banepoengkamp 8+8, 6 baner', 'Ratapisteottelu 8+8, 6 rataa'),
-    sub: tr('2 lag · 6 serier · specialpoäng (st1/st2)', '2 teams · 6 games · special points (st1/st2)', '2 hold · 6 serier', '2 lag · 6 serier', '2 joukkuetta · 6 sarjaa'),
+    sub: tr('2 lag · 6 serier · specialpoäng (st1/st2)', '2 teams · 6 games · special points (st1/st2)', '2 hold · 6 serier · specialpoint (st1/st2)', '2 lag · 6 serier · spesialpoeng (st1/st2)', '2 joukkuetta · 6 sarjaa · erikoispisteet (st1/st2)'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'BANP 8+8 6b', numGames: 6, numPlayers: 18, numReservPlayers: 2, moveMethod: 1, hcpType: 0, useStart: 0,
         movementFileName: 'Banpoäng8Man6Banor.ini', movementstartLane: 1, firstLane: 1, lastLane: 6, playStyle: am ? 1 : 0,
@@ -65,7 +65,7 @@ export const PREDEFINED = [
   {
     id: 'ind', variant: 'IND',
     title: tr('Individuell tävling', 'Individual competition', 'Individuel turnering', 'Individuell turnering', 'Henkilökohtainen kilpailu'),
-    sub: tr('8 spelare · 4 banor · 4 serier · flytt 1 bana per serie', '8 players · 4 lanes · 4 games · move 1 lane per game', '8 spillere · 4 baner · 4 serier', '8 spillere · 4 baner · 4 serier', '8 pelaajaa · 4 rataa · 4 sarjaa'),
+    sub: tr('8 spelare · 4 banor · 4 serier · flytt 1 bana per serie', '8 players · 4 lanes · 4 games · move 1 lane per game', '8 spillere · 4 baner · 4 serier · flyt 1 bane pr. serie', '8 spillere · 4 baner · 4 serier · flytt 1 bane per serie', '8 pelaajaa · 4 rataa · 4 sarjaa · siirto 1 rata per sarja'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'IND', numGames: 4, numPlayers: 8, lastActiveMovementType: 1, rotationStartLane: 1, firstLane: 1, lastLane: 4,
         numPlayersPerLane: 2, lanesToMove: 1, whenToMove: 1, moveMethod: 0, hcpType: 1, useStart: 1, playStyle: am ? 1 : 0, VBSTvariant: 2, showNextLane: 1 }),
@@ -75,7 +75,7 @@ export const PREDEFINED = [
   {
     id: 'rr', variant: 'RR',
     title: tr('Petersen / Round Robin', 'Petersen / Round Robin', 'Petersen / Round Robin', 'Petersen / Round Robin', 'Petersen / Round Robin'),
-    sub: tr('6 spelare · alla mot alla · 5 serier · 30 bonus per vunnen serie', '6 players · everyone meets everyone · 5 games · 30 bonus per game won', '6 spillere · 5 serier · 30 bonus', '6 spillere · 5 serier · 30 bonus', '6 pelaajaa · 5 sarjaa · 30 bonusta'),
+    sub: tr('6 spelare · alla mot alla · 5 serier · 30 bonus per vunnen serie', '6 players · everyone meets everyone · 5 games · 30 bonus per game won', '6 spillere · alle mod alle · 5 serier · 30 bonus pr. vundet serie', '6 spillere · alle mot alle · 5 serier · 30 bonus per vunnet serie', '6 pelaajaa · kaikki kaikkia vastaan · 5 sarjaa · 30 bonusta voitetusta sarjasta'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'RR', numGames: 5, numPlayers: 6, moveMethod: 1, hcpType: 1, useStart: 1, useExtraPoints: 1,
         movementFileName: am ? 'Petersen6AM.ini' : 'Petersen6EU.ini', movementstartLane: 1, firstLane: 1, lastLane: am ? 6 : 3,
@@ -86,7 +86,7 @@ export const PREDEFINED = [
   {
     id: 'skane', variant: 'SKANE',
     title: tr('Skånemästerskap', 'Skåne Master', 'Skåne Master', 'Skåne Master', 'Skåne Master'),
-    sub: tr('8 spelare · 4 banor · 6 serier · HCP av snitt', '8 players · 4 lanes · 6 games · handicap from average', '8 spillere · 6 serier', '8 spillere · 6 serier', '8 pelaajaa · 6 sarjaa'),
+    sub: tr('8 spelare · 4 banor · 6 serier · HCP av snitt', '8 players · 4 lanes · 6 games · handicap from average', '8 spillere · 4 baner · 6 serier · HCP efter snit', '8 spillere · 4 baner · 6 serier · HCP etter snitt', '8 pelaajaa · 4 rataa · 6 sarjaa · tasoitus keskiarvosta'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'SK', numGames: 6, numPlayers: 8, lastActiveMovementType: 1, rotationStartLane: 1, firstLane: 1, lastLane: 4,
         numPlayersPerLane: 2, lanesToMove: 1, whenToMove: 1, moveMethod: 0, hcpType: 1, useStart: 1, playStyle: am ? 1 : 0, VBSTvariant: 5 }),
@@ -96,7 +96,7 @@ export const PREDEFINED = [
   {
     id: 'lagspel', variant: 'LAGSPEL',
     title: tr('Lagspel', 'Team play', 'Holdspil', 'Lagspill', 'Joukkuepeli'),
-    sub: tr('4 lag à 3 · 4 banor · 4 serier · lagsumma', '4 teams of 3 · 4 lanes · 4 games · team total', '4 hold à 3 · 4 serier', '4 lag à 3 · 4 serier', '4 joukkuetta · 4 sarjaa'),
+    sub: tr('4 lag à 3 · 4 banor · 4 serier · lagsumma', '4 teams of 3 · 4 lanes · 4 games · team total', '4 hold à 3 · 4 baner · 4 serier · holdsum', '4 lag à 3 · 4 baner · 4 serier · lagsum', '4 × 3 pelaajaa · 4 rataa · 4 sarjaa · joukkueen summa'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'TEAM', numGames: 4, numPlayers: 12, lastActiveMovementType: 1, rotationStartLane: 1, firstLane: 1, lastLane: 4,
         numPlayersPerLane: 3, lanesToMove: 1, whenToMove: 1, moveMethod: 0, hcpType: 1, useStart: 1, laneTotalAtBottomFormat: 1,
@@ -107,7 +107,7 @@ export const PREDEFINED = [
   {
     id: 'korp18', variant: 'KORP',
     title: tr('Korp - 18 banpoäng', 'Company league - 18 lane points', 'Firmaliga - 18 banepoint', 'Bedrift - 18 banepoeng', 'Yrityssarja - 18 ratapistettä'),
-    sub: tr('2 lag à 3 · 3 banor · 3 serier · 2 poäng per bana', '2 teams of 3 · 3 lanes · 3 games · 2 points per lane', '2 hold à 3 · 3 serier', '2 lag à 3 · 3 serier', '2 joukkuetta · 3 sarjaa'),
+    sub: tr('2 lag à 3 · 3 banor · 3 serier · 2 poäng per bana', '2 teams of 3 · 3 lanes · 3 games · 2 points per lane', '2 hold à 3 · 3 baner · 3 serier · 2 point pr. bane', '2 lag à 3 · 3 baner · 3 serier · 2 poeng per bane', '2 × 3 pelaajaa · 3 rataa · 3 sarjaa · 2 pistettä per rata'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'KORP 18', numGames: 3, numPlayers: 8, numReservPlayers: 2, moveMethod: 1, hcpType: 1, useStart: 1,
         movementFileName: 'VBSKorp3Man3Banor18p.ini', movementstartLane: 1, firstLane: 1, lastLane: 3, playStyle: am ? 1 : 0,
@@ -118,7 +118,7 @@ export const PREDEFINED = [
   {
     id: 'korp12', variant: 'KORP',
     title: tr('Korp - Hudiksvall 12 poäng', 'Company league - Hudiksvall 12 points', 'Firmaliga - Hudiksvall 12', 'Bedrift - Hudiksvall 12', 'Yrityssarja - Hudiksvall 12'),
-    sub: tr('2 lag à 3 · 3 serier · 1 per bana + 1 per serie', '2 teams of 3 · 3 games · 1 per lane + 1 per game', '2 hold à 3 · 3 serier', '2 lag à 3 · 3 serier', '2 joukkuetta · 3 sarjaa'),
+    sub: tr('2 lag à 3 · 3 serier · 1 per bana + 1 per serie', '2 teams of 3 · 3 games · 1 per lane + 1 per game', '2 hold à 3 · 3 serier · 1 pr. bane + 1 pr. serie', '2 lag à 3 · 3 serier · 1 per bane + 1 per serie', '2 × 3 pelaajaa · 3 sarjaa · 1 per rata + 1 per sarja'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'KORP 12', numGames: 3, numPlayers: 8, numReservPlayers: 2, moveMethod: 1, hcpType: 1, useStart: 1,
         movementFileName: 'VBSKorp3Man3Banor12p.ini', movementstartLane: 1, firstLane: 1, lastLane: 3, playStyle: am ? 1 : 0,
@@ -129,7 +129,7 @@ export const PREDEFINED = [
   {
     id: 'korpBaker', variant: 'KORP',
     title: tr('Korp - 2 man + baker', 'Company league - 2 players + baker', 'Firmaliga - 2 + baker', 'Bedrift - 2 + baker', 'Yrityssarja - 2 + baker'),
-    sub: tr('2 lag à 2 · 4 serier · serie 3-4 baker', '2 teams of 2 · 4 games · games 3-4 baker', '2 hold à 2 · 4 serier', '2 lag à 2 · 4 serier', '2 joukkuetta · 4 sarjaa'),
+    sub: tr('2 lag à 2 · 4 serier · serie 3-4 baker', '2 teams of 2 · 4 games · games 3-4 baker', '2 hold à 2 · 4 serier · serie 3-4 baker', '2 lag à 2 · 4 serier · serie 3-4 baker', '2 × 2 pelaajaa · 4 sarjaa · sarjat 3-4 baker'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'KORP BAKER', numGames: 4, numPlayers: 8, numReservPlayers: 2, moveMethod: 1, hcpType: 1, useStart: 1,
         movementFileName: 'VBSKorp2Man4SerBaker.ini', movementstartLane: 1, firstLane: 1, lastLane: 2, playStyle: am ? 2 : 0,
@@ -140,7 +140,7 @@ export const PREDEFINED = [
   {
     id: 'korpVg', variant: 'KORP',
     title: tr('Korp - Västergötland', 'Company league - Västergötland', 'Firmaliga - Västergötland', 'Bedrift - Västergötland', 'Yrityssarja - Västergötland'),
-    sub: tr('2 lag à 4 · 4 serier', '2 teams of 4 · 4 games', '2 hold à 4 · 4 serier', '2 lag à 4 · 4 serier', '2 joukkuetta · 4 sarjaa'),
+    sub: tr('2 lag à 4 · 4 serier · banparspoäng + seriepoäng', '2 teams of 4 · 4 games · lane pair + game points', '2 hold à 4 · 4 serier · baneparpoint + seriepoint', '2 lag à 4 · 4 serier · baneparpoeng + seriepoeng', '2 × 4 pelaajaa · 4 sarjaa · rataparipisteet + sarjapisteet'),
     build: (am) => ({
       header: makeHeader({ shiftName: 'KORP VG', numGames: 4, numPlayers: 10, numReservPlayers: 2, moveMethod: 1, hcpType: 1, useStart: 0,
         movementFileName: 'Västergötland.ini', movementstartLane: 1, firstLane: 1, lastLane: 4, playStyle: am ? 1 : 0,

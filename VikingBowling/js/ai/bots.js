@@ -100,10 +100,17 @@ export class MachinePlayer {
   hand(mask) { return this.leftHanded ? mirrorMask(mask) : mask; }
 
   // First ball on a full rack: returns { standing (mask), kind }
+  // With the bumpers up (this.bumpers, set per ball by the lane) there is no gutter ball: the
+  // ball that would have gone into the gutter comes off a bumper and takes a side of the rack
+  // (kind 'bumper', a multi-pin leave weighted toward four to six pins standing).
   firstBall() {
     const r = this.rng(), p = this.p;
     if (r < p.strike) return { standing: 0, kind: 'strike' };
-    if (r < p.strike + p.gutter) return { standing: 0x3FF, kind: 'gutter' };
+    if (r < p.strike + p.gutter) {
+      if (!this.bumpers) return { standing: 0x3FF, kind: 'gutter' };
+      const m = pick(MULTIS, (x) => x.w * Math.exp(-Math.pow(x.n - 5, 2) / 3), this.rng);
+      return { standing: this.hand(m.mask), kind: 'bumper' };
+    }
     if (r < p.strike + p.gutter + p.single) {
       const s = pick(SINGLES, (x) => x[1], this.rng);
       return { standing: this.hand(M(s[0])), kind: 'single' };
@@ -147,7 +154,9 @@ export class MachinePlayer {
     if (rng() < conv) return 0;
     // missed: a single pin stays up; otherwise some of the pins fall
     if (n === 1) return standing;
-    if (rng() < 0.25) return standing;        // chopped nothing / missed them all
+    // chopped nothing / missed them all - with the bumpers up a ball heading for the gutter is
+    // sent back in, so it misses them all less often
+    if (rng() < (this.bumpers ? 0.1 : 0.25)) return standing;
     let left = standing;
     const pins = [];
     for (let i = 0; i < 10; i++) if (standing & (1 << i)) pins.push(i);

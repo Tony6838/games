@@ -18,7 +18,10 @@
 //                                          keeps (OpenPlay writes this file on a lane)
 //   fetch('/GameConsole/...') and other absolute paths -> the same file under the game's
 //                                          own folder, so the game runs from any sub-path
-//   fetch('/html/vtvimage')              -> accepted and dropped (the page is readonly=1)
+//   fetch('/html/vtvimage')              -> the sheet's JPEG, kept by the stand-in for the lane
+//                                          console's picture of the lane (VTVFile<n>.jpg); the game's
+//                                          TV frames are readonly and post none - the console asks the
+//                                          page for its picture instead (game/consolehost.js)
 //   v3gfx/Backgrounds/ClubLogos/<team>.png -> ClubLogos/Empty.png (no team has a logo)
 // ---------------------------------------------------------------------------
 (function () {
@@ -91,6 +94,16 @@
   }
   window.vikingFixAssetUrl = fixUrl;
 
+  // An animation taken down before it had started playing (the next ball's, or a status change)
+  // rejects the page's video.play() promise, which vbsmedia.js leaves unhandled - harmless on a
+  // lane TV, noise in the game's console: answered here
+  var mediaPlay = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function () {
+    var p = mediaPlay.apply(this, arguments);
+    if (p && typeof p.catch === 'function') p.catch(function () { /* taken down before it played */ });
+    return p;
+  };
+
   var setAttr = Element.prototype.setAttribute;
   Element.prototype.setAttribute = function (name, value) {
     if (name === 'href' || name === 'src' || name === 'xlink:href') value = fixUrl(String(value));
@@ -132,7 +145,11 @@
     if (/^\/html\/lanedata\.json/i.test(url))
       return host ? textResponse(host.payloadText(laneOf(url)), 'application/json') : textResponse('', 'text/plain', 404);
     if (/^\/html\/onscoring/i.test(url)) return textResponse('', 'text/plain', 404);
-    if (/^\/html\/vtvimage/i.test(url)) return textResponse('{}', 'application/json');
+    // the sheet as a JPEG (VTVFile<n>.html.jpg on a lane PC): kept for the lane console's picture
+    if (/^\/html\/vtvimage/i.test(url)) {
+      if (host && host.storeVtvImage && init && init.body) host.storeVtvImage(laneOf(url), init.body);
+      return textResponse('{}', 'application/json');
+    }
 
     // the competition's OnScoring layout, which VBS-T copies to <league>.xml when it is booked
     var layoutFor = /\/Reception\/vbsTournaments\/([^/?]+\.h001)\.xml$/i.exec(decodeURIComponent(path));

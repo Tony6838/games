@@ -1,20 +1,24 @@
 // ---------------------------------------------------------------------------
 // main.js - Viking Bowling: the screens and the game flow.
-//   splash (4.4 splash, five flags, help and copyright) -> game choice (open play and its
+//   splash (the blue Viking helmet, five flags, help and copyright) -> game choice (open play and its
 //   variants, or a VBS-T format; EUR or AMR) -> names -> play -> summary
 // ---------------------------------------------------------------------------
 import { setLang, lang, langInfo, t, ct, LANGS, FLAGS, loadConsoleTexts } from './i18n.js';
 import { BowlingScene } from './sim3d/scene.js';
 import { LanePhysics, LANE } from './sim3d/physics.js';
-import { SwipeInput } from './sim3d/input.js';
+import { SwipeInput, STANCE } from './sim3d/input.js';
 import { StandInLoadCom } from './standin/loadcom.js';
 import { MachinePlayer, generateNames, SKILLS } from './ai/bots.js';
 import { startOpenPlay, GCI, firstBallOfSerie } from './engine/openplay.js';
 import { gameTotal } from './engine/bowlingscore.js';
 import { LaneGame } from './game/lanegame.js';
-import { Sound } from './sound.js';
+import { HallAudio } from './audio/hallaudio.js';
 import { VbstSession, PREDEFINED, loadAutoFormats } from './vbst/session.js';
 import { AUTO_FORMATS } from './vbst/autoformats.js';
+import { gameCard, formatCard, formatSymbolFor } from './menucards.js';
+// the TV wall, the lane consoles, the bumpers and the warm-up (js/game/wallgame.js)
+import { installWallGame, WARM_IDS, warmChoice } from './game/wallgame.js';
+import { withBumperMark, withoutBumperMark } from './engine/correction.js';
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -23,22 +27,28 @@ const store = {
   set(k, v) { try { localStorage.setItem('vbg.' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
 };
 
+// The open play game types: the name (the lane console's text where it has one), one line on
+// what is special about the game and its symbol (js/menucards.js). Short Game n starts at
+// frame 11 - n (CGame::CheckShortGame: start square 16, 14, 12, 10).
 const OPEN_GAMES = [
-  { id: 'normal', img: 'gametype10Pin.jpg', label: () => ct('game.normal', 'Vanlig bowling') },
-  { id: '369', img: 'gametype369.jpg', label: () => ct('game.369', '3-6-9') },
-  { id: 'mini', img: 'gametypeMini.jpg', label: () => ct('game.mini', 'Mini Bowling') },
-  { id: 'tenth', img: 'gametype10thFrame.jpg', label: () => ct('game.10thFrame', '10th Frame') },
-  { id: 'notap9', img: 'gametype10PinMoved.jpg', label: () => t('noTapN', { n: 9 }) },
-  { id: 'notap8', img: 'gametype10PinMoved.jpg', label: () => t('noTapN', { n: 8 }) },
-  { id: 'notap7', img: 'gametype10PinMoved.jpg', label: () => t('noTapN', { n: 7 }) },
-  { id: 'notap6', img: 'gametype10PinMoved.jpg', label: () => t('noTapN', { n: 6 }) },
-  { id: 'short2', img: 'gametypeAmr.jpg', label: () => t('shortN', { n: 2 }) },
-  { id: 'short3', img: 'gametypeAmr.jpg', label: () => t('shortN', { n: 3 }) },
-  { id: 'short4', img: 'gametypeAmr.jpg', label: () => t('shortN', { n: 4 }) },
-  { id: 'short5', img: 'gametypeAmr.jpg', label: () => t('shortN', { n: 5 }) },
-  { id: 'cfg', img: 'gametype10Pin.jpg', label: () => t('cfg') }
+  { id: 'normal', sym: 'pin', label: () => ct('game.normal', 'Vanlig bowling'), desc: () => t('gdNormal') },
+  { id: '369', sym: '369', label: () => ct('game.369', '3-6-9'), desc: () => t('gd369') },
+  { id: 'mini', sym: 'mini', label: () => ct('game.mini', 'Mini Bowling'), desc: () => t('gdMini') },
+  { id: 'tenth', sym: 'tenth', label: () => ct('game.10thFrame', '10th Frame'), desc: () => t('gdTenth') },
+  { id: 'notap9', sym: 'notap:9', label: () => t('noTapN', { n: 9 }), desc: () => t('gdNoTap', { n: 9 }) },
+  { id: 'notap8', sym: 'notap:8', label: () => t('noTapN', { n: 8 }), desc: () => t('gdNoTap', { n: 8 }) },
+  { id: 'notap7', sym: 'notap:7', label: () => t('noTapN', { n: 7 }), desc: () => t('gdNoTap', { n: 7 }) },
+  { id: 'notap6', sym: 'notap:6', label: () => t('noTapN', { n: 6 }), desc: () => t('gdNoTap', { n: 6 }) },
+  { id: 'short2', sym: 'short:9', label: () => t('shortN', { n: 2 }), desc: () => t('gdShort', { f: 9 }) },
+  { id: 'short3', sym: 'short:8', label: () => t('shortN', { n: 3 }), desc: () => t('gdShort', { f: 8 }) },
+  { id: 'short4', sym: 'short:7', label: () => t('shortN', { n: 4 }), desc: () => t('gdShort', { f: 7 }) },
+  { id: 'short5', sym: 'short:6', label: () => t('shortN', { n: 5 }), desc: () => t('gdShort', { f: 6 }) },
+  { id: 'cfg', sym: 'cfg', label: () => t('cfg'), desc: () => t('gdCfg') }
 ];
 const THEMES = ['Standard', 'Viking Refresh', 'Halloween', 'Xmas Center'];      // the options of #optTheme
+// the pin crash's time a frame on the low detail level: 8 ms, or half the frame interval when frames
+// are slower anyway (a software renderer draws a frame in 100 ms and more: the crash keeps its pace)
+const PIN_BUDGET_MS = 8, PIN_BUDGET_SHARE = 0.5;
 const MAX_ROBOTS = 5;                                                          // the options of #optRobots
 
 // The saved settings, checked against what this version of the game knows: a value that
@@ -59,6 +69,11 @@ export function loadSettings(saved) {
   one('redPin', bool); one('aim', bool); one('speed', bool); one('aimV', bool);
   one('name', (x) => typeof x === 'string');
   d.name = d.name.trim().slice(0, 20);
+  d.detail = 'auto'; one('detail', (x) => x === 'auto' || x === 'high' || x === 'low');    // the 3D hall's detail level (sim3d/hall.js)
+  d.throwMode = 'auto'; one('throwMode', (x) => x === 'auto' || x === 'motion' || x === 'swipe');   // swing the phone or swipe (sim3d/input.js, motion.js)
+  d.warm = 'none'; one('warm', (x) => WARM_IDS.includes(x));                                    // the warm-up of open play
+  d.warmV = 'format'; one('warmV', (x) => x === 'format' || WARM_IDS.includes(x));              // VBS-T: the format's own or another
+  d.bump = false; one('bump', bool);                                                             // the player bowls with bumpers
   one('format', (x) => typeof x === 'string' && (PREDEFINED.some((p) => p.id === x) ||
     (x.startsWith('auto:') && AUTO_FORMATS.some((a) => a.name === x.slice(5)))));
   return d;
@@ -69,20 +84,29 @@ class App {
     this.settings = loadSettings(store.get('settings', {}));
     this.mode = 'open';
     this.fast = false;
-    this.sound = new Sound();
-    this.sound.on = store.get('sound', true);
+    this.sound = new HallAudio({ store, app: this });      // js/audio: the hall's sound (mute and volume remembered)
     this.loadcom = new StandInLoadCom();
-    this.scene = new BowlingScene($('#stage'));
+    this.scene = new BowlingScene($('#stage'), { detail: this.settings.detail });
+    this.scene.onDetailChange = () => this.syncDetailUi();     // "auto" dropped to low on a slow device
     const sp = LANE.laneSpacing;
     this.slots = [{ slot: 0, laneX: 0, number: 5, hue: 0.6 }, { slot: 1, laneX: sp, number: 6, hue: 0.08 }];
     this.scene.buildHall(this.slots, { base: 5 });
     this.physics = this.slots.map((s) => new LanePhysics({ laneX: s.laneX }));
     this.input = new SwipeInput($('#stage'), $('#trail'), {
-      onPosition: (x) => this.onPosition(x),
+      onPosition: (x, z) => this.onPosition(x, z),
       onThrow: (p) => this.onThrow(p),
       onAim: (p) => this.onAim(p),
-      onWeak: () => this.toast(t('weak'))
+      onWeak: () => this.toast(t('weak')),
+      onMisplace: () => this.toast(t('placeHint'), 3500, 'hint'),
+      // the throw by swinging the phone (sim3d/motion.js): its hints, "use the swipe instead"
+      onHint: (key, ms) => this.toast(t(key), ms || 4000, 'hint'),
+      onChooseSwipe: () => { this.settings.throwMode = 'swipe'; this.save(); this.input.setMode('swipe'); this.syncThrowUi(); this.swipeStatus(); },
+      onModeChange: () => { this.syncThrowUi(); this.swipeStatus(); },     // motion control failed (the swipe) or came back
+      onHintClear: () => { clearTimeout(this.toastT); $('#toast').classList.remove('show'); },
+      // the swing's aim marker over the arrows is drawn through the scene's camera
+      aimView: () => (this.throwLane ? { camera: this.scene.camera, laneX: this.throwLane.laneX } : null)
     });
+    this.input.setMode(this.settings.throwMode);
     this.activeLane = null;
     this.instantBot = new MachinePlayer({ name: 'auto', average: 185 });   // for app.instant (automated runs)
     this.last = performance.now();
@@ -96,6 +120,7 @@ class App {
     this.bindUi();
     setLang(this.settings.lang);
     this.applyTexts();
+    installWallGame(this, $, store);    // the TV wall, the lane consoles, the bumpers, the warm-up
     window.vikingApp = this;            // for the automated screenshot runs
   }
 
@@ -117,29 +142,37 @@ class App {
     const physDt = Math.min(0.25, elapsed);      // a slow frame still moves the ball in real time
     this.last = ts;
     const L = this.activeLane;
+    if (L) this.scene.setActiveLane(L.slot);      // the playing lane's overhead TV is the large, framed one
     if (L) {
       const ph = L.physics;
-      if (ph.state === 'rolling' || ph.state === 'deck') {
-        ph.step(physDt * (this.fast ? 2.5 : 1));
+      if (ph.state === 'approach' || ph.state === 'rolling' || ph.state === 'deck') {
+        // ⏩ speeds up the machine players' balls, never the player's own. On the low detail level (a
+        // phone) the pin crash - the contact solving of ten pins - gets PIN_BUDGET_MS a frame (or a
+        // share of a slow frame): on a CPU that cannot keep up it then plays a little slower than real
+        // time instead of stalling frames
+        const budget = this.scene.detail === 'low' && ph.state === 'deck' ? Math.max(PIN_BUDGET_MS, PIN_BUDGET_SHARE * elapsed * 1000) : 0;
+        ph.step(physDt * (this.fast && !ph.human ? 2.5 : 1), budget);
         const b = ph.ball.position;
-        if (ph.state === 'rolling' && b.z > -13.5) this.scene.followView(L.laneX, b.z, b.x);
+        if (ph.state === 'approach') { /* carried up to the foul line: the aim view stays */ }
+        else if (ph.state === 'rolling' && b.z > -13.5) this.scene.followView(L.laneX, b.z, b.x);
         else this.scene.pinView(L.laneX, this.scene.portrait);
-        for (const ev of ph.events.splice(0)) {
-          if (ev.type === 'pins') this.sound.crash(Math.min(1, (ph.entry ? ph.entry.speed : 6) / 7));
-        }
+        this.sound.ballEvents(L, ph.events.splice(0));      // the pins' impacts, the gutter, the ball at rest
       }
       this.syncLane(L, this.redPinFor(L));
     }
     this.scene.render(dt);
+    this.sound.frame(dt, this);                            // the roll, the pins, the far lanes, the lane lights
     this.raf = requestAnimationFrame((t2) => this.frame(t2));
   }
 
   syncLane(L, redPin) { this.scene.sync(L.slot, L.physics, redPin); }
+  // the red head pin: not while practice balls are played (LanedataUtil::RedPinShown, as
+  // LaneGame.redPinOn), so the warm-up's racks are white
   redPinFor(L) {
     const g = this.engine;
     if (!g) return false;
     const pis = g.getPlayerInfoStruct(L.number);
-    return !!pis && pis.RedPin === 1;
+    return !!pis && pis.RedPin === 1 && !g.isWarmUp(L.number);
   }
 
   // ---- the throw ---------------------------------------------------------
@@ -147,16 +180,31 @@ class App {
     return new Promise((resolve) => {
       this.throwResolve = resolve;
       this.throwLane = L;
-      this.input.enable(this.humanX0 || 0);
-      this.onPosition(this.humanX0 || 0);
+      // the throw is asked again while the lane console is open (a console change interrupted it):
+      // the swipe and the swing button stay off behind it until it is closed (ConsoleHost.close)
+      if (!(this.consoleHost && this.consoleHost.isOpen)) this.input.enable(this.humanX0 || 0, this.humanZ0 || STANCE.zMin);
+      this.onPosition(this.humanX0 || 0, this.humanZ0 || STANCE.zMin);
+      // thrown by swinging the phone: the swing button says how (and the first-use card)
+      if (this.input.usingMotion()) { this.status(t('yourTurnMotion'), true); return; }
+      // the gestures, once: throw, pull back for power, hold to move the ball
+      if (!store.get('throwHint', false)) { store.set('throwHint', true); this.toast(t('throwHint'), 9000, 'hint'); }
     });
   }
-  onPosition(x) {
+  // the player's turn went over to the swipe (chosen instead of the swing, or the swing failed), or
+  // back to the swing (a permission granted late)
+  swipeStatus() {
+    if (this.throwResolve) this.status(t(this.input.usingMotion() ? 'yourTurnMotion' : 'yourTurn'), true);
+  }
+  // where the player stands: x across the lane, z metres behind the foul line
+  onPosition(x, z = this.humanZ0 || STANCE.zMin) {
     this.humanX0 = x;
+    this.humanZ0 = z;
     const L = this.throwLane;
     if (!L || !this.throwResolve) return;
-    L.physics.ball.position.set(L.laneX + x, LANE.ballRadius, 0.35);
+    L.physics.ball.position.set(L.laneX + x, LANE.ballRadius, z);
     L.physics.ball.velocity.setZero();
+    // the camera behind the ball, as far back as the player stands
+    this.scene.aimView(L.laneX, this.scene.portrait, z);
     this.scene.camTargetPos.x = L.laneX + x * 0.5;
   }
   onAim(p) {
@@ -164,14 +212,15 @@ class App {
     const now = performance.now();
     if (this.lastAim && now - this.lastAim < 140) return;
     this.lastAim = now;
-    const r = LanePhysics.predict({ x0: p.x0, speed: p.speed, angle: p.angle, side: p.side, roll: p.roll }, 4);
+    const r = LanePhysics.predict({ x0: p.x0, speed: p.speed, angle: p.angle, side: p.side, roll: p.roll,
+      bumpers: !!(this.bumpers && this.bumpers.isUp(this.throwLane.slot)) }, 4);
     this.scene.showAimPath(this.throwLane.laneX, r.path);
   }
   aimEnabled() { return this.mode === 'vbst' ? this.settings.aimV !== false : this.settings.aim; }
   // for the automated runs: a well aimed throw at targetX (m right of the head pin)
   testAimedThrow(targetX = 0.09, speed = 8, side = 26, x0 = 0.25) { const p = LanePhysics.aim({ targetX, x0, speed, side, roll: 0.5 }); this.humanX0 = x0; return this.testThrow(p); }
   // for the automated runs: a throw as a swipe would give it
-  testThrow(p) { if (this.throwResolve) this.onThrow(Object.assign({ x0: this.humanX0 || 0, roll: 0.5 }, p)); return !!p; }
+  testThrow(p) { if (this.throwResolve) this.onThrow(Object.assign({ x0: this.humanX0 || 0, z0: this.humanZ0 || STANCE.zMin, roll: 0.5 }, p)); return !!p; }
   onThrow(p) {
     if (!this.throwResolve) return;
     const r = this.throwResolve;
@@ -193,8 +242,16 @@ class App {
 
   // ---- the HUD -----------------------------------------------------------
   status(text, mine) { const s = $('#status'); s.textContent = text; s.classList.toggle('mine', !!mine); }
-  speedo(kmh) { $('#speedo').textContent = this.settings.speed ? kmh.toFixed(1) + ' km/h' : ''; }
-  toast(text, ms = 2200) { const e = $('#toast'); e.textContent = text; e.classList.add('show'); clearTimeout(this.toastT); this.toastT = setTimeout(() => e.classList.remove('show'), ms); }
+  // the ball speed after every ball, as a lane shows it (the lane TV shows it too when the
+  // "show ball speed" option is on)
+  speedo(kmh) {
+    const loc = { sv: 'sv-SE', en: 'en-GB', da: 'da-DK', no: 'nb-NO', fi: 'fi-FI' }[lang()] || 'sv-SE';
+    let v;
+    try { v = new Intl.NumberFormat(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(kmh); } catch (e) { v = kmh.toFixed(1); }
+    $('#speedo').textContent = kmh > 0 ? t('ballSpeedKmh', { v }) : '';
+  }
+  // cls 'hint': a gesture hint, shown above the status line instead of at the top
+  toast(text, ms = 2200, cls = '') { const e = $('#toast'); e.textContent = text; e.classList.toggle('hint', cls === 'hint'); e.classList.add('show'); clearTimeout(this.toastT); this.toastT = setTimeout(() => e.classList.remove('show'), ms); }
   effect(text, cls = '') {
     const e = $('#effect');
     e.className = 'effect ' + cls;
@@ -213,11 +270,9 @@ class App {
         : n >= 4 ? t('fourBagger') : n === 3 ? t('turkey') : n === 2 ? t('double') : t('strike'));
       this.effect(label, res.redPinStrike ? 'red' : '');
       this.scene.burst(this.activeLane.laneX, res.redPinStrike ? 0xff3030 : 0xE2B550, 120);
-      this.sound.fanfare();
     } else if (res.exciter === GCI.EXCITER_SPARE || res.exciter === GCI.EXCITER_SPMAKE) {
       this.effect(t('spare'));
       this.scene.burst(this.activeLane.laneX, 0x7fc1ff, 70);
-      this.sound.fanfare([523, 784]);
     } else if (res.exciter === GCI.EXCITER_SPLIT) this.effect(t('split'), 'white');
     else if (res.exciter === GCI.EXCITER_ZERO || (result && result.gutter && fallen === 0)) this.effect(t('gutter'), 'white');
     else if (!res.firstBall && res.ballPins === 0) this.effect(t('miss'), 'white');
@@ -233,6 +288,12 @@ class App {
   }
 
   pushTv(lanes) { for (const n of lanes) this.loadcom.changed(n); }
+  // the window of the TakTV page that shows this lane, or null (a lane without one: the small TVs)
+  tvWindowFor(lane) {
+    const i = this.tvLanes ? this.tvLanes.indexOf(lane) : -1;
+    const f = i >= 0 ? [$('#tv1'), $('#tv2')][i] : null;
+    return f && f.getAttribute('src') ? f.contentWindow : null;
+  }
 
   // Points the lane TV page(s) at the lanes of this game
   setupTv(laneNumbers) {
@@ -243,7 +304,10 @@ class App {
     const tvs = [$('#tv1'), $('#tv2')];
     tvs.forEach((f, i) => {
       if (i < laneNumbers.length) {
-        f.src = 'web/screen/HTML/TakTV/TakTVGame.html?lane=' + laneNumbers[i] + '&readonly=1&lang=' + encodeURIComponent(langInfo().lang) + '&v=' + Date.now();
+        // readonly: the page does not rasterise and post its sheet as a JPEG after every push (on a
+        // phone that hitched the game); the lane console's picture of the lane is asked of the page
+        // only while the console shows that lane (ConsoleHost, tvWindowFor)
+        f.src = 'web/screen/HTML/TakTV/TakTVGame.html?lane=' + laneNumbers[i] + '&lang=' + encodeURIComponent(langInfo().lang) + '&readonly=1&v=' + Date.now();
         f.hidden = i !== 0;
       } else { f.hidden = true; f.removeAttribute('src'); }
     });
@@ -257,6 +321,7 @@ class App {
     $$('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
     this.screen = id;
     this.setRendering(id === 'play');
+    if (id !== 'play') this.input.pauseSensors();       // no devicemotion listener on the menus
     // back on a screen with a start button: a new game may be started again (see start())
     if (id === 'splash' || id === 'menu' || id === 'names' || id === 'summary') {
       this.starting = false;
@@ -275,10 +340,38 @@ class App {
     $('#langRow').innerHTML = LANGS.map((l) => `<button class="flagBtn${l.id === lang() ? ' active' : ''}" data-lang="${l.id}" role="radio" aria-checked="${l.id === lang()}">${FLAGS[l.id]}<span>${l.name}</span></button>`).join('');
     this.renderGameGrid();
     if (this.formatsShown) this.renderFormats();
+    this.syncDetailUi();
+    this.syncThrowUi();
+  }
+
+  // The way to throw in the two option rows (swing the phone or swipe); "Auto" says which it
+  // is on this device. The splash's line on the swing shows where the swing is the default.
+  syncThrowUi() {
+    for (const sel of [$('#optThrow'), $('#optThrowV')]) {
+      if (!sel) continue;
+      const auto = sel.querySelector('option[value="auto"]');
+      if (auto) auto.textContent = t('throwAuto') + ' (' + t(this.input.autoMode() === 'motion' ? 'throwMotion' : 'throwSwipe') + ')';
+      sel.value = this.settings.throwMode;
+    }
+    const how = $('#howToMotion');
+    if (how) how.hidden = this.input.autoMode() !== 'motion';
+    // "Visa svingdemo" where the swing is the way to throw
+    const swing = this.settings.throwMode === 'motion' || (this.settings.throwMode === 'auto' && this.input.autoMode() === 'motion');
+    for (const b of [$('#optMotionDemo'), $('#optMotionDemoV')]) if (b) b.hidden = !swing;
+  }
+
+  // The hall's detail level in the two option rows; "Auto" says which level it picked
+  syncDetailUi() {
+    for (const sel of [$('#optDetail'), $('#optDetailV')]) {
+      if (!sel) continue;
+      const auto = sel.querySelector('option[value="auto"]');
+      if (auto) auto.textContent = t('detailAuto') + ' (' + t(this.scene.autoLevel === 'low' ? 'detailLow' : 'detailHigh') + ')';
+      sel.value = this.settings.detail;
+    }
   }
 
   renderGameGrid() {
-    $('#gameGrid').innerHTML = OPEN_GAMES.map((g) => `<button class="gameTile${g.id === this.settings.game ? ' active' : ''}" data-game="${g.id}" style="background-image:url('web/screen/common/img/${g.img}')"><span>${g.label()}</span></button>`).join('');
+    $('#gameGrid').innerHTML = OPEN_GAMES.map((g) => gameCard(g, g.id === this.settings.game)).join('');
   }
 
   bindUi() {
@@ -314,6 +407,14 @@ class App {
     $('#optRobots').addEventListener('change', (e) => { this.settings.robots = +e.target.value; this.save(); });
     $('#optSkill').addEventListener('change', (e) => { this.settings.skill = e.target.value; this.save(); });
     $('#optSkillV').addEventListener('change', (e) => { this.settings.skill = e.target.value; this.save(); });
+    for (const id of ['#optThrow', '#optThrowV']) {
+      const sel = $(id);
+      if (sel) sel.addEventListener('change', (e) => { this.settings.throwMode = e.target.value; this.input.setMode(e.target.value, true); this.save(); this.syncThrowUi(); });
+    }
+    for (const id of ['#optMotionDemo', '#optMotionDemoV']) { const b = $(id); if (b) b.addEventListener('click', () => this.input.playDemo()); }
+    for (const id of ['#optDetail', '#optDetailV']) {
+      $(id).addEventListener('change', (e) => { this.settings.detail = e.target.value; this.scene.setDetail(e.target.value); this.save(); this.syncDetailUi(); });
+    }
     $$('[data-ftab]').forEach((b) => b.addEventListener('click', () => { this.ftab = b.dataset.ftab; this.renderFormats(); }));
     $('#autoSearch').addEventListener('input', () => this.renderFormats());
     $('#formatList').addEventListener('click', (e) => {
@@ -346,6 +447,7 @@ class App {
 
   syncHud() {
     $('#btnSound').innerHTML = this.sound.on ? '&#128266;' : '&#128263;';
+    $('#btnSound').title = t(this.sound.on ? 'soundOff' : 'soundOn'); $('#btnSound').setAttribute('aria-label', $('#btnSound').title);
     $('#btnFast').classList.toggle('on', this.fast);
     $('#btnFull').title = fsElement() ? t('exitFullscreen') : t('fullscreen');
     $('#btnFull').classList.toggle('on', !!fsElement());
@@ -369,6 +471,8 @@ class App {
     $('#optSpeed').checked = this.settings.speed;
     $('#optTheme').value = this.settings.theme;
     $('#optRobots').value = String(this.settings.robots);
+    this.syncDetailUi();
+    this.syncThrowUi();
   }
 
   async renderFormats() {
@@ -376,14 +480,15 @@ class App {
     $$('[data-ftab]').forEach((b) => b.classList.toggle('active', b.dataset.ftab === ftab));
     $('#autoSearch').hidden = ftab !== 'auto';
     let list;
-    if (ftab === 'pre') list = PREDEFINED.map((f) => ({ id: f.id, title: f.title(lang()), sub: f.sub(lang()) }));
+    if (ftab === 'pre') list = PREDEFINED.map((f) => ({ id: f.id, title: f.title(lang()), sub: f.sub(lang()), sym: formatSymbolFor(f.id) }));
     else {
       if (!this.autoFormats) { $('#formatList').innerHTML = '<div class="note">…</div>'; this.autoFormats = await loadAutoFormats(); }
       const q = ($('#autoSearch').value || '').toLowerCase();
-      list = this.autoFormats.filter((f) => !q || f.name.toLowerCase().includes(q)).map((f) => ({ id: 'auto:' + f.name, title: f.name, sub: f.summary(lang()), bad: f.missing }));
+      list = this.autoFormats.filter((f) => !q || f.name.toLowerCase().includes(q)).map((f) => ({ id: 'auto:' + f.name, title: f.name, sub: f.summary(lang()), bad: f.missing,
+        sym: formatSymbolFor('', (f.header.teamNames || []).filter((v) => v > 0).length) }));
     }
     if (!this.settings.format) this.settings.format = PREDEFINED[0].id;
-    $('#formatList').innerHTML = list.map((f) => `<button class="fmt${f.id === this.settings.format ? ' active' : ''}${f.bad ? ' bad' : ''}" data-fmt="${escapeHtml(f.id)}"><b>${escapeHtml(f.title)}</b><small>${escapeHtml(f.sub)}</small></button>`).join('');
+    $('#formatList').innerHTML = list.map((f) => formatCard(f, f.id === this.settings.format, ftab !== 'pre')).join('');
   }
 
   // ---- names --------------------------------------------------------------
@@ -417,13 +522,15 @@ class App {
 
   renderRobots() {
     if (this.mode === 'vbst') { $('#robotList').innerHTML = this.vbst.rosterHtml(); return; }
-    $('#robotList').innerHTML = `<div class="note">${t('opponents')}</div>` + this.robots.map((r) =>
-      `<div class="robot"><span>&#129302; ${escapeHtml(r.name)}</span><small>${t('skill')}: ${r.average}${r.leftHanded ? ' · L' : ''}</small></div>`).join('');
+    // each machine player may bowl with bumpers too (a child at a low level): the console's toggle
+    $('#robotList').innerHTML = `<div class="note">${t('opponents')}</div>` + this.robots.map((r, i) =>
+      `<div class="robot"><span>&#129302; ${escapeHtml(r.name)}</span><span class="robotRight"><small>${t('skill')}: ${r.average}${r.leftHanded ? ' · L' : ''}</small>` +
+      `<label class="bumpToggle"><input type="checkbox" data-bump="${i}"${r.bumpers ? ' checked' : ''}> <span>${t('bumpers')}</span></label></span></div>`).join('');
   }
 
   humanName() {
     const n = ($('#humanName').value || '').trim().replace(/[^\p{L}\p{N} .\-_']/gu, '').slice(0, 20);
-    return n || (lang() === 'en' ? 'Player' : lang() === 'fi' ? 'Pelaaja' : 'Spelare');
+    return n || ({ en: 'Player', da: 'Spiller', no: 'Spiller', fi: 'Pelaaja' }[lang()] || 'Spelare');
   }
 
   // ---- open play -------------------------------------------------------------
@@ -444,17 +551,33 @@ class App {
       return;
     }
     const american = this.settings.style === 'amr';
-    const players = [{ name: this.settings.name, human: true }, ...this.robots.map((r) => ({ name: r.name, bot: r }))];
+    const players = [{ name: this.settings.name, human: true, bumpers: !!this.settings.bump }, ...this.robots.map((r) => ({ name: r.name, bot: r, bumpers: !!r.bumpers }))];
+    // the warm-up the start carries, and the bumper mark (+C) after the name of a bumper player,
+    // as the lane console's start writes them into the lane file
+    const warm = warmChoice(this.settings.warm);
     this.engine = startOpenPlay({
-      method: this.settings.game, names: players.map((p) => ({ name: p.name })), american,
-      redPinPercent: this.settings.redPin ? 15 : 0, protocol: this.settings.theme, laneNumber: 5
+      method: this.settings.game, names: players.map((p) => ({ name: withBumperMark(p.name, p.bumpers) })), american,
+      redPinPercent: this.settings.redPin ? 15 : 0, protocol: this.settings.theme, laneNumber: 5,
+      practiceMethod: warm.method, practiceAmount: warm.amount
     });
     const eng = this.engine;
     const lanes = eng.lanes.map((pis, i) => ({ number: pis.laneNumber, laneX: this.slots[i].laneX, physics: this.physics[i], slot: i }));
     this.prepareLanes(lanes, eng);
-    // who is who: in an American game the first half is on the odd lane (index 0..7), the rest on the even (8..)
+    // who is who: by the player's id in the lane file (the console may reorder, add or take off
+    // bowlers); in an American game the first half is on the odd lane, the rest on the even
     const split = american ? Math.ceil(players.length / 2) : players.length;
-    const who = (lane, index) => (index < 8 ? players[index] : players[split + index - 8]);
+    const byId = new Map();
+    eng.lanes.forEach((pis, li) => { for (let i = 0; i < pis.noPlayers; i++) byId.set(pis.player[i].playerIdNumber, players[li === 0 ? i : split + i]); });
+    const skillAvg = SKILLS.find((s) => s.id === this.settings.skill).avg;
+    const who = (lane, index, p) => {
+      let w = p && byId.get(p.playerIdNumber);
+      if (!w && p) {     // a bowler added at the console: a machine player of the game's level
+        w = { name: withoutBumperMark(p.playerName), bot: new MachinePlayer({ name: withoutBumperMark(p.playerName), average: skillAvg }) };
+        byId.set(p.playerIdNumber, w);
+        players.push(w);
+      }
+      return Object.assign(w || players[0], p ? { name: withoutBumperMark(p.playerName) } : {});
+    };
     this.show('play');
     this.syncHud();
     const session = this.session = new LaneGame(this, { engine: eng, lanes, who });
@@ -481,6 +604,7 @@ class App {
     this.setupTv(lanes.map((L) => L.number));
     this.activeLane = lanes[0];
     this.humanX0 = this.humanX0 || 0;
+    this.speedo(0);
   }
 
   showSummary(players, eng) {
@@ -488,8 +612,9 @@ class App {
     const cfg = eng.isCFG();
     for (const pis of eng.lanes) for (let i = 0; i < pis.noPlayers; i++) {
       const p = pis.player[i];
-      const who = players.find((x) => x.name === p.playerName) || {};
-      rows.push({ name: p.playerName, human: !!who.human, total: gameTotal(p.score, cfg), ...frameStats(p) });
+      const name = withoutBumperMark(p.playerName);          // the bumper mark is not shown
+      const who = players.find((x) => x.name === name) || {};
+      rows.push({ name, human: !!who.human, total: gameTotal(p.score, cfg), ...frameStats(p) });
     }
     rows.sort((a, b) => b.total - a.total);
     const best = rows[0] ? rows[0].total : 0;
@@ -505,7 +630,7 @@ class App {
     if (this.throwResolve) { const r = this.throwResolve; this.throwResolve = null; r({ x0: 0, speed: 6, angle: 0, side: 0 }); }
     // a ball still rolling is finished at once: the render loop that steps it stops with
     // the play screen, and the stopped serie must not wait for it (or keep its sound)
-    for (const ph of this.physics) if (ph.state === 'rolling' || ph.state === 'deck') ph.state = 'done';
+    for (const ph of this.physics) if (ph.state === 'approach' || ph.state === 'rolling' || ph.state === 'deck') ph.state = 'done';
     this.sound.stopRoll();
     this.input.disable();
     $('#tvBox').classList.remove('big');

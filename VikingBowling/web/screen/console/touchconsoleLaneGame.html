@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="-1">
+    <meta http-equiv="CACHE-CONTROL" content="NO-CACHE">
+    <meta charset="utf-8">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0'/>
+    <link rel="icon" type="image/x-icon" href="../common/img/favicon.ico">
+    <title>VBS</title>
+    <!-- Viking Bowling: the game's stand-in for LoadCom's console service (/console/events, players.json,
+         changeScore, endPractice, changePlayersInfo ...). With the phone sizing below, the only lines this
+         page adds to touchconsoleLane.html. -->
+    <script src="../../../js/standin/console-standin.js"></script>
+    <!--
+      touchconsoleLane.html - EN bana, som den visas i TouchConsole.html/TouchConsole2.html.
+
+      Öppnas inte direkt på en tablet: skalet TouchConsole.html/TouchConsole2.html lägger en sådan här sida
+      per bana i en iframe och säger åt den om den visas på hela skärmen (rev2Full) eller som
+      en kolumn bredvid den andra banan (rev2Column).
+
+      Samma skript och samma id:n som TouchConsole.html (js/TouchConsole.js, startBowling.js,
+      correctScore.js, VBSTchangePlayer.js, saveMoveGame.js, ../common/js/commonAPI.js), så
+      allt som skickas till servern är oförändrat. Det som INTE får ändras utan att skripten
+      ändras också:
+        - #startBowling: dess innerHTML är spelsättet som skickas. Den är dold här och trycks
+          av den synliga #rev2Start (js/touchconsoleLane.js).
+        - #correctButtons: tretton knappar i ordningen - 1..9 X / F (index används).
+        - .overlay visas med :target och med jQuery show()/hide(), dvs display:block/none.
+
+      Texter: data-i18n="nyckel" och texten i lang/<språk>.json (js/touchconsoleLang.js). Texten som
+      står i elementen här är bara vad som syns innan språkfilen har laddats.
+    -->
+    <!-- Typsnitten ligger lokalt (fonts/), så att sidan ser likadan ut i en hall utan internet -->
+    <link rel="stylesheet" href="fonts/barlow.css">
+    <link rel="stylesheet" href="../common/css/vbskeyboard.css">
+    <link rel="stylesheet" href="touchconsoleLane.css">
+    <script>
+      function loadHomePage() {
+        Android.loadHomePage();
+      }
+    </script>
+    <!-- Viking Bowling: the console on a phone, where the player corrects the score as at a lane. The
+         page sizes itself by the screen (html { font-size: min(1.25vw, 2vh) } in touchconsoleLane.css):
+         right for a lane's tablet, but on a phone it made the buttons 19-26 px high. A floor under that
+         size makes every button finger sized there; what no longer fits then scrolls - a dialog
+         downwards (.overlay scrolls already) and Korrigera's row of 21 balls sideways (.scoreWrap
+         already can), with the ball being edited kept in view. Nothing of the console's scripts or of
+         its stylesheet is changed. -->
+    <style>
+      html { font-size: max(min(1.25vw, 2vh), 11px); }
+      @media (max-width: 899px) {
+        .popup { padding: 1.25rem 1rem; }
+        #changescore .scoretable { min-width: 900px; }
+        .onGoingGameButton { font-size: 0.95rem; }
+      }
+    </style>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        var row = document.getElementById('scorerow');
+        if (!row || !window.MutationObserver) return;
+        new MutationObserver(function () {
+          var cell = row.querySelector('.focusedTabelCell'), wrap = cell && cell.closest('.scoreWrap');
+          if (!wrap || wrap.scrollWidth <= wrap.clientWidth) return;
+          var c = cell.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+          if (c.left < w.left) wrap.scrollLeft -= w.left - c.left + 8;
+          else if (c.right > w.right) wrap.scrollLeft += c.right - w.right + 8;
+        }).observe(row, { subtree: true, attributes: true, attributeFilter: ['class'] });
+      });
+    </script>
+  </head>
+  <body>
+  <div class="main-wrapper">
+
+    <!-- Bannamnet ovanför poängbilden när banan spelar i en kolumn -->
+    <div class="playBand"><span data-i18n="lane">Bana</span>&nbsp;<span class="laneNo"></span></div>
+
+    <!-- ============================================================ Namnifyllning -->
+    <div id="fillBowlingData" class="overlay">
+      <div class="popup startScreen">
+        <div class="laneBand"><span data-i18n="lane">Bana</span>&nbsp;<span class="laneNo"></span></div>
+
+        <form id="startBowlingForm" action="javascript:void(0);">
+          <div id="bowlingStartForm" class="form-group">
+            <section class="playersCol">
+              <div class="sectionHead">
+                <h2 class="sectionLabel" data-i18n="players">Spelare</h2>
+                <span id="playerCount" class="sectionCount"></span>
+              </div>
+              <div id="nameArea">
+                <script>
+                  // Six rows always; those above the hall's "Antal spelarfält" are hidden by
+                  // vbsApplyMaxPlayers (js/startBowling.js).
+                  for (var i=0; i < 6; i++)
+                    document.getElementById("nameArea").innerHTML +=
+                      '<div class="nameRow">' +
+                        '<span class="nameNo">' + (i + 1) + '</span>' +
+                        '<input class="playerName" type="text" maxlength="60" placeholder="Spelarnamn" data-i18n-placeholder="playerPlaceholder" aria-label="' + (i + 1) + '" onkeyup="checkNameValid()" oninput="adjustCaps()" onfocus="selectAll(this)" onblur="checkMember(this)">' +
+                        // Handicap per game, optional (startBowling.js sends it as hcp<n> beside player<n>)
+                        '<label class="hcpBox"><span class="hcpText" data-i18n="hcp">HCP</span><input class="playerHcp" type="text" inputmode="numeric" maxlength="3" autocomplete="off" oninput="adjustHcp(this)" onfocus="selectAll(this)"></label>' +
+                        '<label class="bumpToggle"><input class="playerBump" type="checkbox"><span class="bumpText" data-i18n="bumpers">Bumpers</span></label>' +
+                      '</div>';
+                </script>
+              </div>
+              <p class="hint" data-i18n="memberHint">Medlem? Skriv ditt medlemsnummer så hämtas namnet.</p>
+            </section>
+
+            <aside class="modeCol">
+              <!-- Helskärm: snabbval -->
+              <div class="modeCard">
+                <span class="sectionLabel" data-i18n="mode">Spelsätt</span>
+                <div class="quickModes">
+                  <button type="button" class="quickMode" data-src="gameType10Pin" value="Starta Vanlig Bowling" onclick="selectBowling(this)"></button>
+                  <button type="button" class="quickMode" data-src="gameType369" value="Starta 3-6-9" onclick="selectBowling(this)"></button>
+                  <button type="button" class="quickMode" data-src="gameTypeMini" value="Starta Mini Bowling" onclick="selectBowling(this)"></button>
+                  <button type="button" class="quickMode" data-src="gameType10thFrame" value="Starta 10th Frame" onclick="selectBowling(this)"></button>
+                </div>
+                <a id="otherBowling" class="btn generalButton otherBowlingButton" href="#otherBowlingForm" onclick="initializeBowlingSelectForm()" data-i18n="otherModes">Andra spelsätt</a>
+              </div>
+              <!-- Kolumn: en rad -->
+              <div class="modeRow">
+                <span class="sectionLabel" data-i18n="mode">Spelsätt</span>
+                <span id="currentModeName" class="modeName"></span>
+                <a class="changeModeLink" href="#otherBowlingForm" onclick="initializeBowlingSelectForm()" data-i18n="changeMode">Byt spelsätt</a>
+              </div>
+
+              <div class="bottomButtons">
+                <!-- Den riktiga startknappen, dold: innerHTML = spelsättet som skickas -->
+                <button id="startBowling" type="button" class="btn btn-primary generalButton" disabled hidden>Starta Vanlig Bowling</button>
+                <button id="rev2Start" type="button" class="rev2Start" disabled>
+                  <span class="rev2StartText"><span class="rev2StartLabel"></span><span class="rev2StartSub"></span></span>
+                </button>
+              </div>
+            </aside>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ GSX-träning -->
+    <div id="fillTrainingData" class="overlay">
+      <div class="popup startScreen gsxScreen">
+        <div class="laneBand"><span data-i18n="lane">Bana</span>&nbsp;<span class="laneNo"></span></div>
+        <form id="startTrainingForm" action="javascript:void(0);">
+          <div id="trainingStartForm" class="form-group"></div>
+
+          <div class="gsxBody">
+            <section class="gsxMain">
+              <div class="gsxHead">
+                <span class="gsxTitle" data-i18n="gsx.title">GSX Träning</span>
+                <span class="gsxHint" data-i18n="gsx.upTo3">Upp till 3 spelare</span>
+                <a class="changeModeLink gsxColumnOnly" href="#otherBowlingForm" onclick="initializeBowlingSelectForm()" data-i18n="changeMode">Byt spelsätt</a>
+              </div>
+              <!-- Ett kort per spelare, byggt av js/touchconsoleLane.js (buildGsx) -->
+              <div id="gsxCards"></div>
+            </section>
+
+            <aside class="gsxAside">
+              <div class="gsxHelp">
+                <span class="sectionLabel" data-i18n="gsx.howTitle">Så gör ni</span>
+                <span class="gsxHelpText" data-i18n="gsx.howText"></span>
+              </div>
+              <a id="otherBowlingTraining" class="btn generalButton otherBowlingButton" href="#otherBowlingForm" onclick="initializeBowlingSelectForm()" data-i18n="changeMode">Byt spelsätt</a>
+              <div class="bottomButtons">
+                <!-- Den riktiga startknappen, dold; #gsxStart trycker på den -->
+                <button id="startTraning" type="button" class="btn btn-primary generalButton" disabled hidden data-i18n="training.start">Starta GSX Träning</button>
+                <button id="gsxStart" type="button" class="rev2Start" disabled>
+                  <span class="rev2StartText"><span class="rev2StartLabel"></span><span class="rev2StartSub"></span></span>
+                </button>
+              </div>
+            </aside>
+          </div>
+
+          <!-- Originalfälten som startBowling.js läser (spelarnamn, rullista med program, tio
+               kryssrutor per spelare i ordningen 7 8 9 10 / 4 5 6 / 2 3 / 1). De syns inte; korten
+               ovan skriver till dem. Namnfälten flyttas in i korten av buildGsx(). -->
+          <div class="gsxHiddenFields" hidden>
+            <div id="trainingFormLeft">
+              <script>
+                var here = document.getElementById('trainingFormLeft');
+                for (var i=0; i<3; i++)
+                {
+                  here.innerHTML += '<div><input class="playerName" type="text" maxlength="60" placeholder="Spelarnamn" data-i18n-placeholder="playerPlaceholder" onkeyup="checkTrainingValid()" oninput="adjustCaps()"></div>';
+                  here.innerHTML += '<select onchange="updateTrainingPINsActive()" class="show-tick"></select><div></div>';
+                }
+              </script>
+            </div>
+            <div id="trainingFormRight">
+              <script>
+                var here = document.getElementById('trainingFormRight');
+                function addBowlPosition(quantiy)
+                {
+                  var p = document.createElement("P");
+                  p.setAttribute("class","practice_pin");
+                  for (var i=0; i<quantiy; i++)
+                  {
+                    var label = document.createElement("LABEL");
+                    label.setAttribute("class","checkbox-inline pinrow");
+                    var input = document.createElement("INPUT");
+                    input.setAttribute("type", "checkbox");
+                    input.setAttribute("onchange", "checkTrainingValid()")
+                    label.appendChild(input);
+                    p.appendChild(label);
+                  }
+                  here.appendChild(p);
+                }
+                function addBowlBlock()
+                {
+                  for (var i=4; i>=1; i--)
+                    addBowlPosition(i);
+                  var br = document.createElement("BR");
+                  here.appendChild(br);
+                }
+                for (var i=0; i<3; i++)
+                  addBowlBlock();
+              </script>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Lista med färdiga program (GSX), öppnas från ett spelarkort -->
+    <div id="gsxProgramDialog" class="gsxProgramOverlay" hidden>
+      <div class="gsxProgramBox" role="dialog" aria-labelledby="gsxProgramTitle">
+        <div class="gsxProgramHead">
+          <div class="gsxProgramHeadText">
+            <h2 id="gsxProgramTitle"></h2>
+            <span id="gsxProgramSub"></span>
+          </div>
+          <button type="button" class="gsxProgramClose" data-i18n-aria="close" data-gsx-close></button>
+        </div>
+        <div class="gsxProgramListWrap">
+          <div id="gsxProgramList" class="gsxProgramList"></div>
+        </div>
+        <div class="gsxProgramFoot">
+          <button type="button" id="gsxProgramOwn" class="gsxFootButton" data-i18n="gsx.ownInstead">Egna käglor i stället</button>
+          <span class="flexSpacer"></span>
+          <button type="button" class="gsxFootButton" data-gsx-close data-i18n="cancel">Avbryt</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ Välj spelsätt -->
+    <div id="otherBowlingForm" class="overlay">
+      <div class="popup gameSelect">
+        <div class="dialogHead">
+          <a class="close backLink" href="#fillBowlingData" data-i18n-aria="close">&times;</a>
+          <h2 id="selectGamingformatTitle" data-i18n="game.selectTitle">Välj spel</h2>
+        </div>
+        <div class="gameGrid">
+          <button onclick="selectBowling(this)" type="button" id="gameType10Pin" value="Starta Vanlig Bowling" class="btn btn-primary gameType" data-i18n="game.normal">Vanlig bowling</button>
+          <button onclick="selectBowling(this)" type="button" id="gameType369" value="Starta 3-6-9" class="btn btn-primary gameType" data-i18n="game.369">3-6-9</button>
+          <button onclick="selectBowling(this)" type="button" id="gameTypeMini" value="Starta Mini Bowling" class="btn btn-primary gameType" data-i18n="game.mini">Mini Bowling</button>
+          <button onclick="selectBowling(this)" type="button" id="gameType10thFrame" value="Starta 10th Frame" class="btn btn-primary gameType" data-i18n="game.10thFrame">10th Frame</button>
+          <button onclick="getTrainingNames(this)" type="button" id="gameTypeGSXTrain" value="Starta GSX Träning" class="btn btn-primary gameType" data-i18n="game.gsx">GSX Träning</button>
+          <button onclick="selectBowling(this)" type="button" id="gameTypeAmr" value="Starta Amerikanskt Lösspel" class="btn btn-primary gameType" data-i18n="game.amr">Amerikanskt lösspel</button>
+          <div id="NoTapDetails" class="gameTypeGroup">
+            <span class="gameTypeMulti" data-i18n="game.noTap">No Tap</span>
+            <div class="multi">
+              <button onclick="selectBowling(this)" type="button" value="Starta NoTap (Limit 6)" class="btn btn-primary gameTypeSub" data-mode-name="No Tap 6">6</button>
+              <button onclick="selectBowling(this)" type="button" value="Starta NoTap (Limit 7)" class="btn btn-primary gameTypeSub" data-mode-name="No Tap 7">7</button>
+              <button onclick="selectBowling(this)" type="button" value="Starta NoTap (Limit 8)" class="btn btn-primary gameTypeSub" data-mode-name="No Tap 8">8</button>
+              <button onclick="selectBowling(this)" type="button" value="Starta NoTap (Limit 9)" class="btn btn-primary gameTypeSub" data-mode-name="No Tap 9">9</button>
+            </div>
+          </div>
+          <div id="ShortGameDetails" class="gameTypeGroup">
+            <span class="gameTypeMulti" data-i18n="game.shortGames">Short Games</span>
+            <div class="multi">
+              <button onclick="selectBowling(this)" type="button" value="Short Game 2" class="btn btn-primary gameTypeSub" data-mode-name="Short Game 2">2</button>
+              <button onclick="selectBowling(this)" type="button" value="Short Game 3" class="btn btn-primary gameTypeSub" data-mode-name="Short Game 3">3</button>
+              <button onclick="selectBowling(this)" type="button" value="Short Game 4" class="btn btn-primary gameTypeSub" data-mode-name="Short Game 4">4</button>
+              <button onclick="selectBowling(this)" type="button" value="Short Game 5" class="btn btn-primary gameTypeSub" data-mode-name="Short Game 5">5</button>
+            </div>
+          </div>
+        </div>
+        <div id="startMovePlayDivision">
+          <a id="startMovePlayButton" class="btn btn-primary gameTypeMulti gameTypeMultiPadding gameType10PinMoved" href="#startMovePlay" data-i18n="game.startMoved">Starta flyttat spel</a>
+        </div>
+        <div class="dialogButtons">
+          <a id="startMovePlayCancel" class="btn btn-primary generalButton dark2" href="#fillBowlingData" data-i18n="cancel">Avbryt</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ AMR: ändra aktiv spelare -->
+    <div id="AMRchangeActiveSection" class="overlay">
+      <div class="popup">
+        <h2 id="AMRchangeActiveTitle" data-i18n="amr.title">Ändra aktiv spelare</h2>
+        <form id="AMRchangeActiveForm" action="javascript:void(0);">
+          <div class="form-group" id="AMRchangeActiveDivision">
+            <table class="amrTable">
+              <tr>
+                <th id="oddLane"></th>
+                <th id="evenLane"></th>
+              </tr>
+            </table>
+          </div>
+          <div class="dialogButtons">
+            <a type="button" class="btn btn-primary generalButton dark2" href="#" data-i18n="cancel">Avbryt</a>
+            <button id="AMRchangeActiveSaveButton" type="button" class="btn btn-primary generalButton" data-i18n="save">Spara</button>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Ändra spelare -->
+    <div id="changeactive" class="overlay">
+      <div class="popup">
+        <h2 id="changePlayerTitle" data-i18n="changePlayer.title">Ändra spelare</h2>
+        <div class="playerGrid playerGridHead">
+          <span class="colHandle" aria-hidden="true"></span>
+          <label id="playStyle" class="colActive" data-i18n="changePlayer.active">Aktiv</label>
+          <label id="changePlayerNameLabel" class="colName" data-i18n="changePlayer.name">Spelarnamn</label>
+          <label id="changePlayerBumpLabel" class="colBump" data-i18n="changePlayer.bumpers">Bumpers</label>
+          <label id="changePlayerPositionLabel" class="colPosition" data-i18n="changePlayer.position">Position</label>
+          <label id="changePlayerRemoveLabel" class="colRemove" data-i18n="changePlayer.remove">Ta bort</label>
+        </div>
+        <form id="ChangePlayerForm" action="javascript:void(0);">
+          <div class="form-group">
+            <div id="playerNameList"></div>
+            <p class="dragHint" data-i18n="changePlayer.dragHint">Håll i handtaget och dra spelaren dit den ska stå.</p>
+          </div>
+          <div class="changePlayerButtons">
+            <button id="addplayerbutton" type="button" class="btn btn-primary generalButton" data-i18n="changePlayer.add">Lägg till spelare</button>
+            <a id="AMRchangeActivePlayerButton" type="button" class="btn btn-primary generalButton" href="#AMRchangeActiveSection" data-i18n="changePlayer.changeActive">Ändra aktiv spelare</a>
+            <span class="flexSpacer"></span>
+            <button id="changePlayerInfoSubmitButton" type="button" class="btn btn-primary generalButton" data-i18n="save">Spara</button>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Avsluta spel / inspel -->
+    <div id="stopGame" class="overlay">
+      <div class="popup narrow">
+        <h2 id="stopGameTitle" data-i18n="warning">Varning</h2>
+        <form action="javascript:void(0);">
+          <div class="form-group">
+            <h3 id="stopGameWarning" data-i18n="stop.gameWarning">Avsluta pågående spel?</h3>
+          </div>
+          <div class="dialogButtons">
+            <a id="stopGameCancel" class="btn btn-primary generalButton dark2" href="#" data-i18n="cancel">Avbryt</a>
+            <a id="stopBowlingsubmitbutton" class="btn btn-danger generalButton danger" href="#fillBowlingData" data-i18n="stop.gameConfirm">Avsluta spel</a>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+    <div id="stopPractice" class="overlay">
+      <div class="popup narrow">
+        <h2 id="stopPracticeTitle" data-i18n="warning">Varning</h2>
+        <form action="javascript:void(0);">
+          <div class="form-group">
+            <h3 id="stopPracticeWarning" data-i18n="stop.practiceWarning">Avsluta pågående inspelning?</h3>
+          </div>
+          <div class="dialogButtons">
+            <a id="stopPracticeCancel" class="btn btn-primary generalButton dark2" href="#" data-i18n="cancel">Avbryt</a>
+            <a id="stopPracticeSubmitbutton" class="btn btn-danger generalButton danger" href="#fillBowlingData" data-i18n="stop.practiceConfirm">Avsluta inspelning</a>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Service (används när banan visas ensam och spelar) -->
+    <div id="callPersonal" class="overlay">
+      <div class="popup narrow">
+        <h2 id="serviceTitle" data-i18n="serviceTitle">Tillkalla personal</h2>
+        <p><span id="serviceWait" class="blinking serviceWait" hidden data-i18n="serviceWait">Personal tillkallad, vänta!</span></p>
+        <form action="javascript:void(0);">
+          <div class="dialogButtons">
+            <a id="callPersonalCancel" class="btn btn-primary generalButton dark2" href="#" data-i18n="cancel">Avbryt</a>
+            <a id="callPersonalsubmitbutton" class="btn btn-primary generalButton" data-i18n="callService">Tillkalla personal</a>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Byt in reserv -->
+    <div id="changePlayer" class="overlay">
+      <div class="popup">
+        <h2 id="changeInReserveTitle" data-i18n="reserve.title">Byt in reservspelare</h2>
+        <p id="changePlayerInfo" class="helptext"></p>
+        <form action="javascript:void(0);">
+          <div class="form-group reserveGrid">
+            <div>
+              <h3 id="changeOutReserveTitle" data-i18n="reserve.out">Byt ut spelare</h3>
+              <select onchange="updateVBSTreservPlayers()" id="selectplayerlistCurrentPlayers" class="show-tick" name="playerindex"></select>
+            </div>
+            <div>
+              <h3 id="withThisPlayerTitle" data-i18n="reserve.with">Med denna spelare</h3>
+              <select id="selectplayerlistReservPlayers" class="show-tick" name="playerindex"></select>
+            </div>
+          </div>
+          <div class="dialogButtons">
+            <a id="cancelChangePlayersubmitbutton" class="btn btn-primary generalButton dark2" href="#" data-i18n="cancel">Avbryt</a>
+            <button id="changePlayersubmitbutton" type="button" class="btn btn-primary generalButton" href="#fillBowlingData" data-i18n="reserve.confirm">Byt ut/in</button>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Flytta spel -->
+    <div id="saveMovePlay" class="overlay">
+      <!-- Banorna som runda sifferknappar, som käglorna i Reset/Set. saveMoveGame.js bygger
+           knapparna och rubriken med den valda banan (#theTarget) i #targetLanes som förut;
+           rubriken göms och #moveText visar valet i stället (touchconsoleLane.js, syncMove). -->
+      <div class="popup movePopup">
+        <h2 id="moveGameTitle" data-i18n="move.title">Flytta spel</h2>
+        <form action="javascript:void(0);">
+          <p id="moveText" class="moveText"></p>
+          <div id="targetLanes" class="form-group"></div>
+          <div class="dialogButtons">
+            <a id="cancelSaveMovePlaysubmitbutton" class="btn btn-primary generalButton dark2" href="#" data-i18n="cancel">Avbryt</a>
+            <button id="saveMovePlaysubmitbutton" type="button" class="btn btn-primary generalButton" data-i18n="move.confirm">Flytta</button>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Reset/Set -->
+    <div id="pinSetter" class="overlay">
+      <!-- Käglorna som runda sifferknappar i triangeln (P1 i designytan). Kryssrutorna pin1-pin10
+           är originalets: fetchLastPlayedPinPattern() fyller i dem och submitPinSetLane() läser
+           dem (TouchConsole.js). Originalets två knappar finns kvar dolda - skriptet binder sina
+           klick där och ChangeLanguage() skriver deras text - och korten nedan trycker på dem. -->
+      <div class="popup pinPopup">
+        <h2 id="pinSetterTitle" data-i18n="pins.title">Reset/Set</h2>
+        <form action="javascript:void(0);">
+          <div class="pinBody">
+            <section class="pinPanel">
+              <div class="pinHead">
+                <span class="sectionLabel" data-i18n="pins.standing">Käglor som står</span>
+                <span id="pinCount" class="pinCount"></span>
+              </div>
+              <div class="pinTable">
+              <div class="pinRow"><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin7" aria-label="7"><span>7</span></label><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin8" aria-label="8"><span>8</span></label><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin9" aria-label="9"><span>9</span></label><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin10" aria-label="10"><span>10</span></label></div>
+              <div class="pinRow"><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin4" aria-label="4"><span>4</span></label><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin5" aria-label="5"><span>5</span></label><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin6" aria-label="6"><span>6</span></label></div>
+              <div class="pinRow"><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin2" aria-label="2"><span>2</span></label><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin3" aria-label="3"><span>3</span></label></div>
+              <div class="pinRow"><label class="pinBtn"><input type="checkbox" class="bowlingpin" id="pin1" aria-label="1"><span>1</span></label></div>
+              </div>
+              <div class="pinFoot">
+                <span class="pinHint" data-i18n="pins.hint">Förvalt: läget efter senaste slaget</span>
+                <button type="button" id="pinAll" class="pinSmall" data-i18n="pins.all">Alla</button>
+                <button type="button" id="pinNone" class="pinSmall" data-i18n="pins.none">Inga</button>
+              </div>
+            </section>
+            <div class="pinActions">
+              <button id="pinResetSubmitbutton" type="button" class="btn generalButton" hidden data-i18n="pins.first">Ställ förstaslag</button>
+              <button id="pinSetSubmitbutton" type="button" class="btn generalButton" hidden data-i18n="pins.second">Ställ andraslag</button>
+              <button type="button" id="pinFirstCard" class="pinAction">
+                <span class="pinIcon" aria-hidden="true"></span>
+                <span class="pinActionText">
+                  <span class="pinActionTitle" data-i18n="pins.first">Ställ förstaslag</span>
+                  <span class="pinActionSub" data-i18n="pins.firstSub">Alla tio käglor ställs upp</span>
+                </span>
+              </button>
+              <button type="button" id="pinSecondCard" class="pinAction isPrimary">
+                <span class="pinIcon" aria-hidden="true"></span>
+                <span class="pinActionText">
+                  <span class="pinActionTitle" data-i18n="pins.second">Ställ andraslag</span>
+                  <span id="pinSecondSub" class="pinActionSub"></span>
+                </span>
+              </button>
+              <span class="flexSpacer"></span>
+              <a id="cancelpinSettersubmitbutton" class="btn btn-primary generalButton dark2 pinCancel" href="#" data-i18n="cancel">Avbryt</a>
+            </div>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Starta flyttat spel -->
+    <div id="startMovePlay" class="overlay">
+      <div class="popup narrow">
+        <h2 id="beginToMoveTitle" data-i18n="moveStart.title">Starta flyttat spel</h2>
+        <form action="javascript:void(0);">
+          <div class="form-group">
+            <h3 id="confirmationTitle" data-i18n="moveStart.question">Är du säker?</h3>
+          </div>
+          <div class="dialogButtons">
+            <a id="cancelMovePlaysubmitbutton" class="btn btn-primary generalButton dark2" href="#" data-i18n="cancel">Avbryt</a>
+            <a id="startMovePlaysubmitbutton" type="button" class="btn btn-primary generalButton" href="#fillBowlingData" data-i18n="moveStart.start">Starta</a>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Korrigera -->
+    <div id="changescore" class="overlay">
+      <div class="popup wide">
+        <h2 id="correctTitle" data-i18n="correct.title">Korrigera</h2>
+        <form id="changescoreform" action="javascript:void(0);">
+          <div class="form-group">
+            <div id="playerlistforchange"></div>
+          </div>
+          <div class="scoreWrap">
+          <table class="scoretable">
+            <tr id="headRow">
+              <script>
+                for (var i=1;i<=10;i++)
+                {
+                  var tabelHeader = document.createElement("TH");
+                  tabelHeader.colSpan = i < 10 ? "2" : "3";
+                  tabelHeader.innerHTML = i;
+                  document.getElementById("headRow").appendChild(tabelHeader);
+                }
+              </script>
+            </tr>
+            <tr id="scorerow">
+              <script>
+                for (var i=0;i<=20;i++)
+                {
+                  var tabelData = document.createElement("TD");
+                  tabelData.style = "width: 4.76%;";
+                  tabelData.index = i;
+                  tabelData.onfocus = function() {setFocusedCell()};
+                  document.getElementById("scorerow").appendChild(tabelData);
+                }
+              </script>
+            </tr>
+          </table>
+          </div>
+          <!-- Tretton knappar i den här ordningen - updateCorrectButtons() går på index. -->
+          <div id="correctButtons">
+            <button id="zeroButton" type="button" onclick="setScore('-')" class="btn btn-primary generalButton correct special">-</button>
+            <button id="oneButton" type="button" onclick="setScore(1)" class="btn btn-primary generalButton correct">1</button>
+            <button id="twoButton" type="button" onclick="setScore(2)" class="btn btn-primary generalButton correct">2</button>
+            <button id="threeButton" type="button" onclick="setScore(3)" class="btn btn-primary generalButton correct">3</button>
+            <button id="fourButton" type="button" onclick="setScore(4)" class="btn btn-primary generalButton correct">4</button>
+            <button id="fiveButton" type="button" onclick="setScore(5)" class="btn btn-primary generalButton correct">5</button>
+            <button id="sixButton" type="button" onclick="setScore(6)" class="btn btn-primary generalButton correct">6</button>
+            <button id="sevenButton" type="button" onclick="setScore(7)" class="btn btn-primary generalButton correct">7</button>
+            <button id="eightButton" type="button" onclick="setScore(8)" class="btn btn-primary generalButton correct">8</button>
+            <button id="nineButton" type="button" onclick="setScore(9)" class="btn btn-primary generalButton correct">9</button>
+            <button id="StrikeButton" type="button" onclick="setScore('X')" class="btn btn-primary generalButton correct special">X</button>
+            <button id="SparrButton" type="button" onclick="setScore('/')" class="btn btn-primary generalButton correct special">/</button>
+            <button id="felButton" type="button" onclick="setScore('F')" class="btn btn-primary generalButton correct special">F</button>
+          </div>
+          <div class="dialogButtons">
+            <button id="addScoreButton" type="button" class="btn generalButton" data-i18n="correct.add">Lägg till</button>
+            <button id="deleteScoreButton" type="button" class="btn generalButton" data-i18n="correct.remove">Ta bort</button>
+            <span class="flexSpacer"></span>
+            <button id="cancelButton" type="button" class="btn generalButton dark2" data-i18n="cancel">Avbryt</button>
+            <button id="changescoresubmitbutton" type="button" class="btn generalButton" data-i18n="save">Spara</button>
+          </div>
+          <a class="close" href="#" data-i18n-aria="close">&times;</a>
+        </form>
+      </div>
+    </div>
+
+    <!-- ============================================================ Poängbild / reklam -->
+    <div id="main_content">
+      <img id="imageFx" class="scoring-img-full-size" alt="">
+    </div>
+
+    <!-- Kundens meny -->
+    <div id="customMenu" class="overlay">
+      <div class="popup wide">
+        <h2 data-i18n="customMenu.title">Kundens meny</h2>
+        <iframe src="custom.html" class="customFrame"></iframe>
+        <a class="close" href="#" data-i18n-aria="close">&times;</a>
+      </div>
+    </div>
+
+    <!-- Beställ (Terminalinställningar, Kimsoft): hallens beställningssida orderwidget.html, som receptionen
+         skriver från den inklistrade koden och kopierar till varje scoringdator. Hämtas när dialogen
+         öppnas och #LANE# i den blir banans nummer (openOrderWidget i js/TouchConsole.js). -->
+    <div id="orderWidgetMenu" class="overlay">
+      <div class="popup wide">
+        <h2 data-i18n="orderMenu.title">Beställ</h2>
+        <iframe id="orderWidgetFrame" class="customFrame"></iframe>
+        <a class="close" href="#" data-i18n-aria="close">&times;</a>
+      </div>
+    </div>
+
+    <!-- ============================================================ Knappar under spel -->
+    <footer>
+      <div class="lanebuttons">
+        <p>
+          <a id="onGoingMiniLogo" class="onGoingGameButton space" href="javascript:loadHomePage();" aria-label="Hem">
+            <img src="../common/img/CustomLogo.png" alt="">
+          </a>
+          <a id="stopBowlingbutton" class="btn btn-lg btn-primary onGoingGameButton" href="#stopGame" data-i18n="dock.stopGame">Avsluta spel</a>
+          <a id="callPersonalButton" class="btn btn-lg btn-primary onGoingGameButton" href="#callPersonal" data-i18n="service">Service</a>
+          <a class="onGoingGameButton space dockSpacer" href="#" tabindex="-1" aria-hidden="true"></a>
+          <!-- Språkval under spel på hela skärmen (i en kolumn sitter det i bandet ovanför bilden) -->
+          <button id="rev2LangDock" type="button" class="onGoingGameButton langDock" data-i18n-aria="lang.button"><span class="langFlag" aria-hidden="true"></span><span class="langName"></span></button>
+          <a id="changePlayerButton" class="btn btn-lg btn-primary onGoingGameButton" href="#changeactive" data-i18n="dock.changePlayer">Ändra spelare</a>
+          <a id="changeScoreButton" class="btn btn-lg btn-primary onGoingGameButton" href="#changescore" data-i18n="dock.correct">Korrigera</a>
+          <a id="VBSTchangePlayerButton" class="btn btn-lg btn-primary onGoingGameButton" href="#changePlayer" data-i18n="dock.reserve">Byt in reserv</a>
+          <a id="saveMovePlayButton" class="btn btn-lg btn-primary onGoingGameButton" href="#saveMovePlay" data-i18n="dock.moveGame">Flytta spel</a>
+          <a id="pinSetterButton" class="btn btn-lg btn-primary onGoingGameButton" href="#pinSetter" data-i18n="dock.pinSetter">Reset/Set</a>
+          <a id="pressSpace" class="btn btn-lg btn-primary onGoingGameButton" data-i18n="dock.space">SPACE</a>
+          <a id="finishPractice" class="btn btn-lg btn-primary onGoingGameButton" href="#stopPractice" data-i18n="dock.endPractice">Avsluta inspelning</a>
+          <a id="customButton" class="btn btn-lg btn-primary onGoingGameButton" href="#customMenu" data-i18n-aria="dock.customMenu"></a>
+          <a id="orderWidgetButton" class="btn btn-lg btn-primary onGoingGameButton" href="#orderWidgetMenu" data-i18n="dock.order">Beställ</a>
+        </p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Språkval för banan: knapparna med flagga i banans band och i knappraden öppnar den här.
+       Valet gäller den här banan tills den stängs av (touchconsoleLane.js, Språk). -->
+  <div id="rev2LangDialog" class="langOverlay" hidden>
+    <div class="popup langPopup" role="dialog" aria-labelledby="rev2LangTitle">
+      <h2 id="rev2LangTitle" data-i18n="lang.title">Välj språk</h2>
+      <div id="rev2LangList" class="langList"></div>
+      <div class="dialogButtons">
+        <button type="button" class="btn generalButton dark2" data-lang-close data-i18n="cancel">Avbryt</button>
+      </div>
+      <button type="button" class="close" data-lang-close data-i18n-aria="close"></button>
+    </div>
+  </div>
+
+  <!-- Skrivläge: listen längst ner i ramen, ovanför Androids tangentbord (se touchconsoleLane.js) -->
+  <div id="rev2KbBar" class="rev2KbBar" hidden>
+    <span class="kbLane"></span>
+    <button type="button" class="kbPrev" data-i18n="kb.prev">Föregående</button>
+    <button type="button" class="kbNext" data-i18n="kb.next">Nästa</button>
+    <button type="button" class="kbDone" data-i18n="kb.done">Klar</button>
+  </div>
+
+  <script src="../common/js/bootstrap/jquery-3.7.1.min.js"></script>
+  <script src="../common/js/bootstrap/bootstrap.min.js"></script>
+  <script src="../common/js/vbscursor.js"></script>
+  <script src="../common/js/commonAPI.js"></script>
+  <script src="js/TouchConsole.js"></script>
+  <script src="js/correctScore.js"></script>
+  <script src="js/startBowling.js"></script>
+  <script src="js/VBSTchangePlayer.js"></script>
+  <script src="js/saveMoveGame.js"></script>
+  <script src="../common/js/vbskeyboard.js"></script>
+  <script src="js/touchconsoleLang.js"></script>
+  <script src="js/touchconsoleLane.js"></script>
+  </body>
+</html>

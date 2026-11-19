@@ -1,0 +1,192 @@
+/****************************************************************************************
+*  vbskeyboard.css - the on-screen keyboard drawn by vbskeyboard.js.
+*
+*  Everything is sized from the viewport, because the same page runs on a lane
+*  console, a 4K lane TV and a 10" tablet. Keys never carry a fixed pixel size;
+*  the panel gets a share of the height and the rows and keys divide it up.
+*
+*  A hall that wants a different look overrides the variables below in its own
+*  Custom.css, which every page that loads this one also loads, after it:
+*
+*      :root { --vbskb-height: 34vh; --vbskb-accent-bg: #b00; }
+*
+*  Do not style .vbskb-key by element name - the keys are <button>, and the
+*  bootstrap button rules would then apply to them.
+****************************************************************************************/
+
+:root {
+	--vbskb-height: clamp(210px, 40vh, 470px);
+	--vbskb-gap: 0.6vh;
+	--vbskb-radius: 0.7vh;
+
+	--vbskb-bg: #1b1f24;
+	--vbskb-key-bg: #f3f5f8;
+	--vbskb-key-fg: #16181c;
+	--vbskb-key-down: #9fb4cd;
+	--vbskb-special-bg: #4a5462;
+	--vbskb-special-fg: #ffffff;
+	--vbskb-accent-bg: #106ebe;
+	--vbskb-accent-fg: #ffffff;
+
+	--vbskb-font: "Segoe UI", Tahoma, Arial, sans-serif;
+}
+
+.vbskb {
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: var(--vbskb-height);
+	box-sizing: border-box;
+	padding: var(--vbskb-gap);
+
+	/* Above .overlay (z-index 9) and above anything a hall's Custom.css is likely
+	   to have invented, because a keyboard behind the dialog it types into is the
+	   same as no keyboard at all. */
+	z-index: 2147483000;
+
+	background: var(--vbskb-bg);
+	box-shadow: 0 -0.4vh 1.4vh rgba(0, 0, 0, 0.5);
+	font-family: var(--vbskb-font);
+
+	/* A keyboard is touched, never selected or long-pressed. touch-action keeps
+	   the browser from waiting to see whether a tap is the start of a double-tap
+	   zoom, which is what makes an in-page keyboard feel slow. */
+	touch-action: manipulation;
+	user-select: none;
+	-webkit-user-select: none;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/* The browser's own [hidden] rule already does this, but it is the weakest rule
+   there is: one stray "div { display: block }" in a hall's Custom.css would leave
+   the keyboard standing across the bottom of the screen all game. */
+.vbskb[hidden] {
+	display: none;
+}
+
+/* The caret we draw in place of the browser's while the window is inactive - see
+   "The caret on an inactive window" in vbskeyboard.js. The browser's is 1px wide
+   and blinks at Windows' default 530ms on, 530ms off; this one copies both. Its
+   colour and place are set from script, from the field's own caret-color. Just
+   below the keyboard, so a caret can never be drawn on top of the keys. */
+.vbskb-caret {
+	position: fixed;
+	width: 1px;
+	pointer-events: none;
+	z-index: 2147482999;
+	animation: vbskb-blink 1.06s step-end infinite;
+}
+
+.vbskb-caret[hidden] {
+	display: none;
+}
+
+@keyframes vbskb-blink {
+	0%   { opacity: 1; }
+	50%  { opacity: 0; }
+	100% { opacity: 1; }
+}
+
+.vbskb-rows {
+	display: flex;
+	flex-direction: column;
+	gap: var(--vbskb-gap);
+	height: 100%;
+}
+
+.vbskb-row {
+	flex: 1 1 0;
+	min-height: 0;
+	display: flex;
+	gap: var(--vbskb-gap);
+}
+
+/* Holds room in a row without being a key. A row's keys share its whole width, so the
+   four-key punctuation row on the second page would otherwise draw keys two and a half
+   times the size of the letter keys below it. Draws nothing and takes no pointer. */
+.vbskb-spacer {
+	flex: var(--vbskb-w, 1) 1 0;
+	min-width: 0;
+	pointer-events: none;
+}
+
+.vbskb-key {
+	/* --vbskb-w is the key's share of the row; the wide keys set it inline. */
+	flex: var(--vbskb-w, 1) 1 0;
+	min-width: 0;
+
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: var(--vbskb-radius);
+
+	background: var(--vbskb-key-bg);
+	color: var(--vbskb-key-fg);
+	font-family: inherit;
+	font-size: clamp(15px, 3.6vh, 34px);
+	line-height: 1;
+	cursor: pointer;
+	-webkit-tap-highlight-color: transparent;
+}
+
+.vbskb-key.is-down {
+	background: var(--vbskb-key-down);
+}
+
+.vbskb-special,
+.vbskb-accent {
+	/* The word keys carry text, not one glyph, so they need a smaller face than
+	   the letters to fit "Färdig" at the narrow end of the range. */
+	font-size: clamp(13px, 2.7vh, 26px);
+}
+
+.vbskb-special {
+	background: var(--vbskb-special-bg);
+	color: var(--vbskb-special-fg);
+}
+
+.vbskb-special.is-down {
+	background: var(--vbskb-key-down);
+	color: var(--vbskb-key-fg);
+}
+
+.vbskb-accent {
+	background: var(--vbskb-accent-bg);
+	color: var(--vbskb-accent-fg);
+	font-weight: 600;
+}
+
+/* Shift held for one letter, and shift locked. Two different marks: a one-shot
+   that looked like a lock would have the user typing SHOUTED names. */
+.vbskb-special.is-active {
+	background: var(--vbskb-accent-bg);
+	color: var(--vbskb-accent-fg);
+}
+
+.vbskb-special.is-locked {
+	background: var(--vbskb-accent-bg);
+	color: var(--vbskb-accent-fg);
+	box-shadow: inset 0 -0.5vh 0 rgba(255, 255, 255, 0.65);
+}
+
+.vbskb-space {
+	background: var(--vbskb-key-bg);
+}
+
+/* The space bar has no label, so it needs something to look like a key. */
+.vbskb-space::after {
+	content: "";
+	width: 40%;
+	height: 0.35vh;
+	border-radius: 0.35vh;
+	background: #9aa3ad;
+}
+
+.vbskb-space.is-down {
+	background: var(--vbskb-key-down);
+}

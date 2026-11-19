@@ -10,6 +10,8 @@
 <link rel="icon" href="web/screen/common/img/favicon.ico">
 <link rel="stylesheet" href="web/screen/console/fonts/barlow.css">
 <link rel="stylesheet" href="css/game.css">
+<link rel="stylesheet" href="css/audio.css">
+<link rel="stylesheet" href="css/motion.css">
 <script type="importmap">
 { "imports": {
     "three": "./lib/three/three.module.js",
@@ -27,17 +29,17 @@
 <div id="stage"></div>
 <canvas id="trail"></canvas>
 
-<!-- 1. Splash: the 4.4 splash, the five languages, the short help and copyright -->
+<!-- 1. Splash: the blue Viking helmet, the five languages, the short help and copyright -->
 <section id="splash" class="screen active">
-  <div class="splashBg"></div>
   <div class="splashCard">
-    <img class="splashImg" src="img/Splash44.png" alt="Viking Scoring System 4.4">
+    <div class="splashLogo"><img class="splashImg" src="img/VikingHelmet.webp" width="1000" height="592" alt="Viking"></div>
     <div class="splashTitle">VIKING BOWLING</div>
     <div class="langRow" id="langRow" role="radiogroup"></div>
     <div class="infoBox">
       <h2 data-t="infoTitle"></h2>
       <p data-t="infoText"></p>
       <p class="howTo" data-t="howTo"></p>
+      <p class="howTo" id="howToMotion" data-t="howToMotion" hidden></p>
       <p class="copy" data-t="copyright"></p>
     </div>
     <button id="okBtn" class="btn gold big" data-t="ok"></button>
@@ -72,6 +74,13 @@
         <label class="opt sel"><span data-t="robots"></span>
           <select id="optRobots"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option></select></label>
         <label class="opt sel"><span data-t="skill"></span><select id="optSkill"></select></label>
+        <label class="opt sel"><span data-t="warmUp"></span><select id="optWarm"></select></label>
+        <label class="opt sel"><span data-t="detail"></span>
+          <select id="optDetail"><option value="auto" data-t="detailAuto"></option><option value="high" data-t="detailHigh"></option><option value="low" data-t="detailLow"></option></select></label>
+        <label class="opt sel"><span data-t="throwInput"></span>
+          <select id="optThrow"><option value="auto" data-t="throwAuto"></option><option value="motion" data-t="throwMotion"></option><option value="swipe" data-t="throwSwipe"></option></select></label>
+        <button type="button" class="chip" id="optMotionDemo" data-t="demoReplay" hidden></button>
+        <label class="opt sel vol"><span data-t="volume"></span><input type="range" min="0" max="100" step="5" data-volume></label>
       </div>
     </div>
     <div id="vbstPane" class="pane" hidden>
@@ -84,6 +93,13 @@
       <div class="optRow">
         <label class="opt"><input type="checkbox" id="optAimV" checked> <span data-t="aimLine"></span></label>
         <label class="opt sel"><span data-t="skill"></span><select id="optSkillV"></select></label>
+        <label class="opt sel"><span data-t="warmUp"></span><select id="optWarmV"></select></label>
+        <label class="opt sel"><span data-t="detail"></span>
+          <select id="optDetailV"><option value="auto" data-t="detailAuto"></option><option value="high" data-t="detailHigh"></option><option value="low" data-t="detailLow"></option></select></label>
+        <label class="opt sel"><span data-t="throwInput"></span>
+          <select id="optThrowV"><option value="auto" data-t="throwAuto"></option><option value="motion" data-t="throwMotion"></option><option value="swipe" data-t="throwSwipe"></option></select></label>
+        <button type="button" class="chip" id="optMotionDemoV" data-t="demoReplay" hidden></button>
+        <label class="opt sel vol"><span data-t="volume"></span><input type="range" min="0" max="100" step="5" data-volume></label>
       </div>
     </div>
     <div class="footer">
@@ -98,6 +114,7 @@
   <div class="panel">
     <h2 id="namesTitle"></h2>
     <label class="field"><span data-t="yourName"></span><input id="humanName" maxlength="20" autocomplete="off"></label>
+    <label class="opt bumpToggle humanBump"><input type="checkbox" id="humanBump"> <span data-t="bumpersMine"></span></label>
     <div id="robotList" class="robotList"></div>
     <div class="footer">
       <button class="btn" id="namesBack" data-t="back"></button>
@@ -114,6 +131,8 @@
     <iframe id="tv2" class="tv" title="Lane TV" hidden></iframe>
     <div class="tvTabs" id="tvTabs" hidden><button data-lane="1"></button><button data-lane="2"></button></div>
   </div>
+  <!-- the TV wall: one small TV per other lane in play (js/game/tvwall.js) -->
+  <div id="tvStrip" class="tvStrip" hidden></div>
   <div id="effect" class="effect"></div>
   <div id="status" class="status"></div>
   <div class="hudBtns">
@@ -121,9 +140,20 @@
     <button id="btnFast" class="icon" aria-label="Fast">&#9193;</button>
     <button id="btnSound" class="icon" aria-label="Sound">&#128266;</button>
     <button id="btnFull" class="icon" aria-label="Full screen">&#x26F6;</button>
+    <button id="btnConsole" class="icon conIcon" aria-label="Lane console" data-t-title="conButton"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 9h4M7 12h6"/></svg></button>
   </div>
   <div id="speedo" class="speedo"></div>
 </section>
+
+<!-- the lane console of each lane in play: VBS's web console page (js/game/consolehost.js) -->
+<div id="consoleBox" class="consoleBox" hidden>
+  <div class="consoleBar">
+    <span id="consoleTitle" class="consoleTitle"></span>
+    <div id="consoleTabs" class="consoleTabs"></div>
+    <button id="consoleClose" class="icon consoleClose" aria-label="Close">&#x2715;</button>
+  </div>
+  <iframe id="consoleFrame" class="consoleFrame" title="Lane console"></iframe>
+</div>
 
 <!-- VBS-T standings between series -->
 <section id="standings" class="screen">

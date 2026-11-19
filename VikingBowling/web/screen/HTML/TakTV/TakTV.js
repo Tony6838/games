@@ -139,8 +139,8 @@
   // the next tick and its picture after that. An idle lane's file is the last game,
   // or an empty one that the theme fills with its own placeholders ("Lagnamn", the
   // RED PIN badge) - and that was what the reception's Restore old scoring showed
-  // for a second or two on every lane it was asked to show live (Siren, Vora,
-  // 2026-10-24, "Lagspel med red pin", which that hall never plays). The lane TV
+  // for a second or two on every lane it was asked to show live (seen at a hall:
+  // "Lagspel med red pin", a game that hall never plays). The lane TV
   // itself showed the same at every page load. Until the status is known the media
   // area shows nothing, which is honest; the history view (feed=host) and ?json=
   // pages have no status at all and show the sheet as before.

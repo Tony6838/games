@@ -1,0 +1,3 @@
+/* The sound's volume setting in the options of open play and VBS-T (js/audio/hallaudio.js) */
+.opt.vol input[type=range] { width: 120px; height: 20px; accent-color: var(--gold); cursor: pointer; }
+@media (max-width: 480px) { .opt.vol input[type=range] { width: 100px; } }

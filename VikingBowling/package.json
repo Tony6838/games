@@ -9,7 +9,10 @@
     "test:bots": "node tests/bot_stats.mjs 20000 1",
     "test:vbst": "node tests/vbst_formats.mjs 7",
     "test:swipe": "node tests/swipe_test.mjs",
-    "test:physics": "node tests/physics_tune.mjs"
+    "test:physics": "node tests/physics_tune.mjs",
+    "test:warmup": "node tests/warmup_test.mjs",
+    "test:bumpers": "node tests/bumper_test.mjs",
+    "tvmedia": "node tools/make_tv_media.mjs"
   },
   "license": "SEE LICENSE IN LICENSE",
   "dependencies": {

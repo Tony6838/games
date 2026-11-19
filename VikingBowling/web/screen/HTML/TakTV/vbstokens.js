@@ -88,7 +88,7 @@ function vbsIsGsxTraining(json) {
 
 // The RedPin the sheet draws by: none while a warm-up is played - no red pin on
 // the rack, no RED PIN badge (#IS_REDPIN#), no red pin frame mark - else the
-// lane's own (Tony 2026-11-17: "RedPin alert or animation or image should not
+// lane's own (the rule: "RedPin alert or animation or image should not
 // show in practice period"). Port of LanedataUtil::RedPinShown and
 // IsWarmUpBeingPlayed (shared/lanedata/LanedataUtil.cpp): a practice method set
 // (but not one configured as nothing at all - no amount, nothing counted, as the
@@ -1004,7 +1004,7 @@ function vbsGetText(id, ctx, current) {
   if (tmp === '#LANE_NUMBER#') return { text: String(lane.laneNumber), status: 0 };
   if (tmp === '#LANE_NUMBERD#') return { text: vbsLangText(ctx, 'IDS_LANE'), status: 0 };
   // Which side of the lane pair this lane is on - left is an odd lane, right an
-  // even one (STB 2026-10-06). Port of LaneSideText in Game.cpp: true is the
+  // even one. Port of LaneSideText in Game.cpp: true is the
   // lane number, false is empty, so a picture with the id shows only on its side
   // and a text with it writes the lane number there and nothing on the other.
   if (tmp === '#IS_LEFTLANE#' || tmp === '#IS_RIGHTLANE#') {

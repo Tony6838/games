@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>TV media maker</title>
+<link rel="stylesheet" href="../web/screen/console/fonts/barlow.css">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body>
+<!--
+  The game hall's lane TV animations (web/screen/TV/media/*.webm), drawn here on a 960 x 540 canvas
+  and recorded with MediaRecorder by tools/make_tv_media.mjs. A hall puts its own animations in
+  web\screen\TV\media with an .ini beside each naming the exciter it is for (action=STRIKEA ...);
+  Viking 4.4 ships only the two RedPin videos. Original artwork, drawn in code, in the lane TV's
+  colours (the Standard theme's blue, the console's gold).
+-->
+<canvas id="c" width="960" height="540"></canvas>
+<script>
+'use strict';
+const C = document.getElementById('c'), g = C.getContext('2d');
+const W = 960, H = 540, GOLD = '#E2B550', FONT = '"Barlow Condensed", "Segoe UI", Arial, sans-serif';
+const ease = (t) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
+const pop = (t) => { t = Math.min(1, Math.max(0, t)); return t < 0.6 ? ease(t / 0.6) * 1.15 : 1.15 - 0.15 * ease((t - 0.6) / 0.4); };
+let seed = 7; const R = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+
+function background(t, hue = '#13305e') {
+  const bg = g.createRadialGradient(W / 2, H * 0.45, 40, W / 2, H / 2, W * 0.75);
+  bg.addColorStop(0, hue); bg.addColorStop(1, '#050b18');
+  g.fillStyle = bg; g.fillRect(0, 0, W, H);
+  // light rays turning slowly
+  g.save(); g.translate(W / 2, H * 0.48); g.rotate(t * 0.25);
+  for (let i = 0; i < 16; i++) {
+    g.rotate(Math.PI / 8);
+    g.fillStyle = i % 2 ? 'rgba(255,255,255,0.035)' : 'rgba(226,181,80,0.05)';
+    g.beginPath(); g.moveTo(0, 0); g.lineTo(-60, -W); g.lineTo(60, -W); g.closePath(); g.fill();
+  }
+  g.restore();
+  g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(0, H - 34, W, 34);
+  g.fillStyle = '#9fb3d4'; g.font = `700 20px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText('VIKING  BOWLING', W / 2, H - 17);
+}
+function bigText(text, t, color = GOLD, y = H * 0.44, size = 150) {
+  const s = pop(t);
+  if (s <= 0) return;
+  g.save(); g.translate(W / 2, y); g.scale(s, s);
+  g.font = `700 ${size}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = color; g.shadowBlur = 40; g.lineWidth = 10; g.strokeStyle = 'rgba(0,0,0,0.8)';
+  g.strokeText(text, 0, 0); g.fillStyle = color; g.fillText(text, 0, 0);
+  g.restore();
+}
+function subText(text, t, y = H * 0.68) {
+  const a = Math.min(1, Math.max(0, (t - 0.25) * 3));
+  g.globalAlpha = a; g.font = `600 40px ${FONT}`; g.textAlign = 'center'; g.fillStyle = '#ffffff';
+  g.fillText(text, W / 2, y); g.globalAlpha = 1;
+}
+function pin(x, y, s, rot = 0, alpha = 1) {
+  g.save(); g.globalAlpha = alpha; g.translate(x, y); g.rotate(rot); g.scale(s, s);
+  g.fillStyle = '#ffffff'; g.beginPath();
+  g.moveTo(0, -60); g.bezierCurveTo(9, -60, 10, -46, 7, -36); g.bezierCurveTo(5, -28, 18, -10, 18, 8);
+  g.bezierCurveTo(18, 30, 10, 40, 8, 44); g.lineTo(-8, 44); g.bezierCurveTo(-10, 40, -18, 30, -18, 8);
+  g.bezierCurveTo(-18, -10, -5, -28, -7, -36); g.bezierCurveTo(-10, -46, -9, -60, 0, -60); g.fill();
+  g.fillStyle = '#d81e22'; g.fillRect(-7, -33, 14, 3); g.fillRect(-7, -27, 14, 3);
+  g.restore();
+}
+function ball(x, y, r, spin) {
+  const gr = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
+  gr.addColorStop(0, '#5fa8ff'); gr.addColorStop(1, '#0b2a66');
+  g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#071226';
+  for (const [a, d] of [[spin, 0.45], [spin + 0.5, 0.45], [spin + 0.25, 0.2]]) { g.beginPath(); g.arc(x + Math.cos(a) * r * d, y + Math.sin(a) * r * d, r * 0.1, 0, Math.PI * 2); g.fill(); }
+}
+const RACK = [[0, 0], [-1, 1], [1, 1], [-2, 2], [0, 2], [2, 2], [-3, 3], [-1, 3], [1, 3], [3, 3]];
+function rackPos(i, cx = W / 2, cy = H * 0.62, sp = 38) { const [c, r] = RACK[i]; return [cx + c * sp * 0.6, cy - r * sp * 0.55]; }
+function sparks(t, n, color, cx = W / 2, cy = H * 0.45) {
+  seed = 99;
+  for (let i = 0; i < n; i++) {
+    const a = R() * Math.PI * 2, v = 200 + R() * 500, tt = Math.max(0, t - R() * 0.2);
+    const x = cx + Math.cos(a) * v * tt, y = cy + Math.sin(a) * v * tt + 300 * tt * tt;
+    g.globalAlpha = Math.max(0, 1 - tt * 1.2); g.fillStyle = color; g.fillRect(x, y, 4, 4);
+  }
+  g.globalAlpha = 1;
+}
+function xMark(x, y, s, t) {
+  const k = ease(t * 2.5);
+  if (k <= 0) return;
+  g.save(); g.translate(x, y); g.scale(k * s, k * s); g.rotate((1 - k) * 0.8);
+  g.strokeStyle = GOLD; g.lineWidth = 16; g.lineCap = 'round'; g.shadowColor = GOLD; g.shadowBlur = 20;
+  g.beginPath(); g.moveTo(-30, -30); g.lineTo(30, 30); g.moveTo(30, -30); g.lineTo(-30, 30); g.stroke();
+  g.restore();
+}
+
+// t: seconds since the start; each returns nothing, draws one frame
+const ANIMS = {
+  Strike(t) {
+    background(t);
+    // the ball rolls in, the rack explodes
+    const hit = 0.55;
+    seed = 3;
+    for (let i = 0; i < 10; i++) {
+      const [x, y] = rackPos(i);
+      if (t < hit) pin(x, y, 0.75);
+      else { const tt = t - hit, a = (R() - 0.5) * 2.4 - Math.PI / 2, v = 380 + R() * 420; pin(x + Math.cos(a) * v * tt, y + Math.sin(a) * v * tt + 700 * tt * tt, 0.75, (R() - 0.5) * 12 * tt, Math.max(0, 1 - tt)); }
+    }
+    if (t < hit + 0.2) ball(W / 2 + 8, H + 40 - (t / hit) * (H * 0.45), 34 - 10 * Math.min(1, t / hit), t * 12);
+    if (t > hit) { sparks(t - hit, 70, GOLD, W / 2, H * 0.55); bigText('STRIKE!', (t - hit - 0.05) * 1.6); }
+  },
+  Double(t) {
+    background(t);
+    xMark(W / 2 - 110, H * 0.3, 1.4, t - 0.1); xMark(W / 2 + 110, H * 0.3, 1.4, t - 0.35);
+    bigText('DOUBLE!', (t - 0.55) * 1.6, GOLD, H * 0.62, 140);
+    if (t > 0.55) sparks(t - 0.55, 50, GOLD, W / 2, H * 0.62);
+  },
+  Turkey(t) {
+    background(t, '#3a2a10');
+    xMark(W / 2 - 170, H * 0.28, 1.2, t - 0.05); xMark(W / 2, H * 0.28, 1.2, t - 0.25); xMark(W / 2 + 170, H * 0.28, 1.2, t - 0.45);
+    bigText('TURKEY!', (t - 0.7) * 1.6, '#ffcf5a', H * 0.62, 150);
+    if (t > 0.7) sparks(t - 0.7, 80, '#ffcf5a', W / 2, H * 0.6);
+  },
+  FourBagger(t) {
+    background(t);
+    for (let i = 0; i < 4; i++) xMark(W / 2 - 240 + i * 160, H * 0.28, 1.0, t - 0.05 - i * 0.15);
+    bigText('4 IN A ROW!', (t - 0.75) * 1.6, GOLD, H * 0.62, 120);
+  },
+  StrikeStreak(t) {
+    background(t, '#1d2f6e');
+    for (let i = 0; i < 6; i++) xMark(W / 2 - 300 + i * 120, H * 0.27 + Math.sin(t * 6 + i) * 6, 0.8, t - i * 0.08);
+    bigText('STRIKE STREAK!', (t - 0.6) * 1.6, GOLD, H * 0.6, 112);
+    if (t > 0.6) sparks(t - 0.6, 60, '#7fd0ff', W / 2, H * 0.6);
+  },
+  Perfect300(t) {
+    background(t, '#3b2c05');
+    for (let k = 0; k < 4; k++) if (t > 0.2 + k * 0.35) sparks(t - 0.2 - k * 0.35, 60, ['#ffcf5a', '#7fd0ff', '#ff7aa8', '#ffffff'][k], W * (0.2 + 0.2 * k), H * (0.25 + 0.1 * (k % 2)));
+    bigText('300', (t - 0.15) * 1.4, '#ffd257', H * 0.42, 220);
+    subText('PERFECT GAME', t - 0.4, H * 0.72);
+  },
+  Spare(t) {
+    background(t, '#0f3a5e');
+    const hit = 0.5;
+    const pins = [[W / 2 - 40, H * 0.6], [W / 2 + 40, H * 0.6]];
+    pins.forEach(([x, y], i) => {
+      if (t < hit) pin(x, y, 0.9);
+      else { const tt = t - hit; pin(x + (i ? 1 : -1) * 260 * tt, y - 120 * tt + 600 * tt * tt, 0.9, (i ? 1 : -1) * 8 * tt, Math.max(0, 1 - tt)); }
+    });
+    if (t < hit + 0.15) ball(W / 2, H + 40 - (t / hit) * (H * 0.42), 34 - 10 * Math.min(1, t / hit), t * 10);
+    if (t > hit) { bigText('SPARE!', (t - hit) * 1.6, '#7fd0ff'); sparks(t - hit, 40, '#7fd0ff', W / 2, H * 0.55); }
+  },
+  SplitConverted(t) {
+    background(t, '#2a1650');
+    const hit = 0.6;
+    // 7-10: the ball takes the 10, which flies across into the 7
+    const p7 = [W / 2 - 170, H * 0.58], p10 = [W / 2 + 170, H * 0.58];
+    const k = Math.min(1, Math.max(0, (t - hit * 0.6) / 0.5));
+    if (t < hit * 0.6) pin(p10[0], p10[1], 0.85);
+    else pin(p10[0] - 340 * k, p10[1] - 30 * Math.sin(Math.PI * k), 0.85, -6 * k, k < 1 ? 1 : Math.max(0, 1 - (t - hit * 0.6 - 0.5) * 2));
+    if (t < hit * 0.6 + 0.5) pin(p7[0], p7[1], 0.85);
+    else { const tt = t - hit * 0.6 - 0.5; pin(p7[0] - 200 * tt, p7[1] - 80 * tt + 500 * tt * tt, 0.85, -7 * tt, Math.max(0, 1 - tt * 1.5)); }
+    if (t < hit * 0.6 + 0.1) ball(p10[0] + 10, H + 40 - (t / (hit * 0.6)) * (H * 0.4), 30, t * 10);
+    if (t > hit + 0.5) { bigText('SPLIT', (t - hit - 0.5) * 1.8, '#c79bff', H * 0.32, 120); subText('CONVERTED!', (t - hit - 0.5) * 1.5 + 0.2, H * 0.78); }
+  },
+  Split(t) {
+    background(t, '#4a1520');
+    const sep = ease(t * 1.5) * 160;
+    pin(W / 2 - 40 - sep, H * 0.6, 0.9); pin(W / 2 + 40 + sep, H * 0.6, 0.9);
+    // the crack between them
+    if (t > 0.3) {
+      g.strokeStyle = 'rgba(255,120,120,' + Math.min(1, (t - 0.3) * 3) + ')'; g.lineWidth = 5; g.beginPath();
+      let y = H * 0.35; g.moveTo(W / 2, y);
+      for (let i = 0; i < 8; i++) { y += 30; g.lineTo(W / 2 + (i % 2 ? 14 : -14), y); }
+      g.stroke();
+    }
+    bigText('SPLIT!', (t - 0.35) * 1.6, '#ff8a8a', H * 0.3, 140);
+  },
+  GutterBall(t) {
+    background(t, '#202838');
+    // a lane in perspective with its gutter, the ball dropping into it
+    g.fillStyle = '#c8a06a'; g.beginPath(); g.moveTo(W * 0.38, H * 0.2); g.lineTo(W * 0.62, H * 0.2); g.lineTo(W * 0.8, H); g.lineTo(W * 0.2, H); g.fill();
+    g.fillStyle = '#7f8a9e'; g.beginPath(); g.moveTo(W * 0.62, H * 0.2); g.lineTo(W * 0.66, H * 0.2); g.lineTo(W * 0.92, H); g.lineTo(W * 0.8, H); g.fill();
+    for (let i = 0; i < 10; i++) { const [x, y] = rackPos(i, W / 2, H * 0.28, 16); pin(x, y, 0.28); }
+    const k = Math.min(1, t / 1.6);
+    const y = H - k * H * 0.75, x = W * 0.62 + (W * 0.86 - W * 0.62) * (1 - k) * (y > H * 0.7 ? 1 : 1) + 0;
+    ball(x - 30 * (1 - k), y, 30 - 22 * k, t * 14);
+    bigText('GUTTER BALL', (t - 0.5) * 1.5, '#ffffff', H * 0.5, 100);
+  },
+  Foul(t) {
+    background(t, '#3a0a0a');
+    const on = Math.floor(t * 6) % 2 === 0;
+    g.fillStyle = on ? '#ff2a2a' : '#5a0d0d'; g.fillRect(0, H * 0.74, W, 10);
+    g.fillStyle = on ? 'rgba(255,40,40,0.25)' : 'rgba(0,0,0,0)'; g.fillRect(0, 0, W, H);
+    bigText('FOUL', (t - 0.1) * 1.6, '#ff4a4a', H * 0.42, 190);
+  }
+};
+
+// Records one animation and answers it as a base64 string
+window.record = (name, seconds = 2.4) => new Promise((resolve, reject) => {
+  const stream = C.captureStream(30);
+  const type = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm;codecs=vp8';
+  const rec = new MediaRecorder(stream, { mimeType: type, videoBitsPerSecond: 700000 });
+  const chunks = [];
+  rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+  rec.onerror = (e) => reject(e.error || e);
+  rec.onstop = async () => {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    let s = ''; for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+    resolve({ type, size: buf.length, b64: btoa(s) });
+  };
+  const t0 = performance.now();
+  const draw = () => {
+    const t = (performance.now() - t0) / 1000;
+    ANIMS[name](Math.min(t, seconds));
+    if (t < seconds + 0.15) requestAnimationFrame(draw); else rec.stop();
+  };
+  ANIMS[name](0);
+  rec.start(100);
+  requestAnimationFrame(draw);
+});
+// one frame of an animation at time t (the preview pictures)
+window.frameAt = (name, t) => { ANIMS[name](t); return C.toDataURL('image/png'); };
+window.names = () => Object.keys(ANIMS);
+</script>
+</body></html>
