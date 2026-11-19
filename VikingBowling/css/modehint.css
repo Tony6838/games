@@ -17,8 +17,7 @@
 /* a wide screen: the two parts on one line */
 @media (min-width: 900px) and (min-height: 521px) { .modeHint:not(.wait) { flex-direction: row; gap: 14px; } }
 
-/* the hand: over the swipe trail (5) and, made after it, over the swing button (7) - the ball sits
-   under the button's glass with the swing - and under the HUD (8) */
+/* the hand: over the swipe trail (5) and under the HUD (8) */
 .gripHand { position: fixed; left: 0; top: 0; width: 140px; height: 190px; z-index: 7; pointer-events: none;
   transform-origin: 70px 60px; display: none; filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.45)); }
 .gripHand.show { display: block; }

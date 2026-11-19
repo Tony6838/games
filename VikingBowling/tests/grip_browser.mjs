@@ -4,16 +4,19 @@
 // aim line, the status line, the buttons, the TVs and the ball speed), the hand on the ball while
 // it is held, a slow drag that moves the ball without a throw, a sideways release, a straight push
 // (no spin), a curved swipe (side spin that hooks the ball left: its path, and its drawn rotation),
-// "wait for your turn" while a machine player bowls, and - touch - the phone's twist read from
-// Chromium's sensor emulation (counterclockwise, clockwise, none). Prints what it checked and every
-// exception, console error and failed request; exits 1 on a failed check.
+// "wait for your turn" while a machine player bowls, that no motion sensor is used (no
+// devicemotion/deviceorientation listener, no requestPermission, nothing about swinging or
+// twisting the phone in the help or the settings, an older visit's swing settings ignored and
+// cleaned), and a player's turn end to end: the ball moved to the pocket by a slow drag, pushed
+// straight, until the game scores a strike or a spare. Touch runs are an Android phone (its user
+// agent, Chromium's sensor emulation on). Prints what it checked and every exception, console
+// error and failed request; exits 1 on a failed check.
 import { openBrowser, sleep } from './cdp.mjs';
 
 const [W = '390', H = '844', touch = '1', LANG = 'sv', outDir = 'screenshots/grip', base = 'http://127.0.0.1:8000/'] = process.argv.slice(2);
 const w = +W, h = +H, mobile = touch === '1';
 const tag = `${outDir}/${w}x${h}_${mobile ? 'touch' : 'mouse'}_${LANG}`;
-// the GPU (as tests/motion_browser.mjs): with software WebGL the main thread is busy for ~100 ms a
-// frame and the sensor events come late and thinned out (SWGL=1 for software WebGL)
+// the GPU: with software WebGL the main thread is busy for ~100 ms a frame (SWGL=1 for software WebGL)
 const b = await openBrowser({ w, h, mobile, gpu: !process.env.SWGL });
 const checks = [];
 const check = (ok, what) => { checks.push((ok ? 'ok   ' : 'FAIL ') + what); console.log((ok ? 'ok   ' : 'FAIL ') + what); return ok; };
@@ -25,20 +28,20 @@ async function waitFor(expr, ms = 30000, step = 120) {
 }
 const ANDROID = 'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36';
 if (mobile) {
+  // a phone with motion sensors: the game must not use them
   await b.send('Emulation.setUserAgentOverride', { userAgent: ANDROID, platform: 'Linux armv8l' });
   for (const type of ['accelerometer', 'linear-acceleration', 'gyroscope', 'relative-orientation']) await b.send('Emulation.setSensorOverrideEnabled', { enabled: true, type, metadata: { available: true } });
 }
-// the phone's rotation rate about the axis through the screen (rad/s, + counterclockwise as seen); the
-// emulation gives it to rotationRate (deg/s)
-let gyroZ = 0, ticking = mobile;
-const setGyro = (z) => b.send('Emulation.setSensorOverrideReadings', { type: 'gyroscope', reading: { xyz: { x: 0, y: 0, z } } });
-if (mobile) {
-  // devicemotion fires only when all of these have a reading: the phone upright and still
-  await b.send('Emulation.setSensorOverrideReadings', { type: 'accelerometer', reading: { xyz: { x: 0, y: 9.81, z: 0 } } });
-  await b.send('Emulation.setSensorOverrideReadings', { type: 'linear-acceleration', reading: { xyz: { x: 0, y: 0, z: 0 } } });
-  await b.send('Emulation.setSensorOverrideReadings', { type: 'relative-orientation', reading: { quaternion: { x: 0.7071, y: 0, z: 0, w: 0.7071 } } });
-  (async () => { let k = 0; while (ticking) { await setGyro(gyroZ + (k++ % 2 ? 1e-4 : 0)); await sleep(12); } })();
-}
+// every devicemotion/deviceorientation listener and every requestPermission call, from the first
+// script on each page
+await b.send('Page.addScriptToEvaluateOnNewDocument', { source: `
+  window.__sensor = [];
+  const add = EventTarget.prototype.addEventListener;
+  EventTarget.prototype.addEventListener = function (type, f, o) { if (/^device(motion|orientation)/.test(String(type))) window.__sensor.push('addEventListener ' + type); return add.call(this, type, f, o); };
+  for (const C of ['DeviceMotionEvent', 'DeviceOrientationEvent']) if (window[C]) window[C].requestPermission = function () { window.__sensor.push(C + '.requestPermission'); return Promise.resolve('granted'); };
+  for (const k of ['ondevicemotion', 'ondeviceorientation']) { try { let v = null; Object.defineProperty(window, k, { configurable: true, get: () => v, set: (f) => { if (f) window.__sensor.push(k); v = f; } }); } catch (e) { /* not definable */ } }
+` });
+const sensorUse = () => b.eval(`return window.__sensor || ['instrumentation missing']`);
 
 // ---- the page's state ---------------------------------------------------------------------
 const rects = () => app(`const q = (s) => document.querySelector(s);
@@ -106,12 +109,29 @@ async function afterBall() {
 
 // ---- the game --------------------------------------------------------------------------------
 await b.go(base + '?nofs=1&detail=low', 3500);
-await b.eval(`localStorage.clear(); localStorage.setItem('vbg.settings', JSON.stringify({ lang: ${JSON.stringify(LANG)}, throwMode: 'swipe', robots: 1, aim: true })); localStorage.setItem('vbg.throwHint', 'true'); return 1`);
+// what an older visit left: the swing chosen in the settings, and the swing's own keys
+const OLD_KEYS = ['motionIntro', 'motionMisses', 'motionUnavailable', 'motionLandscapeTip'];
+await b.eval(`localStorage.clear(); localStorage.setItem('vbg.settings', JSON.stringify({ lang: ${JSON.stringify(LANG)}, throwMode: 'motion', robots: 1, aim: true })); localStorage.setItem('vbg.throwHint', 'true');
+  for (const k of ${JSON.stringify(OLD_KEYS)}) localStorage.setItem('vbg.' + k, k === 'motionMisses' ? '1' : 'true'); return 1`);
 await b.go(base + '?nofs=1&detail=low', 4000);
 await shot('00_splash_help');
+// the start help and the settings: nothing about swinging or twisting the phone (every language)
+const PHONE_WORDS = /svinga|vrid|vrider|swing|twist|dreje telefon|vri telefon|heilaut|kääntä|gyro|sensor|rörelse|bevægelse|bevegelse|liike/i;
+{
+  const ui = await app(`const q = (s) => document.querySelector(s);
+    return { help: [...document.querySelectorAll('#splash .howTo')].map((e) => e.textContent).join(' | '),
+      options: [...document.querySelectorAll('#openPane .optRow, #vbstPane .optRow')].map((e) => e.textContent.replace(/\\s+/g, ' ')).join(' | '),
+      gone: ['#optThrow', '#optThrowV', '#optMotionDemo', '#optMotionDemoV', '#howToMotion', '#swingBtn'].filter((s) => q(s)),
+      keys: ${JSON.stringify(OLD_KEYS)}.filter((k) => localStorage.getItem('vbg.' + k) !== null), throwMode: a.settings.throwMode };`);
+  check(!PHONE_WORDS.test(ui.help), `the start help says nothing about swinging or twisting the phone ("${ui.help.slice(0, 160)}…")`);
+  check(!PHONE_WORDS.test(ui.options) && !/\bKast\b/.test(ui.options), `the settings have no throw-mode or sensor item (${ui.options.slice(0, 200)}…)`);
+  check(ui.gone.length === 0, `no swing elements on the page${ui.gone.length ? ': ' + ui.gone.join(', ') : ''}`);
+  check(ui.keys.length === 0 && ui.throwMode === undefined, `an older visit's swing settings are ignored and its keys removed (left: ${ui.keys.join(', ') || 'none'}, throwMode ${ui.throwMode})`);
+}
 check(await b.click('#okBtn'), 'splash OK');
 await sleep(700);
-await app(`const s = document.querySelector('#optRobots'); s.value = '1'; s.dispatchEvent(new Event('change')); const t = document.querySelector('#optThrow'); t.value = 'swipe'; t.dispatchEvent(new Event('change')); return 1`);
+await app(`const s = document.querySelector('#optRobots'); s.value = '1'; s.dispatchEvent(new Event('change')); return 1`);
+check(!/throwMode/.test(await b.eval(`return localStorage.getItem('vbg.settings') || ''`)), 'the saved settings drop the old throwMode');
 check(await b.click('#menuNext'), 'menu next');
 await sleep(700);
 check(await b.click('#startBtn'), 'start');
@@ -217,39 +237,78 @@ if (path && path.length > 20) {
 } else check(false, 'the hook ball\'s path was recorded');
 await afterBall();
 
-// the phone's twist (touch: the sensor emulation): counterclockwise, clockwise, none, each on a straight push
-if (mobile) {
-  const twisted = async (z) => {
-    if (!(await untilTurn())) return null;
-    await sleep(500);
-    await b.eval(`window.__rel = []; return 1`);
-    const B = await ballXY();
-    // (sent in real time, the events' clock shared with the sensor's: a push long enough to be well
-    // over the 50 mm/s a throw needs even when the page handles a move only every 50 ms)
-    const x1 = B.x, y1 = Math.min(h - 12, B.y + 6), y2 = Math.max(20, y1 - Math.max(h * 0.4, 300)), n = 12;
-    await ptr('down', x1, y1);
-    for (let i = 1; i <= n; i++) {
-      if (i === n - 7) gyroZ = z;                     // the twist over the last part of the push
-      await sleep(25);
-      await ptr('move', x1, y1 + (y2 - y1) * i / n);
-    }
-    await ptr('up', x1, y2);
-    gyroZ = 0;
-    await sleep(300);
-    const r = await lastRelease();
-    const p = await app(`return a.input.twist.samples.length`);
-    if (!r) console.log('     no release:', JSON.stringify(await app(`const S = a.input.samples; return { enabled: a.input.enabled, n: S.length, first: S[0], last: S.slice(-3).map((q) => [Math.round(q.x), Math.round(q.y), Math.round(q.t)]), toast: document.querySelector('#toast').textContent, status: document.querySelector('#status').textContent }`)));
-    await afterBall();
-    return r ? { side: r.side, samples: p } : null;
+// a player's turn end to end, as a player on a phone plays it: the first ball from the pocket
+// board, the second at the pins left standing - each time the ball moved there by a slow drag and
+// then pushed straight up the screen - until the game scores a strike or a spare
+{
+  await b.eval(`window.__marks = []; window.__balls = [];
+    vikingEvents.on('ball', (e) => { if (e.human && !e.practice) __balls.push({ first: e.firstBall, pins: e.pins, standing: e.standing }); });
+    vikingEvents.on('strike', (e) => { if (e.human) __marks.push({ mark: 'X', lane: e.lane }); });
+    vikingEvents.on('spare', (e) => { if (e.human) __marks.push({ mark: '/', lane: e.lane }); }); return 1`);
+  const POCKET = 0.065;                 // m right of the middle: a straight ball from here meets the pocket
+  // the pin spots across the lane (m, + right; js/sim3d/physics.js PIN_SPOTS) and their rows
+  const PIN_X = [0, -0.152, 0.152, -0.305, 0, 0.305, -0.457, -0.152, 0.152, 0.457], PIN_ROW = [0, 1, 1, 2, 2, 2, 3, 3, 3, 3];
+  // where to stand for a straight ball at the pins left: the front row's pins that still stand
+  const spareX = (standing) => {
+    const up = PIN_X.map((x, i) => ((standing >> i) & 1 ? i : -1)).filter((i) => i >= 0);
+    if (!up.length) return POCKET;
+    const front = Math.min(...up.map((i) => PIN_ROW[i])), xs = up.filter((i) => PIN_ROW[i] === front).map((i) => PIN_X[i]);
+    return Math.max(-0.41, Math.min(0.41, xs.reduce((u, v) => u + v, 0) / xs.length));
   };
-  const ccw = await twisted(3.5), cw = await twisted(-3.5), still = await twisted(0);
-  check(!!ccw && ccw.side > 1, `twisting the phone counterclockwise at the release hooks left (side ${ccw ? ccw.side.toFixed(2) : '-'} rad/s)`);
-  check(!!cw && cw.side < -1, `clockwise hooks right (side ${cw ? cw.side.toFixed(2) : '-'} rad/s)`);
-  check(!!still && Math.abs(still.side) < 0.01, `a still phone adds no spin (side ${still ? still.side.toFixed(2) : '-'})`);
+  // a slow drag sideways (75 px/s, under the clutch's 120 mm/s): the ball follows, the lift places it
+  const dragTo = async (x) => {
+    const s0 = await rects();
+    if (Math.abs(s0.x0 - x) <= 0.012) return s0.x0;
+    const B = s0.ball, dx = (x - s0.x0) / 0.0175 * 6, n = Math.max(4, Math.ceil(Math.abs(dx) / 3));
+    if (!mobile) await b.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: B.x, y: B.y + 4 });
+    await ptr('down', B.x, B.y + 4);
+    for (let i = 1; i <= n; i++) { await sleep(40); await ptr('move', B.x + dx * i / n, B.y + 4); }
+    await sleep(150);
+    await ptr('up', B.x + dx, B.y + 4);
+    await sleep(400);
+    return (await rects()).x0;
+  };
+  let mark = null, balls = 0, firstDrag = null;
+  const ballLog = [];
+  for (let k = 0; k < 24 && !mark; k++) {
+    if (!(await untilTurn())) break;
+    await sleep(500);
+    const st = await app(`return { first: a.engine.nextBallIsFirst(a.throwLane.number) }`);
+    const last = await b.eval(`return (window.__balls || []).slice(-1)[0] || null`);
+    const target = st.first || !last ? POCKET : spareX(last.standing);
+    const x = await dragTo(target);
+    if (firstDrag === null) { firstDrag = x; await shot('12_pocket_stance'); }
+    // a quick push, about 5000 px/s (800 mm/s: a 7.3 m/s ball) over as much of the screen as there is
+    const B = await ballXY(), len = Math.min(B.y - 30, h * 0.5);
+    await swipeFromBall(len / h, Math.max(40, len / 5000 * 1000));
+    balls++;
+    await afterBall();
+    await sleep(600);
+    const got = await b.eval(`return (window.__balls || []).slice(-1)[0] || null`);
+    ballLog.push(`${st.first ? '1st' : '2nd'} from ${x.toFixed(2)} m: ${got ? got.pins : '?'}`);
+    mark = await b.eval(`return (window.__marks || [])[0] || null`);
+  }
+  console.log('     the player\'s balls: ' + ballLog.join(', '));
+  check(firstDrag !== null && Math.abs(firstDrag - POCKET) < 0.02, `a slow drag puts the ball on the pocket board (x ${firstDrag === null ? '-' : firstDrag.toFixed(3) + ' m'})`);
+  check(!!mark, `straight pushes from where the player stands are scored as a ${mark ? (mark.mark === 'X' ? 'strike' : 'spare') : 'strike or spare (none came)'} after ${balls} of the player's balls`);
+  if (mark) {
+    await shot('13_scored');
+    // the game's own score sheet has it (the engine the lane TV reads)
+    const sheet = await app(`const g = a.engine, pis = g.getPlayerInfoStruct(${mark.lane}); let hp = null;
+      for (let i = 0; i < pis.noPlayers; i++) if (pis.player[i].playerName.replace(/\\+C$/, '').trim() === a.settings.name) hp = pis.player[i];
+      if (!hp) return null; const s = [...hp.score]; let X = 0, S = 0;
+      for (let f = 0; f < 10; f++) { const i = 2 * f; if (i >= hp.activeSquare) break; if (s[i] === 10) X++; else if (i + 1 < hp.activeSquare && s[i] + s[i + 1] === 10) S++; }
+      return { X, S, square: hp.activeSquare };`);
+    check(!!sheet && (mark.mark === 'X' ? sheet.X > 0 : sheet.S > 0), `the score sheet has it (${sheet ? `${sheet.X} strike(s), ${sheet.S} spare(s) by square ${sheet.square}` : 'the player not found'})`);
+  }
 }
 
-ticking = false;
-await sleep(50);
+// no motion sensor was touched on the page the game was played on
+{
+  const used = await sensorUse();
+  check(Array.isArray(used) && used.length === 0, `no devicemotion/deviceorientation listener and no requestPermission call${Array.isArray(used) && used.length ? ': ' + used.join(', ') : ''}`);
+}
+
 const log = [...new Set(b.log)].filter((l) => !/HTTP 404 .*customSettings\.css/.test(l));
 console.log(log.length ? 'LOG\n  ' + log.join('\n  ') : 'no errors');
 check(!log.some((l) => /EXCEPTION|ERROR/.test(l)), 'no exceptions or console errors');

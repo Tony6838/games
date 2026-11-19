@@ -84,7 +84,7 @@ console.log(`(physics ${((Date.now() - t0) / 1000).toFixed(1)} s)`);
 }
 
 // ---- 1c. a slow ball with the bumpers up reaches the pins ----------------------------------------
-// The slowest balls a swipe or a swing gives (3.3 m/s and a little more) at the rails: going from
+// The slowest balls a throw gives (3.3 m/s and a little more) at the rails: going from
 // rail to rail they can take over 9 s to the pins. None may be ended short of the pins while it
 // still rolls forward; a ball ends short only when it has really stopped.
 {

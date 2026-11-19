@@ -3,9 +3,9 @@
 A 3D bowling game for the browser by **VBS Bowling AB**, built from VBS's own
 **Viking Scoring System 4.4**: its scoring and lane logic, its open play game types,
 its VBS-T competition formats, its HTML lane TV and lane console look, the blue
-Viking helmet of its lane TV and its texts in the five reception languages. You bowl with a swipe of a
-finger or the mouse, or on a phone or tablet by swinging the phone; everyone else on the lanes is a machine player whose game
-follows published bowling statistics.
+Viking helmet of its lane TV and its texts in the five reception languages. You bowl by gripping the
+ball and letting go with a finger, the mouse or a touch pad, the same on a phone, a tablet and a computer;
+everyone else on the lanes is a machine player whose game follows published bowling statistics.
 
 © 1995-2026 VBS Bowling AB. All rights reserved (see `LICENSE`). The game is for
 training, education, demos and entertainment.
@@ -59,8 +59,10 @@ level), `?detail=high` or `?detail=low` (the hall's detail level, see "The hall"
    * the finger's **speed** as it lets go is the speed of the ball,
    * its **direction** as it lets go is the line,
    * a **curve** just before letting go spins the ball, which hooks in the back end (curve
-     left: hooks left, as a right-hander's ball); on a phone, **twisting the phone** as you let
-     go spins it too (counterclockwise: hooks left).
+     left: hooks left, as a right-hander's ball).
+
+   It is the same on every device: a finger on a phone or tablet, the mouse on a desktop, the
+   touch pad on a laptop. The game reads no motion sensors.
 
    To choose where you stand, **drag the ball slowly** and let go: it moves across the approach
    and back from the foul line (up to 4.4 m) and stays where you let go. The arrow keys do the
@@ -68,13 +70,6 @@ level), `?detail=high` or `?detail=low` (the hall's detail level, see "The hall"
    a press on the lane while you cannot throw says to wait for your turn.
    The ball can end in the gutter. With **Siktlinje** on, the ball's predicted path is
    drawn while you swipe. After every ball its speed is shown at the bottom right in km/h.
-
-   **On a phone or tablet the throw is a swing of the phone** (see "Throwing by swinging the
-   phone" below): hold it upright like a remote, keep your thumb on the big **HÅLL - SVINGA -
-   SLÄPP** button over the lower part of the screen, aim by turning the phone until the marker
-   stands on an arrow, swing your arm back and forward and lift your thumb at the bottom of the
-   swing. A short animated demo shows it the first time. The
-   swipe stays available: **Kast** in the settings (Auto / Svinga telefonen / Svep).
 5. Tap the lane TV to make it full size. ⏩ speeds the machine players up (not your own ball).
    The other lanes in play have small TVs under it (tap one to see it large); see "The TV wall".
 6. **Inspelning** (warm-up) in the options: none, balls, frames or minutes before the game; the
@@ -340,9 +335,11 @@ one long task of about half a second per run with the CPU slowed four times.
 
 ## The throw
 
-`js/sim3d/input.js` turns a gesture into a throw. A press on the lane **grips the ball at
-once**: a hand holds it (an SVG drawn for the game over the ball, thumb and two fingers in the
-holes, following the ball as the camera sees it). Everything is decided **when the finger
+`js/sim3d/input.js` turns a gesture into a throw, the same on every device: a finger on a phone
+or tablet, the mouse on a desktop, the touch pad on a laptop (pointer events; the game reads no
+motion sensors). A press on the lane **grips the ball at once**: a hand holds it (an SVG drawn
+for the game over the ball, thumb and two fingers in the holes, following the ball as the camera
+sees it). Everything is decided **when the finger
 lifts**, by its release velocity: how it moved over the last **70 ms** before the lift (four
 samples of a 60 Hz touch screen; a longer window mixes a late flick with the drag before it).
 
@@ -368,28 +365,17 @@ bowler plays out and lets the ball come back.
 
 **Spin.** The heading's turn between the two halves of the path's last 30 mm before the release:
 a dead zone of 0.05 rad (3 degrees), then 28 rad/s of side rotation per radian, scaled with speed
-as below (`sideFactor`); a straight push gives none. On a phone, a **twist of the phone** at the
-release adds to it: the rotation about the axis through the screen over the last 180 ms
-(counterclockwise as you see the screen = a right-hander's release = hook left), mapped as the
-swing's wrist turn (8 degree dead zone, then 18 rad/s per radian); curve and twist together are
-clamped to 20 rad/s before `sideFactor`. The twist is read from `devicemotion` only where the
-events come without asking (Android) or were allowed on this page already (iOS, the swing's
-card) - never a permission prompt - and only while a throw can come. The axis: what the swing's
-tracker found from its data (`FRAMES`), else Chromium's order (`rotationRate.gamma`, checked with
-the sensor emulation: a gyroscope z of +3 rad/s arrives as gamma +171.9 deg/s), and the standard's
-`alpha` on iPhone and iPad (not tried on a device). Without the sensor the spin is the curve's.
-A gentle curve (15 degrees over the end) gives about 5 rad/s on a 7 m/s ball, 17 cm of hook at
-the pins; the drawn ball turns with its side rotation from the release on (also while it is
-carried up the approach from a stance behind the foul line).
+as below (`sideFactor`), at most 20 rad/s before it; a straight push gives none. The curve is the
+only source of spin, on every device. A gentle curve (15 degrees over the end) gives about
+5 rad/s on a 7 m/s ball, 17 cm of hook at the pins; the drawn ball turns with its side rotation
+from the release on (also while it is carried up the approach from a stance behind the foul line).
 
 **On the screen** (`js/game/modehint.js`, `css/modehint.css`): at the player's turn a short hint
 near the ball - under it, or beside it when the status line is right below it (a phone on its
 side), clear of the status line, the buttons, the TVs, the ball speed and the aim line - says
-**Ta tag i klotet och släpp i kastriktningen · Dra långsamt för att flytta** (with the swing:
-**Kasta med den stora knappen · Dra klotet långsamt ovanför knappen för att flytta det**, above
-the swing button). It shows at once at the first three turns of a page; later it comes back at
-once after a gesture that did not throw (the ball moved, a tap, too weak) and the next two turns
-after "too weak", and otherwise after 5 s of a turn without a throw. While the ball is held the
+**Ta tag i klotet och släpp i kastriktningen · Dra långsamt för att flytta**. It shows at once
+at the first three turns of a page; later it comes back at once after a gesture that did not
+throw (the ball moved, a tap, too weak) and the next two turns after "too weak", and otherwise after 5 s of a turn without a throw. While the ball is held the
 hand is the sign; while no throw can come (the ball rolling, the pins, the pinsetter, a machine
 player's turn, the console or another screen) there is no hint, and a press on the lane shows
 **Vänta tills det är din tur** above the finger for a moment.
@@ -419,7 +405,7 @@ The speed is timed by the events' own clock: a slow device that handles a swipe'
 and in bursts throws exactly as fast, and a rest before a quick flick (a still finger sends no
 events) is not counted as part of it.
 
-**Hook.** The curve (and a phone's twist) gives up to 20 rad/s of side rotation, scaled by
+**Hook.** The curve gives up to 20 rad/s of side rotation, scaled by
 `0.69 (v / 7.05)^0.6` for a ball of launch speed v (`sideFactor`): a quicker arm turns the ball more, but
 less than in proportion, so the same curve hooks further and enters the pins at a steeper
 angle on a slower ball, and a faster ball drives through straighter.
@@ -457,149 +443,14 @@ klotfart" is on. ⏩ speeds up the machine players' balls,
 never the player's own. The machine players are unchanged: their pinfall is drawn from the
 statistics first, and their balls are released at the foul line as before.
 
-## Throwing by swinging the phone
-
-`js/sim3d/motion.js` (sensors, analysis, the swing button), `js/sim3d/motiondemo.js` (the demo),
-`css/motion.css`; the mapping onto a throw is `motionParams` in `js/sim3d/input.js`.
-
-**The gesture.** Hold the phone upright in one hand like a remote: its long side along the
-forearm, the screen towards you, the thumb on the big **HÅLL - SVINGA - SLÄPP** button, which
-covers the lower part of the screen (centred, so either thumb finds it without looking). Press
-and hold, **aim** (the button says **SIKTA**: turn the phone a little, and a marker moves over the
-lane's arrows, with the aim line, until it stands on the arrow you want), swing the arm back (that
-locks the aim: **SVINGA!**), swing it forward, and **lift the thumb at the bottom of the swing**:
-letting go of the button is letting go of the ball, and the sensors alone never throw.
-The volume keys are not used (browsers do not give them to pages). Moving the ball works as
-with the swipe: grip it above the button, drag it slowly and let go, or the arrow keys (a quick
-release on the lane does not throw: a hint says to use the button).
-
-**When.** The **Kast** setting (open play and VBS-T): **Auto** (the default) swings on a phone or
-tablet (the browser says Android, iPhone, iPad or iPod) that delivers motion events and swipes
-everywhere else; **Svinga telefonen** and **Svep** force one. With the swing, a swipe on the lane
-does not throw (a hint says how it is done). The first time, a short animated demo shows the
-delivery (below); its **Spela** is also the tap with which iOS asks for the sensors
-(`DeviceMotionEvent.requestPermission` and `DeviceOrientationEvent.requestPermission`, both asked
-inside the tap). iOS asks again on every new page, with a small card. The swing is ready at the
-first gyroscope event: the first events come while the game starts, when the page is at its busiest,
-and are not judged. Back to the swipe, with a note: the permission refused, or a request for it not
-answered within 12 s (a "granted" that comes later still brings the swing back and takes the note
-away); no gyroscope event at all within two seconds; no gyroscope; a stream too slow or stalled to
-follow a swing - two presses in a row with fewer than 20 events in the last second (a quick tap with
-the sensors running is not counted). "Auto" then stays on the swipe on that device at once for a
-refusal or a missing gyroscope, and for the others only when it happens on two pages in a row (a
-press the sensors followed clears the count); choosing **Svinga telefonen** tries again. Motion events
-need https or localhost.
-
-**No dead button.** The release is heard on the whole window, not only on the button: a finger that
-slid off it, a touch the browser took over (`pointercancel`, then touch events: the thumb is the touch
-that started on the button, whatever other fingers rest on the screen), all release it; the page
-hidden (an app switch), the window losing focus or the pointer capture lost cancel the press. A long
-hold keeps every sensor sample from the press on (up to 60 s), so aiming slowly for many seconds still
-throws where the marker stood. The sensors are stopped on the menus, the standings and the summary
-and after 20 s without the button (the machine players' turns), and started again at the player's
-turn without a new card. On a phone held upright the HUD's buttons go above the swing button while it
-shows (two columns at the left edge, clear of the arrows), not inside it where a left thumb rests.
-
-**Calibration.** The first press, and the first press after the screen turned between portrait
-and landscape, says **Håll stilla …** for half a second (the gyroscope's offset and gravity).
-Upright is the agreed grip; a phone held on its side is allowed (it is calibrated for that, and a
-tip says upright is the grip once). In full screen on Android, the swing locks the screen upright
-(`screen.orientation.lock('portrait')`, a refusal is ignored); a turn during a swing is ignored.
-
-**What the swing gives.** Measured with the gyroscope (the rotation rate) and the accelerometer
-(gravity at rest, and its sign), in the phone's own frame, whatever the grip:
-
-| | from | mapping |
-|---|---|---|
-| speed | the forward swing's rate about the shoulder's axis, the highest mean over 45 ms | on the swipe's own curve: 73 deg/s is the weakest swipe (3.3 m/s), 900 deg/s and more the fastest (8.54 m/s), log-log between (`motionFingerMmS`) |
-| aim | how far the phone turned about the vertical while held after the press (smoothed over 120 ms for the marker); the backswing locks it (turning about a level axis faster than 60 deg/s for 40 ms), at the mean over the 250 ms before | 1 board at the arrows (15 ft) per degree, board 5 to 35 (boards counted from the right); the launch angle is the line from the ball's board to that point (`aimAt`): a straight swing follows the aim exactly |
-| pull, push | how far the phone turned about the vertical during the swing, from the lock to 180 ms before the release, the swing's own turning left out | an error on top of the aim: 5 degree dead zone, then 0.03 rad per radian (a 20 degree pull: 0.008 rad, 3.6 cm at the arrows) |
-| hook | the wrist's turn about the arm in the last 180 ms | 8 degree dead zone, then the swipe's 18 per radian, scaled with speed as the swipe's |
-| release timing | the arm's angle at the release: past the bottom of the swing (the forward swing's fastest point) it is measured from there; still speeding up, from the vertical: the arm's angle at the press or, with the agreed grip, where the phone's top points down (so aiming chest high works too), whichever is nearer | -10 to +30 degrees: no error; then up to 3 boards at the arrows over 40 degrees more, early to the right, late to the left |
-| no throw | no backswing and forward swing, let go during the backswing, or 0.4 s after the swing ended (swing and hold to call it off) | a hint; too slow or too short a forward swing is "För svagt" |
-
-| forward swing (deg/s) | 100 | 150 | 200 | 300 | 450 | 600 | 900 |
-|---|---|---|---|---|---|---|---|
-| launch (m/s) | 3.95 | 4.80 | 5.40 | 6.24 | 7.08 | 7.68 | 8.50 |
-| lane shows (km/h) | 11.8 | 15.0 | 17.3 | 20.4 | 23.5 | 25.7 | 28.8 |
-
-A small swing (a 30 degree backswing, about 120 deg/s) gives about 13 km/h, a full free swing from
-shoulder height (about 300 deg/s) 20 km/h, a hard one 25-27.
-
-| let go (arm from vertical) | -42° | -35° | -25° | -15° | -7° to +32° | +44° | +54° | +60° |
-|---|---|---|---|---|---|---|---|---|
-| line error at the arrows (boards) | 2.6 right | 2.0 right | 1.4 right | 0.35 right | 0 | 0.8 left | 1.7 left | 2.2 left |
-
-How it is worked out, and why: the swing's axis is the direction across every "up" of the swing
-(a level swing turns "up" about its axis and never along it; turning the phone towards the target
-and the wrist's turn turn it about "up" itself), which a fit to the gyroscope's own axis is not;
-"up" at the press is gravity if the phone was still for 200 ms, else the orientation event's (a
-gyroscope integrated through the time between turns drifted 30-40 degrees in the tests);
-through the swing "up" follows the gyroscope alone. Two platform conventions are checked from
-the data: which of `rotationRate`'s alpha/beta/gamma is which axis (Chromium, desktop and
-Android, gives alpha = x, beta = y, gamma = z: the default; a mapping that predicts how gravity
-turns better while the phone is handled wins) and the sign of `accelerationIncludingGravity`
-(against the orientation event's beta/gamma). For the agreed grip the swing comes out about the
-phone's short axis, x (the unit test checks it). Every throw the player releases, swipe or
-swing, is the game event `throwRelease` (`js/game/events.js`). `?motiondebug=1` shows the live
-sensor values and the last swing's analysis on the screen.
-
-**The demo.** The first time a game starts with the swing on a phone or tablet: one delivery
-drawn in SVG (no video), looped, with the caption of each step: 1 the phone upright in one hand,
-thumb on the button; 2 press and hold; 3 **Sikta: vrid telefonen lite tills markören står på
-pilen, svinga sedan rakt** (a small lane seen from behind, top right, where the marker slides onto
-an arrow and stays); 4 swing back; 5 swing forward; 6 lift the thumb at the bottom of the swing,
-and the ball rolls away down the lane on the aimed line; and the line **Släpp vid botten av
-svingen** with what early and late do. **Spela** and **Hoppa över** end it at any time; **Visa
-svingdemo** in the settings plays it again. With `prefers-reduced-motion` the six steps are still
-frames. The safety note (hold the phone firmly, a wrist strap, room around you) is in
-it the first time.
-
-**Tests.**
-
-| Test | What |
-|---|---|
-| `node tests/motion_test.mjs` | synthetic traces of a rigid arm and phone (`tests/motion_traces.mjs`) through the page's own tracker and analysis: slow to flat-out swings (monotone, the swipe's range), 30 and 60 Hz, four grips, the aim (held then a straight swing gives exactly the aimed line, aim plus a pulled or pushed swing gives the aim plus the error, a wobbling hand is smoothed, the board 5-35 range, the stance, chest high), the pull and push (dead zone, left and right, before and in the forward swing), the hook, both together, noise, jitter, dropped samples and a gyroscope offset (20 seeds: the ball goes where the marker stood), hesitant and unusual swings, the cancels, the release timing (on time, early, late, chest high), the platform conventions; the swing button with a stand-in page: a 10 s hold keeps the aim, ready at the first gyroscope event, a stall while the game starts never counts against the sensors, slow sensors (5 Hz, a stalled stream) fall back to the swipe after two presses, "unavailable" remembered only for a refusal or the second page in a row, no data at all given a second round, a permission request never answered, and one granted after the timeout (the swing back, the miss forgotten), a press never stuck (a touch taken over by the browser with another finger resting, the page hidden, focus lost, the capture lost, a release beside the button), the sensors off on the menus and after a long wait; 382 checks |
-| `node tests/motion_browser.mjs [url] [outDir]` | headless Edge with phone emulation and Chromium's sensor overrides, fed a swing in real time while the button is touched: the default, the demo, nine throws (speed, aim with the live marker read while held and after the lock, pull, hook, timing, cancels), placing, a swipe that does not throw, the swipe chosen; iPhone with `requestPermission` mocked granted and denied; the demo at 390x844 and 800x1280 in Swedish and English (steps, skip, replay, reduced motion); a desktop that swipes; **E** no dead button: a touch taken over by the browser with another finger resting, the page hidden, focus lost, the capture lost, a release beside the button, placing afterwards, a 9 s hold that keeps the aim, no `devicemotion` listener on the menu, a stalled stream (two presses) and 5 Hz sensors (the swing at first, the swipe after two presses, on two page loads) falling back to the swipe, an iPhone permission request never answered, and one granted after the timeout (the swing back, the note gone). `ONLY=ABCDE` picks scenarios |
-| `node tests/motion_android.mjs [port] [outDir]` | (`adb` from the PATH, or `ADB=<path>`) Chrome on Android in the emulator (AVD `vbs_tablet`): the emulator's own sensors set through its console (`tests/emu_console.mjs`) reach `devicemotion`, and the scripted swings throw; needs `adb reverse` (done by the script) so that the page is on localhost |
-
-**Testing it on a real phone.** Open the game over https (the published page) or on localhost.
-
-1. Splash: the line under the help says that on a phone you throw by swinging. Start open play
-   with 0 machine players (Inställningar: Kast reads "Auto (Svinga telefonen)").
-2. The demo plays: six steps with captions, the phone upright, the aim marker sliding onto an
-   arrow, the thumb lifting at the bottom and the ball rolling. Tap **Spela** (iPhone: allow
-   motion in the dialog).
-3. The big button reads **HÅLL - SVINGA - SLÄPP**. Stand with room around you, hold the phone
-   upright like a remote, thumb on the button. Press: the first time it says **Håll stilla …**,
-   then **SIKTA** (Android vibrates). Turn the phone a little left and right: a gold marker with
-   the board number moves over the arrows and the aim line follows (board 5 to 35, about a board
-   a degree). Put it on an arrow and hold.
-4. Swing back: the marker turns white (locked) and the button says **SVINGA!**. Swing forward and
-   lift the thumb as the arm passes the bottom: the ball rolls along the aim line; a gentle swing
-   about 13-17 km/h on the readout, a full swing about 20, a hard one 25 or more.
-5. Press, aim and let go without swinging: no throw, "Inget kast - svinga bakåt …". Swing, stop
-   and hold, then let go: no throw ("släpp knappen under svingen"). A very slow swing: "För svagt".
-   Aim on the same arrow and swing again with the arm pulled across the body to the left: the
-   ball goes a little left of the aim line; pushed out to the right: a little right; a swing
-   that stays straight follows the aim line.
-6. Turn the wrist counterclockwise (seen from above) as you let go: a right-hander's hook, the
-   ball curves left at the end; clockwise: it curves right.
-7. Let go clearly early (arm still behind you): the ball goes a little right; clearly late
-   (arm out in front): a little left; at the bottom: straight.
-8. Touch the lane above the button (the hand grips the ball), drag slowly and let go: the ball
-   moves on the approach. A swipe up on the lane does not throw and says how to throw.
-9. Settings: **Kast: Svep**: the button is gone and the swipe throws; **Visa svingdemo** plays the
-   demo again. On an iPhone, deny the permission once (Safari settings): the game falls back to
-   the swipe with a note.
-10. If anything is off, open the page with `?motiondebug=1` and send a screenshot of the box at
-    the top left after the throw.
-
-**Known limits.** iOS was not tested on a device (Safari's permission flow was tested with a
-mock; the platform checks cover a different axis order or sign). A swing that starts with the arm
-behind you and only goes forward is taken as a backswing and cancelled (swing back first). The
-early side of the release timing assumes the arm hangs at the press. A phone without a gyroscope
-uses the swipe.
+**No motion sensors.** Every device throws with the grip-and-release gesture above, and nothing
+listens to `devicemotion` or `deviceorientation` or asks for their permission. Until 2026-11-19 a
+phone or tablet threw by default by swinging the phone (a big hold-swing-let-go button, the
+gyroscope and the accelerometer), and the grip throw also took a twist of the phone at the release
+as spin; on a real phone the swing went to the right and was hard to aim, so both were removed. A
+"throwMode" left in the saved settings by an older visit is ignored and dropped at the next save,
+and the swing's own keys (`vbg.motionIntro`, `vbg.motionMisses`, `vbg.motionUnavailable`,
+`vbg.motionLandscapeTip`) are removed at start.
 
 ## The lane TV
 
@@ -832,15 +683,14 @@ The console's own tab bar in the game is 40 px high, its close button 44 x 44.
 console, Baneterminal, Ratapääte), beside a lane tablet with the dock's Korrigera pencil, in the
 dock's look: a raised blue button with a gold icon. A bare screen icon among four other icons was
 not recognised as the lane console. It is the last of the HUD's buttons: the end of the row at the
-top (landscape, desktop), the foot of the column upright (furthest from the small TVs above it), and
-with the swing button the last row of its grid, across both columns, straight above the button
+top (landscape, desktop), the foot of the column upright (furthest from the small TVs above it)
 (102-119 px wide: Ratapääte to Baneterminal). The start help has a line on it (`howToConsole`), and the console hint
 (`conHint`) and the help use the dock's own words in each language (`dock.correct`,
 `dock.changePlayer`, `dock.endPractice` in `web/screen/console/lang/`). The HUD's buttons draw above the small TVs
 (`.hudBtns` z-index 3), because on a short upright screen (a phone's browser with its bars, 375 x 548
 or 390 x 664) the strip of small TVs reached the column and hid the menu, ⏩, sound and full-screen buttons;
 a small TV shown large still covers them. The hint toasts (the one-time explanations of the throw and
-the bumpers, the swing's hints) keep clear of the buttons: upright they stand in the room to the right
+the bumpers) keep clear of the buttons: upright they stand in the room to the right
 of the column, centred there (and on the screen once there is room on both sides), at its foot above
 the ball speed; `js/main.js` (`hintRoom`) measures the column's right edge for `css/game.css` when a
 hint shows and again when a button changes size or the phone is turned. Centred on the screen, the
@@ -1079,15 +929,14 @@ teams, points, pins, leader) is printed by the test.
 | Test | What |
 |---|---|
 | `node tests/loading_test.mjs [kbps=3000] [outDir]` | the load bar on the splash in headless Edge on a throttled connection (starts its own `tests/serve.mjs`): `js/loadsizes.js` names exactly the files the splash waits for; while the game loads the bar shows "Laddar … n %", n only grows and passes 50 %, and the flags, help and **OK** wait; when the game has started the bar is gone, the splash is complete and OK, Fortsätt and Starta reach the play screen with no exception; the text follows the language chosen last time ("Loading … n%"); a file that does not load turns the bar red with "Spelet kunde inte laddas …" |
-| `node tests/swipe_test.mjs` | the grip-and-release throw with synthetic pointer events, each with its own `timeStamp`: the ball speed rises with the release speed on the curve above, a release slower than 50 mm/s does not throw and a short quick flick is too weak; the same finger speed gives the same ball on nine real phones, tablets and touch screens in portrait and landscape (real pixel densities, within 4 %) and with a mouse; the release decides (a stroke that slows or speeds up at the end, a turn at the end sets the line), a pull-back adds nothing; a straight push gives no spin and a straight line; a slow drag and lift moves the ball without a throw (also forward), a sideways or backward release, a finger that stopped before it lifted and a tap never throw; a quick stroke throws from where the ball stood and leaves the stance there, a slow drag first moves it; the drag is clamped to the approach, the modes the hints get, the arrow keys; standing 4 m back gives the same lane speed and line; a curve left spins the ball to hook left in the back end (right: right), a little, and the same curve hooks further and enters steeper on a slower ball; the phone's twist (the turn over the last 180 ms, its dead zone and scale, counterclockwise left, clockwise right, added to the curve and clamped, none without a sensor); on a slow device (6, 10 and 20 frames a second: the events handled in bursts, coalesced, the pointer-up a frame late) a swipe throws exactly as fast as at full frame rate, a rest before a quick flick does not slow it; a touch whose pointer stream the browser cancels while it goes on delivering touch events still throws |
-| `node tests/grip_browser.mjs <w> <h> <touch 0\|1> [lang] [outDir] [baseUrl]` | the grip throw in headless Edge with real pointer input: the hint near the ball (clear of the ball, the aim line, the status line, the buttons, the TVs and the ball speed), the hand on the ball at the press and while it is dragged, a slow drag that moves the ball without a throw, a sideways release, a straight push (no spin), a curved swipe (side spin, the body turning about its direction of travel, the path hooking in the back end), "wait for your turn" while the ball rolls and during a machine player's turn; touch: the phone's twist through Chromium's sensor emulation (counterclockwise, clockwise, still); screenshots in outDir |
+| `node tests/swipe_test.mjs` | the grip-and-release throw with synthetic pointer events, each with its own `timeStamp`: the ball speed rises with the release speed on the curve above, a release slower than 50 mm/s does not throw and a short quick flick is too weak; the same finger speed gives the same ball on nine real phones, tablets and touch screens in portrait and landscape (real pixel densities, within 4 %) and with a mouse; the release decides (a stroke that slows or speeds up at the end, a turn at the end sets the line), a pull-back adds nothing; a straight push gives no spin and a straight line; a slow drag and lift moves the ball without a throw (also forward), a sideways or backward release, a finger that stopped before it lifted and a tap never throw; a quick stroke throws from where the ball stood and leaves the stance there, a slow drag first moves it; the drag is clamped to the approach, the modes the hints get, the arrow keys; standing 4 m back gives the same lane speed and line; a curve left spins the ball to hook left in the back end (right: right), a little, and the same curve hooks further and enters steeper on a slower ball; the input adds no `devicemotion` or `deviceorientation` listener; on a slow device (6, 10 and 20 frames a second: the events handled in bursts, coalesced, the pointer-up a frame late) a swipe throws exactly as fast as at full frame rate, a rest before a quick flick does not slow it; a touch whose pointer stream the browser cancels while it goes on delivering touch events still throws |
+| `node tests/grip_browser.mjs <w> <h> <touch 0\|1> [lang] [outDir] [baseUrl]` | the grip throw in headless Edge with real pointer input: the hint near the ball (clear of the ball, the aim line, the status line, the buttons, the TVs and the ball speed), the hand on the ball at the press and while it is dragged, a slow drag that moves the ball without a throw, a sideways release, a straight push (no spin), a curved swipe (side spin, the body turning about its direction of travel, the path hooking in the back end), "wait for your turn" while the ball rolls and during a machine player's turn; no motion sensor used: the page never adds a `devicemotion` or `deviceorientation` listener nor calls `requestPermission` (recorded from the first script on the page; touch runs are an Android phone with Chromium's sensor emulation on), and the start help and the settings say nothing about swinging or twisting the phone; an older visit's swing settings (`throwMode`, the `vbg.motion*` keys) are ignored and cleaned; a player's turn end to end: the ball moved to the pocket board by a slow drag, then pushed straight, ball after ball until the game scores a strike or a spare (and the score sheet has it); screenshots in outDir |
 | `node tests/physics_tune.mjs` | pin action at the classic impact points (pocket, light, high, head-on, Brooklyn, straight ball); the low level's budget for the pin crash only takes time away (exactly one sub-step a frame when it runs out at once; the pocket hit's strike rate stepped that way) |
 | `node tests/warmup_test.mjs` | the warm-up in balls, frames and minutes as OpenPlay plays it (nothing on the sheet / the frame on the sheet and wiped / the clock, the stop picture and the serie), the turn passed, End practice on the console (only on a lane practising; an American pair ends both lanes, bowlers 0 and 8), a tenth-frame game after a warm-up (ball 0 by OpenPlay's own end, ball 18 by End practice), and **not scored**: the same game balls give the same sheet and totals with and without a warm-up (EUR and AMR, balls and frames); the game's ball loop (`LaneGame` with a stand-in App): a ball still rolling when End practice or the clock ends the warm-up is not scored (balls, frames, minutes, the player's ball and a machine player's) |
 | `node tests/bumper_test.mjs [throws=120]` | balls released at the gutters (both sides, hook and none, 3.5-8.5 m/s): with the bumpers up **none ends in the gutter**, nearly all meet a bumper and take pins, the ball's centre stays inside the rails; the same balls with the bumpers down go into the gutter and touch no rail; a second ball into the same rail is heard as the first (the bumper-hit clock starts again at each release); the slowest balls (3.3-4.2 m/s) at the rails all reach the pins (none ended short while still rolling; a ball that has stopped moving forward is ended where it is); machine players with bumpers throw **no gutter ball** in 20,000 first balls at averages 80, 100 and 130, and without bumpers draw exactly as before; the `+C` mark as `IsBowlerUsingBumper` reads it, players.json's `bump`, and Ändra spelare setting and clearing it |
 | `node tests/wall_play.mjs <open\|vbst\|minutes\|layout\|hint\|anim> <w> <h> <touch 0\|1> [outDir] [baseUrl] [lang]` | the TV wall, the console, the bumpers and the warm-up played in headless Edge with real pointer input (`tests/cdp.mjs`: swipes and taps by the DevTools protocol, each event with its own time) from the sub-path `/games/VikingBowling/`; checks the lane file, the TV and the layout, and lists every exception and failed request (see "The TV wall" for the results) |
 | `node tests/wall_fps.mjs [w] [h] [baseUrl]` | frames a second on both detail levels with the TV wall, and the small TVs as live TakTV pages instead (on this PC's GPU) |
 | `node tools/make_tv_media.mjs [baseUrl] [previewDir]` | makes the TV animations (not a test) |
-| `node tests/motion_test.mjs`, `tests/motion_browser.mjs`, `tests/motion_android.mjs` | throwing by swinging the phone: see "Throwing by swinging the phone" |
 | `node tests/shoot.mjs <spec>` | headless Edge screenshots (the specs used are described below) |
 | `node tests/audio_test.mjs [outDir]` | the sound, in node: renders every sound (no NaN, no clipping, no DC, each in its band; the room tone at its level and seamless; with `outDir` each is written as a WAV to listen to); no human voice: no voice synthesis left in `synth.js` and no reaction made of anything but applause and whistles; balls scored by the game's engine give the right reactions (a strike, a double, a turkey, four in a row, a perfect game, a spare, a converted split, No Tap 9; nothing for a gutter ball, a split, a near miss with the 10 and with the 5, one pin left of a spare, a missed spare, an open frame); the player's reactions louder than a machine player's, a bigger strike bigger; the strikes-in-a-row guess made before the ball against the engine's count after it (8,732 strikes in five game types: 100 % the same); the lane lights' flash at 30, 60, 120 and 144 frames a second, from a spare to a perfect game: never over +85 %, and back at exactly the resting intensity afterwards (also when the lights change during a flash) |
 | `node tests/audio_browser.mjs <url> <outDir> [mobile] [cpu] [quick]` | the sound in headless Edge with the browsers' own autoplay rules, the game served from a sub-path (`node tests/serve.mjs 8790 <folder holding games/VikingBowling>`, then `http://127.0.0.1:8790/games/VikingBowling/`): no AudioContext and no sound before the first gesture, one context created in it and running; every sound rendered, no voice among them, the room tone running; a full EUR and a full AMR game in 3D (the player by test throws, two machine players), where every scored ball with a reaction got it, the early reactions came 0.6 s or more (median 1.5 s) before the score, the impacts grew with the pins down, the far lanes were heard and every sound played came from a bank that is not a voice; every reaction played through the shared game events with the engine's result and recorded from the output as a WAV (a turkey louder than a strike, a perfect game louder than a turkey, the player's strike more than 1.5 times a machine player's, a bad ball nothing over the room tone, two strikes never the same sound); mute and volume, remembered over a reload, and no AudioContext while muted; the frame time with the sound on and muted on the low detail level; no exception or console error |
@@ -1175,8 +1024,8 @@ by `node tools/vendor.mjs`, because a static host (GitHub Pages) does not serve
      as a RedPin video is opened on its own (the game's pages name their icon).
   The club logos (`v3gfx/Backgrounds/ClubLogos/<team>.png`) are no longer among them: the
   stand-in answers them with `Empty.png` (see "The lane TV").
-* The Android emulator check was done for throwing by swinging the phone only
-  (`tests/motion_android.mjs`), not for the rest of the game.
+* The touch throw on phones is tested in headless Edge with phone emulation (an Android phone's
+  user agent, touch events, 390x844 and 844x390), not on a real device or the Android emulator.
 * **The hall** is built around the game's two lanes as lanes 5 and 6. A VBS-T format on other
   lanes renumbers the masking units (and `scene.laneIndexOf` follows), but the layout stays:
   the hall still ends four lanes to the left, and lanes left of lane 1 carry no number.

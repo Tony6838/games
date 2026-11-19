@@ -19,7 +19,7 @@
 //   bumpersDown    { lane, player }                            they lower for a player without bumpers
 //   gameStart      { lanes }  /  gameEnd { lanes }
 //   correction     { lane, player, frame }                     a score corrected on the lane console
-//   throwRelease   { human, input, speed, angle, side, x0, z0 } the player let go of the ball (input 'swipe' | 'motion';
+//   throwRelease   { human, input, speed, angle, side, x0, z0 } the player let go of the ball (input 'swipe';
 //                                                              sim3d/input.js), before it is carried up and rolled
 // A listener that throws is logged and never stops the game or the other listeners.
 // ---------------------------------------------------------------------------

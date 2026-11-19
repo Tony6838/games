@@ -11,7 +11,6 @@
 <link rel="stylesheet" href="web/screen/console/fonts/barlow.css">
 <link rel="stylesheet" href="css/game.css">
 <link rel="stylesheet" href="css/audio.css">
-<link rel="stylesheet" href="css/motion.css">
 <link rel="stylesheet" href="css/modehint.css">
 <link rel="stylesheet" href="css/loading.css">
 <script type="importmap">
@@ -46,7 +45,6 @@
       <h2 data-t="infoTitle"></h2>
       <p data-t="infoText"></p>
       <p class="howTo" data-t="howTo"></p>
-      <p class="howTo" id="howToMotion" data-t="howToMotion" hidden></p>
       <p class="howTo" data-t="howToConsole"></p>
       <p class="copy" data-t="copyright"></p>
     </div>
@@ -85,9 +83,6 @@
         <label class="opt sel"><span data-t="warmUp"></span><select id="optWarm"></select></label>
         <label class="opt sel"><span data-t="detail"></span>
           <select id="optDetail"><option value="auto" data-t="detailAuto"></option><option value="high" data-t="detailHigh"></option><option value="low" data-t="detailLow"></option></select></label>
-        <label class="opt sel"><span data-t="throwInput"></span>
-          <select id="optThrow"><option value="auto" data-t="throwAuto"></option><option value="motion" data-t="throwMotion"></option><option value="swipe" data-t="throwSwipe"></option></select></label>
-        <button type="button" class="chip" id="optMotionDemo" data-t="demoReplay" hidden></button>
         <label class="opt sel vol"><span data-t="volume"></span><input type="range" min="0" max="100" step="5" data-volume></label>
       </div>
     </div>
@@ -104,9 +99,6 @@
         <label class="opt sel"><span data-t="warmUp"></span><select id="optWarmV"></select></label>
         <label class="opt sel"><span data-t="detail"></span>
           <select id="optDetailV"><option value="auto" data-t="detailAuto"></option><option value="high" data-t="detailHigh"></option><option value="low" data-t="detailLow"></option></select></label>
-        <label class="opt sel"><span data-t="throwInput"></span>
-          <select id="optThrowV"><option value="auto" data-t="throwAuto"></option><option value="motion" data-t="throwMotion"></option><option value="swipe" data-t="throwSwipe"></option></select></label>
-        <button type="button" class="chip" id="optMotionDemoV" data-t="demoReplay" hidden></button>
         <label class="opt sel vol"><span data-t="volume"></span><input type="range" min="0" max="100" step="5" data-volume></label>
       </div>
     </div>

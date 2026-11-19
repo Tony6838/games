@@ -10,7 +10,7 @@ globalThis.performance = { now: () => now };
 const listeners = {};
 globalThis.window = { innerHeight: 844, innerWidth: 390, devicePixelRatio: 1, addEventListener: (t, f) => { listeners[t] = f; }, removeEventListener() {}, setTimeout: () => 0, clearTimeout() {} };
 const setGlobal = (k, v) => Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true });
-const { SwipeInput, STANCE, THROW, launchSpeed, gripTwistDeg, twistSideRaw, sideFactor } = await import('../js/sim3d/input.js');
+const { SwipeInput, STANCE, THROW, launchSpeed } = await import('../js/sim3d/input.js');
 const el = { addEventListener: (t, f) => { listeners['el' + t] = f; }, setPointerCapture() {} };
 const canvas = { getContext: () => ({ setTransform() {}, clearRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, arc() {}, fill() {}, closePath() {} }), width: 0, height: 0, clientWidth: 390, clientHeight: 844 };
 let thrown = null, placed = null, modes = [];
@@ -294,51 +294,17 @@ if (swipe(195, 780, 195, 720, 100, 0) !== 'weak') fail('a short flick must be to
   }
 }
 
-// ---- 7. the phone's twist at the release ---------------------------------------------------
-console.log('\n## 7. Twisting the phone at the release\n');
+// ---- 7. no motion sensors: the throw is the gesture alone, on every device -------------------
+console.log('\n## 7. No motion sensors\n');
 {
-  // gripTwistDeg: the turn about the screen's axis over the last 180 ms (deg, + counterclockwise)
-  const rate = (zDps, t0 = 0, t1 = 1000, step = 16) => { const s = []; for (let t = t0; t <= t1; t += step) s.push({ t, z: typeof zDps === 'function' ? zDps(t) : zDps }); return s; };
-  const ccw = gripTwistDeg(rate(200), 1000), cw = gripTwistDeg(rate(-200), 1000), none = gripTwistDeg(rate(0), 1000);
-  console.log(`| 200 deg/s for the last 180 ms | ${ccw.toFixed(1)} deg | -200 | ${cw.toFixed(1)} | still | ${none.toFixed(1)} |`);
-  if (!(Math.abs(ccw - 36) < 2 && Math.abs(cw + 36) < 2 && none === 0)) fail('the twist must be the turn over the last 180 ms');
-  if (gripTwistDeg(rate(200, 0, 700), 1000) !== null) fail('no twist when the sensor stopped before the release');
-  if (gripTwistDeg([{ t: 990, z: 100 }], 1000) !== null) fail('no twist from too few samples');
-  const early = gripTwistDeg(rate((t) => (t < 700 ? 300 : 0)), 1000);
-  if (!(Math.abs(early) < 0.5)) fail('a turn before the last 180 ms does not count');
-  if (!(twistSideRaw(5) === 0 && twistSideRaw(-7.9) === 0)) fail('a twist inside the 8 degree dead zone gives no spin');
-  if (!(Math.abs(twistSideRaw(30) - 22 * Math.PI / 180 * 18) < 1e-9 && twistSideRaw(-30) < 0)) fail('a twist gives 18 rad/s per radian past the dead zone');
-  // a straight push with the phone twisted: the spin is the twist's; with a curve, both add
-  const withTwist = (zDps, list) => {
-    input.enable(0);
-    input.twist.on = true;
-    input.twist.samples = rate(zDps, 0, 3000, 16);
-    const t0 = 2000, pts = [{ x: 196, y: 700, t: t0 }];
-    for (const [dx, dy, v, bow] of list) {
-      const q = pts[pts.length - 1];
-      const s = stroke(q.x, q.y, dx * mm, dy * mm, v * mm, q.t);
-      if (bow) s.forEach((o, i) => { const f = (i + 1) / s.length; o.x += bow * f * f * f; });
-      pts.push(...s);
-    }
-    const p = gesture(pts);
-    input.twist.on = false; input.twist.samples = [];
-    return p;
-  };
-  const tl = withTwist(250, [[0, -45, 600]]), tr = withTwist(-250, [[0, -45, 600]]), t0 = withTwist(0, [[0, -45, 600]]);
-  console.log(`| straight push, phone twisted counterclockwise 45 deg | twist ${tl.twist.toFixed(1)} deg, side ${tl.side.toFixed(2)} rad/s |`);
-  console.log(`| straight push, clockwise | twist ${tr.twist.toFixed(1)} deg, side ${tr.side.toFixed(2)} rad/s |`);
-  console.log(`| straight push, phone still | twist ${t0.twist.toFixed(1)} deg, side ${t0.side.toFixed(2)} rad/s |`);
-  if (!(tl.side > 1 && tr.side < -1 && t0.side === 0)) fail('a counterclockwise twist must hook left, clockwise right, none nothing');
-  if (!(Math.abs(tl.side - twistSideRaw(tl.twist) * sideFactor(tl.speed)) < 1e-9)) fail('the twist must map as the swing\'s wrist turn (scaled by sideFactor)');
-  const both = withTwist(250, [[0, -45, 600, -50]]), curveOnly = withTwist(0, [[0, -45, 600, -50]]);
-  console.log(`| a left curve plus a counterclockwise twist | side ${both.side.toFixed(2)} (the curve alone ${curveOnly.side.toFixed(2)}) |`);
-  if (!(both.side > curveOnly.side + 0.5 && curveOnly.side > 0)) fail('the twist must add to the curve\'s spin');
-  const maxed = withTwist(2500, [[0, -45, 600, -90]]);
-  if (!(Math.abs(maxed.side - THROW.sideMax * sideFactor(maxed.speed)) < 1e-9)) fail('curve and twist together must be clamped to the same maximum');
-  // no sensor (a desktop, no permission): no twist, the curve only
+  const sensorListeners = Object.keys(listeners).filter((k) => /device(motion|orientation)/.test(k));
+  console.log(`| devicemotion / deviceorientation listeners added | ${sensorListeners.length ? sensorListeners.join(', ') : 'none'} |`);
+  if (sensorListeners.length) fail('the input must not listen to the motion sensors');
+  // a straight push on a phone: no spin from anywhere but the curve
+  useDevice(PHONE);
   input.enable(0);
-  const noSensor = gesture([{ x: 196, y: 700, t: 1000 }, ...stroke(196, 700, 0, -270, 3600, 1000)]);
-  if (!(noSensor.twist === null && noSensor.side === 0)) fail('without the sensor there is no twist');
+  const p = gesture([{ x: 196, y: 700, t: 1000 }, ...stroke(196, 700, 0, -270, 3600, 1000)]);
+  if (!(p && p.side === 0 && !('twist' in p))) fail('a straight push must give no spin, and the throw has no twist');
 }
 
 // ---- 8. slow frames: a real swipe still throws, as fast as at full frame rate ---------------

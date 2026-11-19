@@ -273,9 +273,8 @@ if (scenario === 'layout') {
 }
 
 // the one-time throw explanation at the player's first turn, over the 8-lane competition's HUD (the
-// most small TVs), with the swipe
+// most small TVs)
 if (scenario === 'hint') {
-  await app(`const t = document.querySelector('#optThrow'); t.value = 'swipe'; t.dispatchEvent(new Event('change')); return 1`);
   await b.click('[data-tab="vbst"]');
   await sleep(600);
   await app(`a.settings.format = 'banp88x8'; a.settings.warmV = 'none'; a.save(); a.renderFormats(); return 1`);

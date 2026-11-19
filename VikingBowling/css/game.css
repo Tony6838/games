@@ -289,8 +289,7 @@ table.res tr.win td:nth-child(2)::after { content: ' \1F3C6'; }
 /* The button says what it is: the console's own word (conButton: Banterminal, Lane console, ...)
    beside a lane tablet with the console dock's Korrigera pencil, in the dock's look (a raised blue
    button, the icon gold) - a bare screen icon was not recognised as the lane console. It stays the
-   last of the HUD's buttons: the end of the row, the foot of the upright column, and with the swing
-   button the last row of its grid (both columns), straight above the swing button. */
+   last of the HUD's buttons: the end of the row, the foot of the upright column. */
 .hudBtns .conBtn { width: auto; display: inline-flex; align-items: center; gap: 5px; padding: 0 10px 0 7px;
   background: rgba(29,46,76,0.92); border-color: #3B5D93; color: var(--text);
   font-family: var(--fontCond); font-weight: 600; font-size: 15px; line-height: 1; white-space: nowrap; }
@@ -300,7 +299,6 @@ table.res tr.win td:nth-child(2)::after { content: ' \1F3C6'; }
 @media (orientation: landscape) and (max-width: 640px) { .hudBtns .conBtn { font-size: 14px; gap: 4px; padding: 0 8px 0 6px; } }
 @media (orientation: portrait) {
   .hudBtns { align-items: flex-start; }
-  body.swingOn .hudBtns .conBtn { grid-column: 1 / -1; justify-self: start; }
 }
 /* the HUD's buttons over the small TVs: on a short upright screen (a phone's browser with its bars)
    the column reaches the strip under the lane TV, which hid the top buttons; a small TV shown large

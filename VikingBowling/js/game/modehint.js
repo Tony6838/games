@@ -1,19 +1,18 @@
 // ---------------------------------------------------------------------------
 // modehint.js - whether the player can throw now, and how, on the screen.
 //   ready  the player's turn: a short hint near the ball - grip the ball and let go in the
-//          direction of the throw, drag slowly to move it (with the swing: the big button throws,
-//          a slow drag above it moves the ball)
+//          direction of the throw, drag slowly to move it
 //   grip   the ball is held: the hand on the ball shows it (sim3d/input.js); no hint over it
 //   off    no throw now (the ball rolling, the pins, the pinsetter, a machine player's turn, the
 //          lane console, another screen): no hint; a press on the lane says "wait for your turn"
 // When the ready hint shows: at once at the first three turns of the page; after a gesture that
-// did not throw (the ball moved, a tap, too weak, a release on the lane with the swing) at once
+// did not throw (the ball moved, a tap, too weak) at once
 // for the rest of that turn, and after "too weak" the next turns too; otherwise after 5 s of the
 // turn without a throw (a player who seems stuck). Never while a gesture toast shows (the
 // one-time explanation): they would say the same thing in the same place.
 // Where: below the ball as the aiming view shows it, or beside it when the status line is right
 // under it (a phone on its side), clear of the status line, the HUD's buttons, the TVs, the ball
-// speed, a toast, the ball and the aim line above it; with the swing, just above the swing button.
+// speed, a toast, the ball and the aim line above it.
 // ---------------------------------------------------------------------------
 import { t } from '../i18n.js';
 import { gameEvents } from './events.js';
@@ -24,7 +23,6 @@ export const MODE_HINT = { eagerTurns: 3, stuckTurns: 2, idleMs: 5000, waitMs: 1
 const ICON = {
   throw: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 14V3M3.5 7.5 8 3l4.5 4.5"/></svg>',
   move: '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v13M1.5 8h13M6 3.5 8 1.5l2 2M6 12.5l2 2 2-2M3.5 6 1.5 8l2 2M12.5 6l2 2-2 2"/></svg>',
-  button: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2"/></svg>',
   wait: '<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.5V8l2.3 1.6"/></svg>'
 };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -52,18 +50,17 @@ export class ModeHint {
     root.appendChild(el);
     gameEvents.on('throwRelease', (e) => { if (e.human) this.eager = Math.max(0, this.eager - 1); });
     window.addEventListener('resize', () => this.render());
-    // placed again when a toast comes or goes, when the play screen shows (a turn may begin just
-    // before it does) and when the swing button changes (pressed, shown)
+    // placed again when a toast comes or goes and when the play screen shows (a turn may begin just
+    // before it does)
     this.observe(document.getElementById('toast'));
     this.observe(root);
     this.root = root;
   }
   playing() { return this.root.classList.contains('active'); }
 
-  // text: also its text (the swing button says "starting" and then its label, without a class change)
-  observe(el, text = false) {
+  observe(el) {
     if (!el || typeof MutationObserver === 'undefined') return;
-    new MutationObserver(() => this.render()).observe(el, { attributes: true, attributeFilter: ['class'], ...(text ? { subtree: true, childList: true, characterData: true } : {}) });
+    new MutationObserver(() => this.render()).observe(el, { attributes: true, attributeFilter: ['class'] });
   }
 
   // The input's mode (SwipeInput onMode): 'ready' | 'grip' | 'off'; info { after } when a gesture ended without a throw
@@ -94,27 +91,16 @@ export class ModeHint {
     this.render();
   }
 
-  // the swing button shown, its sensors ready and not pressed
-  swingIdle() {
-    const m = this.app.input.motion, b = document.getElementById('swingBtn');
-    if (b && b !== this.swingSeen) { this.swingSeen = b; this.observe(b, true); }
-    return !!(m && m.state === 'ready' && !m.press && b && b.classList.contains('show') && !/\b(down|calib|aim)\b/.test(b.className));
-  }
-
   render() {
-    const app = this.app, el = this.el;
+    const el = this.el;
     let kind = null;
     if (this.waiting && this.mode === 'off') kind = 'wait';
-    else if (this.mode === 'ready' && this.turnShow && this.playing()) {
-      if (!app.input.usingMotion()) kind = 'swipe';
-      else if (this.swingIdle()) kind = 'motion';
-    }
+    else if (this.mode === 'ready' && this.turnShow && this.playing()) kind = 'swipe';
     const toast = document.getElementById('toast');
     if (kind && kind !== 'wait' && toast && toast.classList.contains('show') && toast.classList.contains('hint')) kind = null;
     if (!kind) { el.classList.remove('show'); return; }
     const html = kind === 'wait' ? `<span class="mhMain">${ICON.wait}<span>${esc(t('hintWait'))}</span></span>`
-      : kind === 'motion' ? `<span class="mhMain">${ICON.button}<span>${esc(t('hintThrowMotion'))}</span></span><span class="mhSub">${ICON.move}<span>${esc(t('hintDragMotion'))}</span></span>`
-        : `<span class="mhMain">${ICON.throw}<span>${esc(t('hintGrip'))}</span></span><span class="mhSub">${ICON.move}<span>${esc(t('hintDrag'))}</span></span>`;
+      : `<span class="mhMain">${ICON.throw}<span>${esc(t('hintGrip'))}</span></span><span class="mhSub">${ICON.move}<span>${esc(t('hintDrag'))}</span></span>`;
     if (this.html !== html) { el.innerHTML = html; this.html = html; }
     el.classList.toggle('wait', kind === 'wait');
     const pos = this.place(kind);
@@ -158,7 +144,6 @@ export class ModeHint {
       obst.push({ left: B.x - B.r, right: B.x + B.r, top: B.y - B.r, bottom: B.bottom });         // the ball
       obst.push({ left: B.x - ar, right: B.x + ar, top: 0, bottom: B.y - B.r });                // the aim line up the lane
     }
-    if (kind === 'motion') obst.push(box($('#swingBtn'), 0));
     const obstacles = obst.filter(Boolean);
     const size = (maxW) => { el.style.maxWidth = maxW + 'px'; el.style.left = '0px'; el.style.top = '0px'; return { w: el.offsetWidth, h: el.offsetHeight }; };
     // (half a pixel of slack: offsetWidth rounds up a box that is exactly as wide as the space)
@@ -178,12 +163,10 @@ export class ModeHint {
       for (const o of obstacles) {
         if (!overlap(r, o)) continue;
         const moves = [];
-        // up past it, or to its right or left (sideFirst: the sides first - with the swing, up is the pins)
-        const up = spec.top === undefined || spec.nudgeUp ? [{ ...spec, top: undefined, cy: undefined, bottom: o.top - g }] : [];
-        if (!spec.sideFirst) moves.push(...up);
+        // up past it, or to its right or left
+        if (spec.top === undefined || spec.nudgeUp) moves.push({ ...spec, top: undefined, cy: undefined, bottom: o.top - g });
         moves.push({ ...spec, cx: undefined, right: undefined, left: Math.ceil(o.right + g), maxW: Math.min(spec.maxW, W - g - Math.ceil(o.right + g) - 1) });
         moves.push({ ...spec, cx: undefined, left: undefined, right: Math.floor(o.left - g), maxW: Math.min(spec.maxW, Math.floor(o.left - g) - g - 1) });
-        if (spec.sideFirst) moves.push(...up);
         for (const m of moves) { if (m.maxW < 120) continue; const q = at(m); if (clear(q)) return q; }
       }
       return null;
@@ -196,10 +179,6 @@ export class ModeHint {
       // above the finger (where the player looks, and the finger does not cover it), else below it
       const p = this.pressAt || { x: W / 2, y: above };
       cands = [{ cx: p.x, bottom: p.y - 40, maxW: wide, nudgeUp: true }, { cx: p.x, top: p.y + 40, maxW: wide }, { cx: W / 2, bottom: above, maxW: wide }];
-    }
-    else if (kind === 'motion') {
-      const b = box($('#swingBtn'), 0);
-      cands = [{ cx: W / 2, bottom: (b ? b.top : above) - g, maxW: wide, sideFirst: true }];
     } else {
       const side = Math.min(360, W * 0.45);
       cands = [

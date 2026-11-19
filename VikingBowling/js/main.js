@@ -27,6 +27,13 @@ const store = {
   get(k, d) { try { const v = localStorage.getItem('vbg.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem('vbg.' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } }
 };
+// What older versions kept for the throw by swinging the phone (removed: every device throws by
+// touch or mouse): read by nothing any more, taken away
+function forgetSwingKeys() {
+  for (const k of ['motionIntro', 'motionMisses', 'motionUnavailable', 'motionLandscapeTip']) {
+    try { localStorage.removeItem('vbg.' + k); } catch (e) { /* private mode */ }
+  }
+}
 
 // The open play game types: the name (the lane console's text where it has one), one line on
 // what is special about the game and its symbol (js/menucards.js). Short Game n starts at
@@ -54,7 +61,9 @@ const MAX_ROBOTS = 5;                                                          /
 
 // The saved settings, checked against what this version of the game knows: a value that
 // is not one of the known ids (an older version's, or a damaged entry) gives way to the
-// default, so a stale localStorage can never stop the game from starting.
+// default, so a stale localStorage can never stop the game from starting. A key this version
+// does not know (an older version's "throwMode", the swing of the phone) is left out, and the
+// next save drops it.
 export function loadSettings(saved) {
   const d = { lang: 'sv', style: 'eur', game: 'normal', redPin: false, aim: true, speed: false,
     theme: 'Standard', robots: 2, skill: 'league', name: '' };
@@ -71,7 +80,6 @@ export function loadSettings(saved) {
   one('name', (x) => typeof x === 'string');
   d.name = d.name.trim().slice(0, 20);
   d.detail = 'auto'; one('detail', (x) => x === 'auto' || x === 'high' || x === 'low');    // the 3D hall's detail level (sim3d/hall.js)
-  d.throwMode = 'auto'; one('throwMode', (x) => x === 'auto' || x === 'motion' || x === 'swipe');   // swing the phone or swipe (sim3d/input.js, motion.js)
   d.warm = 'none'; one('warm', (x) => WARM_IDS.includes(x));                                    // the warm-up of open play
   d.warmV = 'format'; one('warmV', (x) => x === 'format' || WARM_IDS.includes(x));              // VBS-T: the format's own or another
   d.bump = false; one('bump', bool);                                                             // the player bowls with bumpers
@@ -82,6 +90,7 @@ export function loadSettings(saved) {
 
 class App {
   constructor() {
+    forgetSwingKeys();
     this.settings = loadSettings(store.get('settings', {}));
     this.mode = 'open';
     this.fast = false;
@@ -101,15 +110,9 @@ class App {
       // whether a throw can come now (js/game/modehint.js): the hint near the ball, "wait for your turn"
       onMode: (m, info) => this.modeHint && this.modeHint.set(m, info),
       onBlocked: (at) => this.modeHint && this.modeHint.blocked(at),
-      // the throw by swinging the phone (sim3d/motion.js): its hints, "use the swipe instead"
-      onHint: (key, ms) => this.toast(t(key), ms || 4000, 'hint'),
-      onChooseSwipe: () => { this.settings.throwMode = 'swipe'; this.save(); this.input.setMode('swipe'); this.syncThrowUi(); this.swipeStatus(); },
-      onModeChange: () => { this.syncThrowUi(); this.swipeStatus(); },     // motion control failed (the swipe) or came back
-      onHintClear: () => { clearTimeout(this.toastT); $('#toast').classList.remove('show'); },
-      // the swing's aim marker over the arrows and the hand on the ball are drawn through the scene's camera
+      // the hand on the ball is drawn through the scene's camera
       aimView: () => (this.throwLane ? { camera: this.scene.camera, laneX: this.throwLane.laneX } : null)
     });
-    this.input.setMode(this.settings.throwMode);
     this.modeHint = new ModeHint(this, $('#play'));
     this.activeLane = null;
     this.instantBot = new MachinePlayer({ name: 'auto', average: 185 });   // for app.instant (automated runs)
@@ -185,19 +188,12 @@ class App {
       this.throwResolve = resolve;
       this.throwLane = L;
       // the throw is asked again while the lane console is open (a console change interrupted it):
-      // the swipe and the swing button stay off behind it until it is closed (ConsoleHost.close)
+      // the throw stays off behind it until it is closed (ConsoleHost.close)
       if (!(this.consoleHost && this.consoleHost.isOpen)) this.input.enable(this.humanX0 || 0, this.humanZ0 || STANCE.zMin);
       this.onPosition(this.humanX0 || 0, this.humanZ0 || STANCE.zMin);
-      // thrown by swinging the phone: the swing button says how (and the first-use card)
-      if (this.input.usingMotion()) { this.status(t('yourTurnMotion'), true); return; }
-      // the gestures, once: throw, pull back for power, hold to move the ball
+      // the gestures, once: grip and let go to throw, a curve for spin, a slow drag moves the ball
       if (!store.get('throwHint', false)) { store.set('throwHint', true); this.toast(t('throwHint'), 9000, 'hint'); }
     });
-  }
-  // the player's turn went over to the swipe (chosen instead of the swing, or the swing failed), or
-  // back to the swing (a permission granted late)
-  swipeStatus() {
-    if (this.throwResolve) this.status(t(this.input.usingMotion() ? 'yourTurnMotion' : 'yourTurn'), true);
   }
   // where the player stands: x across the lane, z metres behind the foul line
   onPosition(x, z = this.humanZ0 || STANCE.zMin) {
@@ -334,7 +330,6 @@ class App {
     $$('.screen').forEach((s) => s.classList.toggle('active', s.id === id));
     this.screen = id;
     this.setRendering(id === 'play');
-    if (id !== 'play') this.input.pauseSensors();       // no devicemotion listener on the menus
     // back on a screen with a start button: a new game may be started again (see start())
     if (id === 'splash' || id === 'menu' || id === 'names' || id === 'summary') {
       this.starting = false;
@@ -354,23 +349,6 @@ class App {
     this.renderGameGrid();
     if (this.formatsShown) this.renderFormats();
     this.syncDetailUi();
-    this.syncThrowUi();
-  }
-
-  // The way to throw in the two option rows (swing the phone or swipe); "Auto" says which it
-  // is on this device. The splash's line on the swing shows where the swing is the default.
-  syncThrowUi() {
-    for (const sel of [$('#optThrow'), $('#optThrowV')]) {
-      if (!sel) continue;
-      const auto = sel.querySelector('option[value="auto"]');
-      if (auto) auto.textContent = t('throwAuto') + ' (' + t(this.input.autoMode() === 'motion' ? 'throwMotion' : 'throwSwipe') + ')';
-      sel.value = this.settings.throwMode;
-    }
-    const how = $('#howToMotion');
-    if (how) how.hidden = this.input.autoMode() !== 'motion';
-    // "Visa svingdemo" where the swing is the way to throw
-    const swing = this.settings.throwMode === 'motion' || (this.settings.throwMode === 'auto' && this.input.autoMode() === 'motion');
-    for (const b of [$('#optMotionDemo'), $('#optMotionDemoV')]) if (b) b.hidden = !swing;
   }
 
   // The hall's detail level in the two option rows; "Auto" says which level it picked
@@ -425,11 +403,6 @@ class App {
     $('#optRobots').addEventListener('change', (e) => { this.settings.robots = +e.target.value; this.save(); });
     $('#optSkill').addEventListener('change', (e) => { this.settings.skill = e.target.value; this.save(); });
     $('#optSkillV').addEventListener('change', (e) => { this.settings.skill = e.target.value; this.save(); });
-    for (const id of ['#optThrow', '#optThrowV']) {
-      const sel = $(id);
-      if (sel) sel.addEventListener('change', (e) => { this.settings.throwMode = e.target.value; this.input.setMode(e.target.value, true); this.save(); this.syncThrowUi(); });
-    }
-    for (const id of ['#optMotionDemo', '#optMotionDemoV']) { const b = $(id); if (b) b.addEventListener('click', () => this.input.playDemo()); }
     for (const id of ['#optDetail', '#optDetailV']) {
       $(id).addEventListener('change', (e) => { this.settings.detail = e.target.value; this.scene.setDetail(e.target.value); this.save(); this.syncDetailUi(); });
     }
@@ -490,7 +463,6 @@ class App {
     $('#optTheme').value = this.settings.theme;
     $('#optRobots').value = String(this.settings.robots);
     this.syncDetailUi();
-    this.syncThrowUi();
   }
 
   async renderFormats() {
