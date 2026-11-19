@@ -307,7 +307,7 @@ for (const answer of want('B') ? ['granted', 'denied'] : []) {
     await shot(B, `B_${answer}_3_card_again`);
   } else {
     check(s.mstate === 'failed' && !s.btn && !s.useMotion && /tilläts inte/.test(s.toast), 'denied: back to the swipe, with the note');
-    check(/svep för att kasta/.test(s.status), `denied: the status must say to swipe ("${s.status}")`);
+    check(/ta tag i klotet och kasta/.test(s.status), `denied: the status must say to grip the ball and throw (the swipe) ("${s.status}")`);
     await shot(B, `B_${answer}_2_fallback`);
     const n = s.rel.length;
     await touchSwipe(B, 196, 720, 192, 430, 220);

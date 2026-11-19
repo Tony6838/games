@@ -254,8 +254,17 @@ class App {
     try { v = new Intl.NumberFormat(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(kmh); } catch (e) { v = kmh.toFixed(1); }
     $('#speedo').textContent = kmh > 0 ? t('ballSpeedKmh', { v }) : '';
   }
-  // cls 'hint': a gesture hint, shown above the status line instead of at the top
-  toast(text, ms = 2200, cls = '') { const e = $('#toast'); e.textContent = text; e.classList.toggle('hint', cls === 'hint'); e.classList.add('show'); clearTimeout(this.toastT); this.toastT = setTimeout(() => e.classList.remove('show'), ms); }
+  // cls 'hint': a gesture hint, shown above the status line instead of at the top, clear of the HUD's buttons
+  toast(text, ms = 2200, cls = '') { const e = $('#toast'); e.textContent = text; e.classList.toggle('hint', cls === 'hint'); if (cls === 'hint') this.hintRoom(); e.classList.add('show'); clearTimeout(this.toastT); this.toastT = setTimeout(() => e.classList.remove('show'), ms); }
+  // The room a hint toast leaves for the HUD's buttons: held upright they are a column at the lower
+  // left as wide as the console button, whose label makes it 102-119 px wide (the language decides),
+  // and the hint goes to the right of it - css/game.css reads --hudR, the buttons' right edge and a
+  // gap. Measured when a hint shows and again while one is up (bindUi: a turned phone, a button resized).
+  hintRoom() {
+    let r = 0;
+    for (const b of document.querySelectorAll('#play .hudBtns button')) { const q = b.getBoundingClientRect(); if (q.width) r = Math.max(r, q.right); }
+    $('#toast').style.setProperty('--hudR', Math.ceil(r + 8) + 'px');
+  }
   effect(text, cls = '') {
     const e = $('#effect');
     e.className = 'effect ' + cls;
@@ -379,6 +388,11 @@ class App {
   }
 
   bindUi() {
+    // a hint's room measured again on a resize and when a HUD button changes size (the label's font
+    // arriving after the hint showed, another language)
+    const room = () => { if ($('#toast').classList.contains('hint')) this.hintRoom(); };
+    window.addEventListener('resize', room);
+    if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(room); document.querySelectorAll('#play .hudBtns button').forEach((b) => ro.observe(b)); }
     $('#langRow').addEventListener('click', async (e) => {
       const b = e.target.closest('[data-lang]');
       if (!b) return;

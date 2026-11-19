@@ -208,9 +208,18 @@ button, input, select { font-family: inherit; font-size: inherit; }
 .toast { position: fixed; left: 50%; top: 18%; transform: translateX(-50%); background: rgba(10,19,34,0.92); border: 1px solid var(--gold); color: var(--text);
   padding: 10px 16px; border-radius: 10px; z-index: 30; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90vw; text-align: center; }
 .toast.show { opacity: 1; }
-/* the gesture hints (js/sim3d/input.js): above the status line, clear of the lane TV, the
-   overhead TV and the buttons */
+/* the gesture hints (js/sim3d/input.js) and the one-time explanations (the throw, the bumpers):
+   above the status line, clear of the lane TV, the overhead TV and the buttons */
 .toast.hint { top: auto; bottom: calc(70px + var(--safeB)); max-width: min(560px, calc(100vw - 130px)); }
+/* held upright the HUD's buttons are a column over the lower left, as wide as the console button
+   with its label: the hint goes in the room to the right of it, centred there - and centred on the
+   screen once that leaves 340 px between two such margins. --hudR is the buttons' right edge and a
+   gap (js/main.js hintRoom). On a narrow screen it ends above the ball speed at the right edge. */
+@media (orientation: portrait) {
+  .toast.hint { left: var(--hudR, 137px); right: clamp(8px, calc(100vw - var(--hudR, 137px) - 340px), var(--hudR, 137px));
+    transform: none; width: fit-content; margin: 0 auto; max-width: 560px; }
+}
+@media (orientation: portrait) and (max-width: 720px) { .toast.hint { bottom: calc(84px + var(--safeB)); } }
 /* a short landscape screen (a phone held sideways) has the ball just above the status line:
    the hint goes to the left, under the buttons, beside the neighbour lane */
 @media (orientation: landscape) and (max-height: 520px) {

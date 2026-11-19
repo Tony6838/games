@@ -1,5 +1,5 @@
 // The TV wall, the lane console, the bumpers and the warm-up, played in headless Edge with real
-// pointer input (tests/cdp.mjs): node tests/wall_play.mjs <scenario> <w> <h> <touch 0|1> [outDir] [baseUrl]
+// pointer input (tests/cdp.mjs): node tests/wall_play.mjs <scenario> <w> <h> <touch 0|1> [outDir] [baseUrl] [lang]
 //   scenario open:  open play, warm-up 2 balls, the player and one machine player with bumpers; a
 //                   practice ball, a ball at the gutter with the bumpers up, End practice on the
 //                   console, game balls, a correction in the console's score editor (checked against
@@ -7,12 +7,17 @@
 //   scenario vbst:  Banpoängsmatch 4+4 (4 lanes, lane moves each serie): the TV wall, a ball, the
 //                   serie played out, serie 2 on other lanes - the large TV follows the player
 //   scenario minutes: open play with a 1 minute warm-up (the TV's clock, the stop picture)
+//   scenario layout: an 8-lane competition at the size: the TV wall, a small TV large, another lane's console
+//   scenario hint:  the 8-lane competition's first turn with the one-time throw explanation as it comes
+//                   (the other scenarios start with it seen); lang picks the language (sv when left out)
+// Every scenario ends with the HUD check: its parts inside the screen and apart, every button reachable,
+// and the hint toasts (both one-time explanations, in the page's language) clear of every button.
 // Prints what it checked and every exception, console error and failed request.
 import { openBrowser, sleep } from './cdp.mjs';
 
-const [scenario = 'open', W = '1280', H = '800', touch = '0', outDir = 'screenshots/wall', base = 'http://127.0.0.1:8471/games/VikingBowling/'] = process.argv.slice(2);
+const [scenario = 'open', W = '1280', H = '800', touch = '0', outDir = 'screenshots/wall', base = 'http://127.0.0.1:8471/games/VikingBowling/', LANG = ''] = process.argv.slice(2);
 const w = +W, h = +H, mobile = touch === '1';
-const tag = `${outDir}/${scenario}_${w}x${h}`;
+const tag = `${outDir}/${scenario}_${w}x${h}${LANG ? '_' + LANG : ''}`;
 const b = await openBrowser({ w, h, mobile });
 const checks = [];
 const check = (ok, what) => { checks.push((ok ? 'ok   ' : 'FAIL ') + what); return ok; };
@@ -53,9 +58,22 @@ async function humanBall(curve = 0, dx = 0) {
   await sleep(1600);
   return ok;
 }
+// The hint toast (the gesture hints, the one-time explanations) where it shows now: pointer-events
+// none, so the reachability test below passes through it - it must lie clear of every HUD button, the
+// status line and the ball speed, inside the window. null when no hint toast shows.
+const hintOver = () => b.eval(`const T = document.querySelector('#toast');
+  if (!T.classList.contains('show') || !T.classList.contains('hint')) return null;
+  const q = T.getBoundingClientRect(), out = [];
+  if (q.x < -1 || q.y < -1 || q.right > innerWidth + 1 || q.bottom > innerHeight + 1) out.push('outside the window');
+  for (const e of [...document.querySelectorAll('#play .hudBtns button'), document.querySelector('#status'), document.querySelector('#speedo')]) {
+    const r = e.getBoundingClientRect();
+    if (r.width && r.height && q.x < r.right - 1 && r.x < q.right - 1 && q.y < r.bottom - 1 && r.y < q.bottom - 1) out.push('covers ' + e.id);
+  }
+  return { out, box: [q.x, q.y, q.width, q.height].map(Math.round).join(','), text: T.textContent.slice(0, 32) };`);
 
 await b.go(base + '?nofs=1&detail=low', 3500);
-await b.eval('localStorage.clear(); localStorage.setItem("vbg.throwHint", "true"); return 1');
+await b.eval(`localStorage.clear(); ${scenario === 'hint' ? '' : 'localStorage.setItem("vbg.throwHint", "true");'}
+  ${LANG ? `localStorage.setItem("vbg.settings", JSON.stringify({ lang: ${JSON.stringify(LANG)} }));` : ''} return 1`);
 await b.go(base + '?nofs=1&detail=low', 3500);
 check(await b.click('#okBtn'), 'splash OK');
 await sleep(700);
@@ -254,6 +272,25 @@ if (scenario === 'layout') {
   await sleep(600);
 }
 
+// the one-time throw explanation at the player's first turn, over the 8-lane competition's HUD (the
+// most small TVs), with the swipe
+if (scenario === 'hint') {
+  await app(`const t = document.querySelector('#optThrow'); t.value = 'swipe'; t.dispatchEvent(new Event('change')); return 1`);
+  await b.click('[data-tab="vbst"]');
+  await sleep(600);
+  await app(`a.settings.format = 'banp88x8'; a.settings.warmV = 'none'; a.save(); a.renderFormats(); return 1`);
+  await sleep(400);
+  check(await b.click('#menuNext'), 'menu next');
+  await sleep(1200);
+  check(await b.click('#startBtn'), 'start the competition');
+  const up = await waitFor(`return !!a.throwResolve && document.querySelector('#toast').classList.contains('show') && document.querySelector('#toast').classList.contains('hint')`, 60000, 150);
+  check(!!up, 'the one-time throw explanation shows at the player\'s first turn');
+  await sleep(500);
+  await b.shot(tag + '_01_throw_hint.png');
+  const h = await hintOver();
+  check(!!h && h.out.length === 0, `the throw explanation keeps clear of the HUD's buttons, the status line and the ball speed (${h ? h.box + ' "' + h.text + '…"' : 'not shown'})${h && h.out.length ? ': ' + h.out.join(', ') : ''}`);
+}
+
 // the TV animations: what the game asked the TV to play (LC_PLAY_ANIMATION) and what the TakTV page
 // really put up (its #videoFx), recorded by an observer in the page since the start
 if (scenario === 'open' || scenario === 'anim') {
@@ -282,7 +319,9 @@ const lay = await b.eval(`const r = (s) => { const e = document.querySelector(s)
   const parts = { tv: r('#tvBox'), strip: r('#tvStrip'), btns: r('.hudBtns'), status: r('#status') };
   const out = []; const names = Object.keys(parts);
   for (const n of names) { const p = parts[n]; if (p && (p.x < -1 || p.y < -1 || p.r > innerWidth + 1 || p.b > innerHeight + 1)) out.push(n + ' outside'); }
-  for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) { const A = parts[names[i]], B = parts[names[j]]; if (A && B && A.x < B.r - 1 && B.x < A.r - 1 && A.y < B.b - 1 && B.y < A.b - 1) out.push(names[i] + ' overlaps ' + names[j]); }
+  // (the strip of small TVs may reach the button column on a short upright screen, 375 x 548 or 390 x 664:
+  // the buttons draw above it by design, and the check below proves nothing covers them)
+  for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) { const A = parts[names[i]], B = parts[names[j]]; if (names[i] === 'strip' && names[j] === 'btns') continue; if (A && B && A.x < B.r - 1 && B.x < A.r - 1 && A.y < B.b - 1 && B.y < A.b - 1) out.push(names[i] + ' overlaps ' + names[j]); }
   return { out, parts };`);
 check(lay && lay.out && lay.out.length === 0, 'HUD layout: ' + (lay && lay.out ? (lay.out.join(', ') || 'nothing cut off or overlapping') : JSON.stringify(lay)));
 // the console button labelled with the console's own word (a bare screen icon was not recognised as
@@ -301,6 +340,19 @@ const hud = await b.eval(`if (!document.querySelector('#play').classList.contain
   const l = document.querySelector('#btnConsole .conLabel');
   return { out, label: l ? l.textContent : '', w: Math.round(document.querySelector('#btnConsole').getBoundingClientRect().width) };`);
 if (hud) check(hud.label.length > 0 && hud.out.length === 0, `the HUD's buttons reachable, the console button labelled "${hud.label}" (${hud.w} px wide): ` + (hud.out.join(', ') || 'none cut off or covered'));
+// the hint toasts over this HUD: the two one-time explanations (the longest hints), in the page's
+// language, with a ball speed up - each clear of every button, the status line and the ball speed
+// (a hint toast once covered the console button's label on an upright phone)
+if (hud) {
+  await app(`if (!document.querySelector('#speedo').textContent) a.speedo(18.4); return 1`);
+  for (const key of ['throwHint', 'bumpHint']) {
+    await b.eval(`const { t } = await import(new URL('js/i18n.js', location.href).href); window.vikingApp.toast(t(${JSON.stringify(key)}), 4000, 'hint'); return 1`);
+    await sleep(400);
+    const h = await hintOver();
+    await b.shot(`${tag}_hint_${key}.png`);
+    check(!!h && h.out.length === 0, `the ${key} toast keeps clear of the HUD's buttons, the status line and the ball speed (${h ? h.box + ' "' + h.text + '…"' : 'not shown'})${h && h.out.length ? ': ' + h.out.join(', ') : ''}`);
+  }
+}
 
 for (const d of b.log.filter((l) => /^DIALOG/.test(l))) console.log('  ' + d);
 const errors = b.log.filter((l) => /EXCEPTION|ERROR/.test(l));
