@@ -26,7 +26,8 @@
 // materials, a light map and an environment map rendered once from the hall.
 // ---------------------------------------------------------------------------
 import * as THREE from 'three';
-import { LANE, PIN_PROFILE, PIN_SPOTS } from './physics.js';
+import { LANE, PIN_SPOTS } from './physics.js';
+import { lowPinGeometry } from './pinmesh.js';
 
 export const REFLECT_LAYER = 1;            // what the lane oil reflects (the mirror camera's layer)
 
@@ -417,21 +418,6 @@ function laneLightMap() {
   t.magFilter = THREE.LinearFilter; t.minFilter = THREE.LinearFilter;
   t.needsUpdate = true;
   return t;
-}
-
-// The neighbours' pins: the real outline with fewer facets (instanced, so ~260 pins are one draw)
-function lowPinGeometry() {
-  const keep = [0, 2, 3, 4, 5, 6, 7, 9, 10, 12, 13, 14, 15, 16, 17];
-  const pts = keep.map((i) => new THREE.Vector2(Math.max(PIN_PROFILE[i][1], 0.0005), PIN_PROFILE[i][0]));
-  const geo = new THREE.LatheGeometry(pts, 10);
-  const pos = geo.getAttribute('position'), col = new Float32Array(pos.count * 3);
-  for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i), red = y > 0.222 && y < 0.262;
-    col.set(red ? [0.75, 0.05, 0.07] : [1, 1, 1], i * 3);
-  }
-  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  geo.computeVertexNormals();
-  return geo;
 }
 
 // ---- the planar reflection in the lane oil ----------------------------------------------

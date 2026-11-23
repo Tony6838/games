@@ -52,8 +52,8 @@ console.log(`(${((Date.now() - t0) / 1000).toFixed(1)} s)`);
 // of time drops the rest of its time, so the crash plays slower than real time; the sub-steps are the
 // same 1/360 s. (1) Exactly: a budget that runs out at once is one sub-step a frame - the same pins at
 // the same time as stepping 1/360 s a frame. (2) The pin action of the pocket hit stepped that way
-// against the normal 1/60 s frames (single throws differ - pin crashes are chaotic, as they already did
-// with the frame rate - the rates must not)
+// against the normal 1/60 s frames (a throw ends the same on any frame time, tests/pin_bounce_test.mjs;
+// these are other throws than the ones above, so only the rates compare)
 {
   const a = new LanePhysics(), b = new LanePhysics();
   const aim = LanePhysics.aim(SCENARIOS[0][1]);
@@ -70,6 +70,6 @@ console.log(`(${((Date.now() - t0) / 1000).toFixed(1)} s)`);
     if (!b.standingMask()) strikesBudget++;
   }
   const ci = (pct) => 196 * Math.sqrt((pct / 100) * (1 - pct / 100) / n);
-  console.log(`the pin crash on a budget (one sub-step a frame on the deck): ${same} of ${n} throws exactly as stepping 1/360 s a frame; pocket hook strikes ${(100 * strikesBudget / n).toFixed(0)}% +- ${ci(100 * strikesBudget / n).toFixed(0)} (in 1/60 s frames above: ${pocketPct.toFixed(0)}% +- ${ci(pocketPct).toFixed(0)}; single crashes are chaotic, so only the rates compare)`);
+  console.log(`the pin crash on a budget (one sub-step a frame on the deck): ${same} of ${n} throws exactly as stepping 1/360 s a frame; pocket hook strikes ${(100 * strikesBudget / n).toFixed(0)}% +- ${ci(100 * strikesBudget / n).toFixed(0)} (in 1/60 s frames above: ${pocketPct.toFixed(0)}% +- ${ci(pocketPct).toFixed(0)}; other throws, so only the rates compare)`);
   if (same !== n) { console.log('FAIL the budget did more than take time away'); process.exitCode = 1; }
 }

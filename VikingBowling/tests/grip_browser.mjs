@@ -278,9 +278,11 @@ await afterBall();
     const target = st.first || !last ? POCKET : spareX(last.standing);
     const x = await dragTo(target);
     if (firstDrag === null) { firstDrag = x; await shot('12_pocket_stance'); }
-    // a quick push, about 5000 px/s (800 mm/s: a 7.3 m/s ball) over as much of the screen as there is
+    // a quick push, about 5000 px/s (800 mm/s: a 7.3 m/s ball) over as much of the screen as there is, each
+    // ball a little quicker: the same push from the same board gives the same pins (physics.js step), and a
+    // hand never pushes the same twice
     const B = await ballXY(), len = Math.min(B.y - 30, h * 0.5);
-    await swipeFromBall(len / h, Math.max(40, len / 5000 * 1000));
+    await swipeFromBall(len / h, Math.max(40, len / (4700 + 40 * balls) * 1000));
     balls++;
     await afterBall();
     await sleep(600);

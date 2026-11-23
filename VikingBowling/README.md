@@ -152,7 +152,10 @@ outside it (see "The scoring proof").
   contact with the lane is modelled as sliding friction against the slip of the contact
   point, with a 40 ft oil pattern, so a ball with side rotation skids in the oil, hooks
   in the dry back end and rolls out; ball-pin and pin-pin impacts are impulses along the
-  real pin outline (the USBC profile) with its rotational inertia.
+  real pin outline (the USBC profile) with its rotational inertia. It runs in sub-steps of
+  1/360 s on every display, so a throw is the same on all of them (see "The pins").
+* The drawn pin (`js/sim3d/pinmesh.js`): the same outline turned on a lathe, closed underneath by a
+  flat base with a small edge.
 * The swipe input (`js/sim3d/input.js`), the machine players (`js/ai/bots.js`), the
   flow and the screens (`js/main.js`, `index.html`, `css/game.css`) and the game's own
   texts in five languages (`js/i18n.js`).
@@ -270,7 +273,7 @@ The consoles, tables and settees stand behind the camera at every stance.
 | Tables, settees, bar | yes | no |
 | The pin crash (the physics) | in real time | at most 8 ms of it a frame (or half the frame interval, when frames are slower anyway, as with a software renderer): on a CPU that cannot keep up it plays a little slower than real time instead of stalling frames (the same 1/360 s sub-steps: the physics is unchanged) |
 | Draw calls a frame (shadow and reflection passes included) | 105 | 46 |
-| Triangles a frame | 183,000 | 53,000 |
+| Triangles a frame | 187,000 | 54,000 |
 
 Before the hall the game drew 143 draw calls and 79,000 triangles a frame.
 
@@ -311,15 +314,15 @@ times the player's ball had frames of 80-160 ms at the 99th percentile while the
 solver iterations were tried and not kept: the solver is under a tenth of that time (the contact
 search between the pins' convex pieces and the deck is the rest), and fewer iterations change the
 play: over 200 pocket hits 32.5 % strikes at 24 iterations and 41 % at 10 (40 throws per impact point
-at 6 iterations: the Brooklyn from 3 % to 15 %), with no time saved. The low level instead gives the
+at 6 iterations: the Brooklyn from 3 % to 15 %; measured before 2026-11-23), with no time saved. The low level instead gives the
 crash 8 ms a frame, or half the frame interval when frames are slower anyway (a software renderer's
 100 ms and more: there the crash keeps real time) (`step(dt, budgetMs)` in `physics.js`):
 the 99th percentile frame during the player's ball is now one or two of the display's frames (13.5-26.6 ms;
 before 67-160 ms), 16-17 frames over 50 ms per four balls instead of 31-63, and the crash ran at 70-100 %
 of real time
 (`tests/physics_tune.mjs` checks that the budget only takes time away: one that runs out at once is
-exactly one sub-step a frame; over 200 pocket hits stepped that way 30.5 % strikes, in 1/60 s frames
-32.5 %, in 1/75 s frames 36 % - the same within the ±6.5 points of 200 throws). A machine player's
+exactly one sub-step a frame; since the sub-steps are the same on every display and on a budget, a throw
+ends the same on all of them, see "The pins"). A machine player's
 ball is planned with 18 simulated releases (`LanePhysics.aim`, about 90 ms on the test PC): that is the
 one long task of about half a second per run with the CPU slowed four times.
 
@@ -426,7 +429,9 @@ balls per speed):
 | 8 | 6.7 | 9.4 / 9.4 | 8.5 / 9.4 | 48 % / 42 % |
 
 A slow ball deflects more and leaves the 7, the 10, 7-10 and 4-7-10 more often; from about
-7 m/s (23 km/h on the readout) the ball drives through as before.
+7 m/s (23 km/h on the readout) the ball drives through as before. (The table was measured before the
+re-racked pins' inertia was put right, see "The pins"; with it the four speeds strike 1, 10, 37 and 54 %,
+200 balls each.)
 
 **Where you stand.** The stance is only where the bowler starts, as on a real approach: the
 ball is carried straight up the approach on that board (drawn rolling at the release speed,
@@ -451,6 +456,74 @@ as spin; on a real phone the swing went to the right and was hard to aim, so bot
 "throwMode" left in the saved settings by an older visit is ignored and dropped at the next save,
 and the swing's own keys (`vbg.motionIntro`, `vbg.motionMisses`, `vbg.motionUnavailable`,
 `vbg.motionLandscapeTip`) are removed at start.
+
+## The pins
+
+**Time.** The physics runs in sub-steps of 1/360 s whatever the frame (`LanePhysics.step`). A frame is
+seldom a whole number of them (75 Hz: 4.8; 60 Hz: the browser's clock gives 16.6 and 16.7 ms), so the
+last sub-step of a frame runs ahead of it and the next frame needs that much less. What is drawn
+(`LanePhysics.drawn`, used by `scene.sync`) is taken that much back, so the ball moves evenly. A throw
+leaves the same pins after the same time on every display.
+
+Until 2026-11-23 a frame ended in a short remainder step instead, and **the pins bounced far too much on
+60, 90 and 120 Hz displays** (hardly on 75 Hz, the screen the game was made on). cannon-es pushes an
+overlap out at a speed that grows as the step shrinks, and a pin that lands is a few mm into the deck
+after the sub-step it lands in. A 0.03 ms remainder right after that sub-step (60 Hz) threw the pin up at
+0.6 of its landing speed on average and up to 1.4 of it, where a whole sub-step gives 0.3: more energy
+than it came with, landing after landing, so the last pins went on hopping metres high and knocked
+standing pins down. The same throws at four frame rates (16 throws on each of nine lines, one lane
+re-racked; a bounce is a pin leaving what it lies on by itself, with no ball or pin hitting it):
+
+| A throw | 60 Hz before | 120 Hz before | 75 Hz before | Now, every display |
+|---|---|---|---|---|
+| bounces over 5 mm / 3 cm / 10 cm | 18.8 / 6.6 / 2.8 | 22.5 / 7.6 / 3.1 | 2.5 / 0.4 / 0.1 | 2.5 / 0.4 / 0.05 |
+| the highest of all | 6.5 m | 8.9 m | 22 cm | 20 cm |
+| pins whose centre of mass rose over 60 cm | 1.5 | 1.7 | 0 | 0 |
+| motion energy on the deck and in the gutters 1 / 2 / 4 s after the impact | 36 / 33 / 13 J | 12 / 10 / 22 J | 0.28 / 0.06 / 0.02 J | 0.28 / 0.03 / 0.00 J |
+| energy made there out of nothing, from 1 s on (two lines) | 58 and 148 J | - | 0.12 and 0.15 J | 0.10 J |
+| the last pin there at rest (median; the ball ends at 5 s) | never | never | 4.7 s | 3.3 s |
+| hops in the pit over 5 mm / 5 cm | 51 / 17 | 59 / 19 | 15 / 3.3 | 1.5 / 0.4 |
+
+A pin dropped 25-31 cm flat on the deck hops at most 0.9 cm now on every display; before, up to 4.7 m at
+60 Hz, 2.9 m at 90 Hz and 1.1 m at 120 Hz (`tests/pin_bounce_test.mjs`).
+
+**A re-racked pin is a new pin.** `resetPins` sets a pin upright before it takes its inertia. cannon-es
+takes it from the box round the body as it lies, so until 2026-11-23 a pin set again after a throw got the
+inertia of however it lay when it was swept: up to five times too heavy to roll and five times too light
+to tumble one way, a new mix every ball. The pins kept rolling longer (the 4.7 s above), and the carry was
+off: a hook into the pocket struck less than a straight ball there. 300 throws a line in 1/60 s frames, the
+lines of `tests/physics_tune.mjs` (±3 points at 10 %, ±6 at 50 %):
+
+| Line | Strikes before / now | Splits before / now |
+|---|---|---|
+| pocket, hook, 8 m/s (6.5 cm) | 38 % / 50 % | 27 % / 24 % |
+| pocket, hook, 6.8 m/s | 17 % / 33 % | 42 % / 34 % |
+| light pocket (11.5 cm) | 24 % / 27 % | 26 % / 27 % |
+| high pocket (3.5 cm) | 11 % / 13 % | 45 % / 47 % |
+| head on | 6 % / 6 % | 48 % / 50 % |
+| Brooklyn | 5 % / 12 % | 42 % / 30 % |
+| straight ball, pocket | 42 % / 29 % | 12 % / 30 % |
+
+(On a 60 Hz display the hopping pins struck more than either: 47 % at the pocket with the hook, 59 % with
+the straight ball, 24 % head on - 100 throws each.)
+
+**The late pins of a machine player's ball** are pushed over at the head (`nudgeForced`, 1.2 s after the
+impact; on 52 of 60 first balls measured): a spin of 19 rad/s (31 at most), never over 19 cm (the centre
+of mass; 15 standing). Until 2026-11-23 the push was given 18 m out (a point in the world, where cannon-es
+takes one from the centre of mass), which spun them at 1,600 rad/s in the median and up to 7,800: they rose
+upright into the air and flew off, 2.8 m up in the median, on every display.
+
+**Where a landing pin's speed goes** (`TUNE` in `physics.js`): the deck and the gutters give back 0.2 of
+it, the kickbacks 0.6 (a pin off the kickback is what a hall calls a messenger), the pit none: its carpet
+and its hanging cushion stop a pin (until 2026-11-23 they were as hard as the kickbacks, and the pins
+hopped in the pit in view over the end of the deck). The cushion takes the ball as before.
+
+**The drawn pin** (`pinmesh.js`) is closed: the outline turned on a lathe from the middle of the base, the
+corner of the base taken off as a real pin's 5/32 in edge is on the game's own pins (1,008 triangles, 952
+before), sharp on the neighbours' (280, as before). Until 2026-11-23 the lathe began at the edge of the
+base, so a pin was open underneath, and with the inside not drawn the lane showed through it. The lathe's
+own normals are kept (the base is shaded flat, and the seam up the pin is gone). The collision shape is
+not touched.
 
 ## The lane TV
 
@@ -510,7 +583,7 @@ mixing itself runs on the browser's audio thread, not in the frames.
 | always, after the first tap | the hall's room tone: the ventilation, far below everything else (no talkers) | a 12 s seamless loop of low-passed noise (160 Hz, about -44 dBFS) |
 | the player's ball | its roll, from the real speed (level, brightness) and position (fainter towards the pins), with a beat at its rotation rate (about 10 per second at 7 m/s); a hollow rattle in the gutter | looped noise, filtered every frame from the physics; the ball carried up the approach is quieter |
 | a machine player's release | the ball landing on the lane | a low thud |
-| the ball at the pins | an impact for every hit the physics reports: the ball meeting a pin, a pin against a pin, a pin falling on the deck, against the kickback, into the pit, the ball into the cushion. More pins falling, more impacts: in two full games a ball averaged 2 impacts with no pin down, 13 for one pin, 48 for seven and 68 for a strike (at most 8 a frame, 5 on a phone: the loudest) | modal synthesis: the pin's decaying modes (0.7-6 kHz, damped in 6-55 ms) and a click; a pin on the deck, the kickback and the pit lower and duller |
+| the ball at the pins | an impact for every hit the physics reports: the ball meeting a pin, a pin against a pin, a pin falling on the deck, against the kickback, into the pit, the ball into the cushion. More pins falling, more impacts: in two full games a ball averaged 1.5 impacts with no pin down, 7 for one pin, 41 for eight and 49 for a strike (at most 8 a frame, 5 on a phone: the loudest) | modal synthesis: the pin's decaying modes (0.7-6 kHz, damped in 6-55 ms) and a click; a pin on the deck, the kickback and the pit lower and duller |
 | the ball at rest | the pinsetter: the sweep drops, the rake takes the deadwood to the pit, the deck sets a new rack (after a strike or a frame) or lifts and respots the leave; then the ball comes back on the return, with a clack on the rack | motors (the 100 Hz mains hum and a gliding gearbox whine), metal clunks, scraping, pin knocks; from the pin deck, 18 m away, with more reverb |
 | the hall's far lanes | when the hall shows a ball on a lane further away (`hall.js`, every 3.5-9.5 s), it is heard rolling, its pins crash as the hall's pins fall (louder for more pins), and its pinsetter sweeps as the hall's rake does | the hall's own events are read each frame (nothing in `hall.js` is changed); placed left or right by the lane's place |
 | the bumpers | the rails rising or lowering (a motor, two stops); a ball against a rail | from the shared game events `bumpersUp`, `bumpersDown`, `bumperHit` |
@@ -932,6 +1005,8 @@ teams, points, pins, leader) is printed by the test.
 | `node tests/swipe_test.mjs` | the grip-and-release throw with synthetic pointer events, each with its own `timeStamp`: the ball speed rises with the release speed on the curve above, a release slower than 50 mm/s does not throw and a short quick flick is too weak; the same finger speed gives the same ball on nine real phones, tablets and touch screens in portrait and landscape (real pixel densities, within 4 %) and with a mouse; the release decides (a stroke that slows or speeds up at the end, a turn at the end sets the line), a pull-back adds nothing; a straight push gives no spin and a straight line; a slow drag and lift moves the ball without a throw (also forward), a sideways or backward release, a finger that stopped before it lifted and a tap never throw; a quick stroke throws from where the ball stood and leaves the stance there, a slow drag first moves it; the drag is clamped to the approach, the modes the hints get, the arrow keys; standing 4 m back gives the same lane speed and line; a curve left spins the ball to hook left in the back end (right: right), a little, and the same curve hooks further and enters steeper on a slower ball; the input adds no `devicemotion` or `deviceorientation` listener; on a slow device (6, 10 and 20 frames a second: the events handled in bursts, coalesced, the pointer-up a frame late) a swipe throws exactly as fast as at full frame rate, a rest before a quick flick does not slow it; a touch whose pointer stream the browser cancels while it goes on delivering touch events still throws |
 | `node tests/grip_browser.mjs <w> <h> <touch 0\|1> [lang] [outDir] [baseUrl]` | the grip throw in headless Edge with real pointer input: the hint near the ball (clear of the ball, the aim line, the status line, the buttons, the TVs and the ball speed), the hand on the ball at the press and while it is dragged, a slow drag that moves the ball without a throw, a sideways release, a straight push (no spin), a curved swipe (side spin, the body turning about its direction of travel, the path hooking in the back end), "wait for your turn" while the ball rolls and during a machine player's turn; no motion sensor used: the page never adds a `devicemotion` or `deviceorientation` listener nor calls `requestPermission` (recorded from the first script on the page; touch runs are an Android phone with Chromium's sensor emulation on), and the start help and the settings say nothing about swinging or twisting the phone; an older visit's swing settings (`throwMode`, the `vbg.motion*` keys) are ignored and cleaned; a player's turn end to end: the ball moved to the pocket board by a slow drag, then pushed straight, ball after ball until the game scores a strike or a spare (and the score sheet has it); screenshots in outDir |
 | `node tests/physics_tune.mjs` | pin action at the classic impact points (pocket, light, high, head-on, Brooklyn, straight ball); the low level's budget for the pin crash only takes time away (exactly one sub-step a frame when it runs out at once; the pocket hit's strike rate stepped that way) |
+| `node tests/pin_bounce_test.mjs` | the pins bounce no more than pins do, with the frame times of 60, 75, 90, 120 and 144 Hz displays, a 1 ms clock (Safari's) and uneven frames: a pin dropped on the deck comes up with a fraction of its landing speed; four throws on one lane leave the same pins after the same time on every display; from 1 s after the impact on no energy is made and nothing is thrown up on the deck and in the gutters; a re-racked pin has a new pin's inertia; a machine player's late pins fall without flying; the pit takes a pin; what is drawn moves evenly. The physics before 2026-11-23 fails the first six |
+| `node tests/pinmesh_test.mjs` | the drawn pins, the game's and the neighbours': closed all round (every edge shared by two triangles; the old mesh, open underneath, is found open), outside out, a flat base shaded flat, on the outline the pins collide with, the stripes, the triangle count |
 | `node tests/warmup_test.mjs` | the warm-up in balls, frames and minutes as OpenPlay plays it (nothing on the sheet / the frame on the sheet and wiped / the clock, the stop picture and the serie), the turn passed, End practice on the console (only on a lane practising; an American pair ends both lanes, bowlers 0 and 8), a tenth-frame game after a warm-up (ball 0 by OpenPlay's own end, ball 18 by End practice), and **not scored**: the same game balls give the same sheet and totals with and without a warm-up (EUR and AMR, balls and frames); the game's ball loop (`LaneGame` with a stand-in App): a ball still rolling when End practice or the clock ends the warm-up is not scored (balls, frames, minutes, the player's ball and a machine player's) |
 | `node tests/bumper_test.mjs [throws=120]` | balls released at the gutters (both sides, hook and none, 3.5-8.5 m/s): with the bumpers up **none ends in the gutter**, nearly all meet a bumper and take pins, the ball's centre stays inside the rails; the same balls with the bumpers down go into the gutter and touch no rail; a second ball into the same rail is heard as the first (the bumper-hit clock starts again at each release); the slowest balls (3.3-4.2 m/s) at the rails all reach the pins (none ended short while still rolling; a ball that has stopped moving forward is ended where it is); machine players with bumpers throw **no gutter ball** in 20,000 first balls at averages 80, 100 and 130, and without bumpers draw exactly as before; the `+C` mark as `IsBowlerUsingBumper` reads it, players.json's `bump`, and Ändra spelare setting and clearing it |
 | `node tests/wall_play.mjs <open\|vbst\|minutes\|layout\|hint\|anim> <w> <h> <touch 0\|1> [outDir] [baseUrl] [lang]` | the TV wall, the console, the bumpers and the warm-up played in headless Edge with real pointer input (`tests/cdp.mjs`: swipes and taps by the DevTools protocol, each event with its own time) from the sub-path `/games/VikingBowling/`; checks the lane file, the TV and the layout, and lists every exception and failed request (see "The TV wall" for the results) |
@@ -978,10 +1053,15 @@ by `node tools/vendor.mjs`, because a static host (GitHub Pages) does not serve
 ## Known gaps
 
 * **Pin action is believable, not exact.** In the physics the best line (the ball meeting
-  the head pin about 11-12 cm right of centre with 5-6 degrees of entry angle) strikes
-  roughly 35-40 % of the time, where real bowlers carry more, and it sits a little right
-  of the textbook pocket (6-7 cm). Pocket hits leave the classic corner pins (7, 10),
-  head-on hits split, light hits leave the 10-pin side (`tests/physics_tune.mjs`).
+  the head pin 8-10 cm right of centre with 6 degrees of entry angle, 8 m/s) strikes 53-55 %
+  of the time (200 throws a line) and the textbook pocket (6-7 cm) 50 %, where real bowlers
+  carry more. Pocket hits leave the classic corner pins (7, 10), head-on hits split, light hits
+  leave the 7-pin side (`tests/physics_tune.mjs`).
+  A pin sliding on the deck stops at once (2 m/s in 0.06 s; at the friction set, 0.18, it would
+  slide for a second): cannon-es takes the friction's limit, a force, as the impulse of a
+  sub-step. With the limit put right the pins carry far more (24 throws a line: 54-67 % at the
+  pocket with a hook, 79-96 % with a straight ball) and do not hop less, so it is left: the pin
+  action was tuned with it.
   A slower ball deflects more and carries less (see "Deflection" under "The throw"): the
   deck's hold on a standing pin is a phenomenological model, sized by judgement, as no
   published measurement of deflection against ball speed was found; in an ideal impulse

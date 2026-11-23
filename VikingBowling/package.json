@@ -11,6 +11,8 @@
     "test:vbst": "node tests/vbst_formats.mjs 7",
     "test:swipe": "node tests/swipe_test.mjs",
     "test:physics": "node tests/physics_tune.mjs",
+    "test:pins": "node tests/pin_bounce_test.mjs",
+    "test:pinmesh": "node tests/pinmesh_test.mjs",
     "test:warmup": "node tests/warmup_test.mjs",
     "test:bumpers": "node tests/bumper_test.mjs",
     "test:loading": "node tests/loading_test.mjs",

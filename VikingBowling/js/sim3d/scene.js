@@ -5,7 +5,8 @@
 // ---------------------------------------------------------------------------
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { LANE, PIN_PROFILE, PIN_SPOTS } from './physics.js';
+import { LANE, PIN_SPOTS } from './physics.js';
+import { pinGeometry } from './pinmesh.js';
 import { Hall, autoDetail, REFLECT_LAYER, LANE_TV_SIZE, blobTexture } from './hall.js';
 
 const _bm = new THREE.Matrix4(), _bv = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bs = new THREE.Vector3();
@@ -149,24 +150,6 @@ function ballTexture(hue = 0.6) {
     g.fillStyle = '#0a0a0a';
     for (const [x, y, r] of [[W * 0.25, H * 0.32, 10], [W * 0.28, H * 0.32, 10], [W * 0.265, H * 0.42, 12]]) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
   });
-}
-
-// The pin: a lathe of the real outline, white with the two red neck stripes
-function pinGeometry() {
-  const pts = [];
-  const add = (y, r) => pts.push(new THREE.Vector2(Math.max(r, 0.0005), y));
-  for (const [y, r] of PIN_PROFILE) add(y, r);
-  const geo = new THREE.LatheGeometry(pts.sort((a, b) => a.y - b.y), 28);
-  const colors = [];
-  const pos = geo.getAttribute('position');
-  for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i);
-    const red = (y > 0.226 && y < 0.239) || (y > 0.246 && y < 0.259);
-    colors.push(red ? 0.75 : 1, red ? 0.05 : 1, red ? 0.07 : 1);
-  }
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-  geo.computeVertexNormals();
-  return geo;
 }
 
 export class BowlingScene {
@@ -371,7 +354,7 @@ export class BowlingScene {
       const m = l.pins[i];
       m.visible = p.active && p.body.position.y > -0.6;
       // the body's origin is the centre of mass; the mesh's is the base
-      const b = p.body;
+      const b = physics.drawn(p.body);
       const off = new THREE.Vector3(0, -0.150, 0).applyQuaternion(new THREE.Quaternion(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w));
       m.position.set(b.position.x + off.x, b.position.y + off.y, b.position.z + off.z);
       m.quaternion.set(b.quaternion.x, b.quaternion.y, b.quaternion.z, b.quaternion.w);
@@ -381,7 +364,7 @@ export class BowlingScene {
       const sb = this.pinBlobs && m.visible && up > 0.85 && m.position.y > -0.05 && m.position.y < 0.08 ? 0.17 : 0;
       this.blobs.setMatrixAt(laneNumber * 11 + i, _bm.compose(_bv.set(m.position.x, 0.0015, m.position.z), _bq, _bs.set(sb || 1e-5, 1, sb || 1e-5)));
     });
-    const bb = physics.ball;
+    const bb = physics.drawn(physics.ball);
     l.ball.position.set(bb.position.x, bb.position.y, bb.position.z);
     l.ball.quaternion.set(bb.quaternion.x, bb.quaternion.y, bb.quaternion.z, bb.quaternion.w);
     // the ball's blob, on the lane, the approach or in the gutter: under its lowest point, fading as it leaves the surface

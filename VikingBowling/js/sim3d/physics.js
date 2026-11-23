@@ -67,6 +67,10 @@ const PIN_SAMPLES = [0.02, 0.06, 0.10, 0.12, 0.15, 0.19, 0.24, 0.30, 0.345];
 export const TUNE = {
   pinPinFriction: 0.15, pinPinRestitution: 0.85, pinLaneFriction: 0.18, pinLaneRestitution: 0.2,
   wallRestitution: 0.6, pinLinearDamping: 0.05, pinAngularDamping: 0.12, ballPinRestitution: 0.75,
+  // the pit: a carpet and a hanging cushion that stop a pin instead of throwing it back. pitRelaxation:
+  // how slowly (cannon's contactEquationRelaxation; the hard surfaces have 3) the overlap of a pin that
+  // comes in fast is let out - at 3 it alone throws the pin back at up to a quarter of its speed
+  pitRestitution: 0, pitRelaxation: 12,
   // the deck's hold on a standing pin (ballPinContacts): a ball meeting it slower than
   // pinHoldSpeed (m/s) meets a pin that is effectively 1 + pinHold * (pinHoldSpeed / speed - 1) times heavier
   pinHold: 2.0, pinHoldSpeed: 6.0
@@ -112,15 +116,17 @@ export class LanePhysics {
 
     const M = this.mat = {
       lane: new CANNON.Material('lane'), ball: new CANNON.Material('ball'),
-      pin: new CANNON.Material('pin'), wall: new CANNON.Material('wall')
+      pin: new CANNON.Material('pin'), wall: new CANNON.Material('wall'), pit: new CANNON.Material('pit')
     };
-    const cm = (a, b, friction, restitution) => world.addContactMaterial(new CANNON.ContactMaterial(a, b, { friction, restitution, contactEquationStiffness: 5e7, contactEquationRelaxation: 3 }));
+    const cm = (a, b, friction, restitution, relaxation = 3) => world.addContactMaterial(new CANNON.ContactMaterial(a, b, { friction, restitution, contactEquationStiffness: 5e7, contactEquationRelaxation: relaxation }));
     cm(M.ball, M.lane, 0.0, 0.0);      // the ball's lane contact is ours (applyLaneFriction)
     cm(M.ball, M.pin, 0.05, 0.85);
     cm(M.pin, M.pin, TUNE.pinPinFriction, TUNE.pinPinRestitution);
     cm(M.pin, M.lane, TUNE.pinLaneFriction, TUNE.pinLaneRestitution);
     cm(M.pin, M.wall, 0.20, TUNE.wallRestitution);
     cm(M.ball, M.wall, 0.10, 0.30);
+    cm(M.pin, M.pit, 0.20, TUNE.pitRestitution, TUNE.pitRelaxation);
+    cm(M.ball, M.pit, 0.10, 0.30);
 
     const box = (hx, hy, hz, x, y, z, mat) => {
       const b = new CANNON.Body({ mass: 0, material: mat });
@@ -141,8 +147,8 @@ export class LanePhysics {
       box(0.02, 0.35, 1.3, side * (W / 2 + G + 0.02), 0.35, -LANE.headPin - 0.55, M.wall);
     }
     // the pit: a floor well below the deck, the cushion at the back
-    box(W / 2 + G + 0.1, 0.05, 0.6, 0, -0.35, deckEnd - 0.6, M.wall);
-    box(W / 2 + G + 0.1, 0.5, 0.05, 0, 0.2, deckEnd - 0.95, M.wall);
+    box(W / 2 + G + 0.1, 0.05, 0.6, 0, -0.35, deckEnd - 0.6, M.pit);
+    box(W / 2 + G + 0.1, 0.5, 0.05, 0, 0.2, deckEnd - 0.95, M.pit);
     // the bumpers: a padded rail over each gutter, its face just outside the lane edge, from a
     // little past the foul line to the end of the pin deck. Down (in the gutter, out of reach)
     // until setBumpers(true) raises them; a ball meeting one comes back onto the lane.
@@ -195,6 +201,7 @@ export class LanePhysics {
     this.resetPins(0x3FF);
     this.state = 'idle';
     this.time = 0;
+    this.ahead = 0;                       // how far the sub-steps have run ahead of the frames (step)
     this.events = [];
   }
 
@@ -218,10 +225,10 @@ export class LanePhysics {
       b.collisionFilterGroup = this.pinGroup;
       b.collisionFilterMask = 1;
       b.type = CANNON.Body.DYNAMIC;
-      b.mass = LANE.pinMass; b.updateMassProperties();
       b.velocity.setZero(); b.angularVelocity.setZero();
+      // upright first: cannon takes the inertia from the box round the pin as it lies in the world
       b.quaternion.set(0, 0, 0, 1);
-      b.updateInertiaWorld(true);
+      b.mass = LANE.pinMass; b.updateMassProperties();
       if (p.active) {
         b.position.set(this.laneX + PIN_SPOTS[i][0], PIN_COM + 0.0005, PIN_SPOTS[i][1]);
         b.collisionResponse = true;
@@ -248,6 +255,7 @@ export class LanePhysics {
   // hook, the speed and the aim line are the same wherever the bowler stands.
   release(params) {
     const z0 = params.z0 || 0;
+    this.ahead = 0;
     if (z0 > 0.1 && !params.forced) {
       const b = this.ball, R = LANE.ballRadius;
       this.carried = { ...params };
@@ -528,19 +536,26 @@ export class LanePhysics {
   }
 
   // Advance the simulation by dt (seconds). Returns the state.
+  // Every sub-step is this.dt long, whatever the frame: the last one may run ahead of the frame, and the
+  // next frame then needs that much less (`ahead`; drawn() takes it back off what is shown). So a throw is
+  // the same on every display. And a frame must never end in a short remainder step: cannon's contacts push
+  // an overlap out at a speed that grows as the step shrinks (4 / (13 h) times the overlap), and a pin that
+  // lands overlaps the deck by the few mm it came in that sub-step. A 0.03 ms remainder (a 60 Hz display's
+  // 16.7 ms frame) right after it threw the pin up at 0.6 of its landing speed, up to 1.4 of it, where a
+  // whole step gives 0.3 - so the pins went on hopping, some of them metres high (tests/pin_bounce_test.mjs).
   // budgetMs: stop after this much time and drop the rest of dt. The simulation then runs slower than
   // real time for that frame instead of holding the frame up - the pin crash on a phone's CPU (the low
   // detail level, main.js). The sub-steps themselves are unchanged: the physics is the same, the crash
   // only takes longer.
   step(dt, budgetMs = 0) {
-    let left = dt;
+    const h = this.dt;
+    this.ahead -= dt;
     const t0 = budgetMs > 0 ? performance.now() : 0;
-    while (left > 1e-9) {
-      const h = Math.min(this.dt, left);
+    while (this.ahead < -1e-9) {
       const carried = this.state === 'approach';
       if (!carried && this.state !== "idle" && this.state !== "done") { this.applyLaneFriction(h); this.ballPinContacts(); this.pinPinContacts(); }
       this.world.step(h);
-      left -= h;
+      this.ahead += h;
       if (carried) {
         // up the approach to the foul line, then the release
         if (this.ball.position.z <= -0.05) this.launch(this.carried);
@@ -548,9 +563,22 @@ export class LanePhysics {
       }
       this.time += h;
       this.watch(h);
-      if (budgetMs > 0 && performance.now() - t0 > budgetMs) break;
+      if (budgetMs > 0 && performance.now() - t0 > budgetMs) { this.ahead = Math.max(0, this.ahead); break; }
     }
     return this.state;
+  }
+
+  // Where a body is at the frame's own time, for drawing: while the ball is out the sub-steps run up to
+  // one ahead of it, so that much back towards where the body was before the last one. Without it the
+  // ball's steps down the lane are uneven on a display whose frames are not a whole number of sub-steps
+  // (75 Hz: 4.8). The same object every call.
+  drawn(b) {
+    const out = this.drawnAt || (this.drawnAt = { position: new CANNON.Vec3(), quaternion: new CANNON.Quaternion() });
+    const moving = this.state === 'approach' || this.state === 'rolling' || this.state === 'deck';
+    const k = moving ? Math.max(0, Math.min(1, this.ahead / this.dt)) : 0;
+    b.position.lerp(b.previousPosition, k, out.position);
+    b.quaternion.slerp(b.previousQuaternion, k, out.quaternion);
+    return out;
   }
 
   // h: the sub-step just taken (s)
@@ -594,7 +622,9 @@ export class LanePhysics {
       b.wakeUp();
       const dx = (b.position.x - this.laneX) - (this.entry ? this.entry.x * 0.3 : 0);
       const dirx = Math.sign(dx || (i % 2 ? 1 : -1)) * (0.4 + Math.random() * 0.6);
-      b.applyImpulse(new CANNON.Vec3(dirx * 1.6, 0.3, -1.4 - Math.random()), new CANNON.Vec3(b.position.x, b.position.y + 0.17, b.position.z));
+      // at the pin's head. The point is from the centre of mass (not in the world: 18 m down the lane
+      // that is an 18 m lever, which spun the pins at thousands of rad/s and threw them metres up)
+      b.applyImpulse(new CANNON.Vec3(dirx * 1.6, 0.3, -1.4 - Math.random()), new CANNON.Vec3(0, 0.17, 0));
     });
   }
 
