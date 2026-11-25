@@ -3,6 +3,8 @@
 (function (root) {
   'use strict';
   const { Tiles: T, Rules: R, Game, AI, Art, Scene } = root.MJ;
+  // 刚更新时浏览器里可能还是旧的 index.html，没有载入 voice.js：那就不说话，照样能玩
+  const Voice = root.MJ.Voice || { forEvent: () => [], Speaker: class { say() {} announce() {} unlock() {} stop() {} } };
   const $ = (id) => document.getElementById(id);
 
   const params = new URLSearchParams(location.search);
@@ -64,35 +66,37 @@
     saveTotals();
   }
 
-  /** 开始画面：有累计的话列出各家总输赢和「清零」。 */
+  /** 开始画面：列出各家总输赢，下面是「所有玩家积分清零」。 */
   function renderTotalsLine() {
-    const line = $('totalsLine');
-    line.hidden = score.hands === 0;
-    if (line.hidden) return;
-    $('totalsText').innerHTML = '总输赢（已打 ' + score.hands + ' 局）：' + NAMES.map((n, s) =>
+    $('totalsText').innerHTML = '<span class="title">总输赢（已打 ' + score.hands + ' 局）：</span>' + NAMES.map((n, s) =>
       '<span class="who">' + n + ' <b class="' + signClass(score.totals[s]) + '">' + signed(score.totals[s]) + '</b></span>').join('');
   }
 
   function wireTotals() {
     const btn = $('btnResetTotals');
-    let armed = null;
+    let step = 'idle'; // idle -> armed（等第二下）-> done（刚清零）-> idle
+    let timer = null;
     let armedAt = 0;
+    const show = (s, text, ms) => {
+      step = s;
+      btn.textContent = text;
+      btn.classList.toggle('armed', s === 'armed');
+      clearTimeout(timer);
+      if (ms) timer = setTimeout(() => show('idle', '所有玩家积分清零'), ms);
+    };
     // 点两下才清零，免得点「开始」时误碰；第二下要隔半秒以上，手抖连点两下不算
     btn.addEventListener('click', () => {
-      if (!armed) {
-        btn.textContent = '确定清零？';
+      if (step === 'idle') {
         armedAt = performance.now();
-        armed = setTimeout(() => { armed = null; btn.textContent = '清零'; }, 4000);
+        show('armed', '再按一次确认清零', 4000);
         return;
       }
-      if (performance.now() - armedAt < 500) return;
-      clearTimeout(armed);
-      armed = null;
-      btn.textContent = '清零';
+      if (step !== 'armed' || performance.now() - armedAt < 500) return;
       score = { totals: [0, 0, 0, 0], hands: 0 };
       saveTotals();
       renderTotalsLine();
       refreshPlates();
+      show('done', '积分已清零', 2000);
     });
     // 另一个标签页里也在打（或清了零）：跟着它存的数走，下一局在它的基础上加
     addEventListener('storage', (e) => {
@@ -115,6 +119,7 @@
   }
   /** 只在用户点击时解锁声音：没有手势时调 resume() 不会成功，那个请求会一直挂着。切后台回来声音停了，下一次点击也从这里恢复。 */
   function unlockAudio() {
+    voice.unlock();
     const a = ctx();
     if (a && a.state !== 'running' && a.state !== 'closed') a.resume().catch(() => {});
   }
@@ -164,6 +169,12 @@
       default: break;
     }
   }
+
+  // ---- 语音（说什么、用谁的声音见 voice.js）------------------------------------
+  const voice = new Voice.Speaker({ isOn: () => soundOn && !document.hidden });
+  const speak = (e) => voice.announce(Voice.forEvent(e));
+  document.addEventListener('visibilitychange', () => { if (document.hidden) voice.stop(); });
+  addEventListener('pagehide', () => voice.stop());
 
   // ---- 记录与提示 ------------------------------------------------------------
   function log(text, big) {
@@ -251,6 +262,7 @@
         await scene.rollDice(e.dice[0], e.dice[1]);
         log('骰子 ' + e.dice[0] + ' + ' + e.dice[1] + (e.kaibao ? '，开宝！本局翻倍' : ''));
         if (e.kaibao) callWord(e.dealer, '开宝', '');
+        speak(e);
         await sleep(280);
         break;
       }
@@ -285,6 +297,7 @@
         break;
       case 'flower':
         state.pub[e.seat].flowers = e.count;
+        speak(e);
         await scene.flower(e.seat, e.id, e.kind);
         log(NAMES[e.seat] + ' 补花 ' + T.name(e.kind));
         refreshPlates();
@@ -303,6 +316,7 @@
         break;
       case 'kongAttempt':
         log(NAMES[e.seat] + ' 想加杠 ' + T.name(e.kind));
+        speak(e);
         await scene.kongAttempt(e.seat, e.id, e.kind);
         await sleep(350);
         break;
@@ -312,6 +326,7 @@
         if (e.from !== e.seat && e.claimedId !== null && !e.upgrade) state.pub[e.from].discards--;
         callWord(e.seat, word, '');
         sound(e.mtype === 'gang' ? 'kong' : 'call');
+        speak(e);
         await scene.meld(e);
         const what = e.kinds ? e.kinds.map(T.name).join(' ') : '（暗）';
         log(NAMES[e.seat] + ' ' + word + (e.sub === 'an' && !e.kinds ? '' : ' ' + what));
@@ -321,8 +336,10 @@
       }
       case 'sankou':
         log(NAMES[e.a] + ' 和 ' + NAMES[e.b] + ' 成三口（包牌）', true);
+        speak(e);
         break;
       case 'handEnd':
+        speak(e);
         await onHandEnd(e.result);
         break;
       default: break;
@@ -433,7 +450,10 @@
       }
       // 上家打的牌不要，接下来就轮到你摸牌：按钮叫「抓牌」；别家打的牌放过并不轮到你，叫「过」
       const drawNext = (claim.from + 1) % 4 === view.seat && view.wallRemaining > 0;
-      bar.appendChild(actionButton('pass', drawNext ? '抓牌' : '过', '', () => finish({ type: 'pass' })));
+      bar.appendChild(actionButton('pass', drawNext ? '抓牌' : '过', '', () => {
+        voice.say(drawNext ? 'zhuapai' : 'guo', view.seat);
+        finish({ type: 'pass' });
+      }));
       bar.hidden = false;
       setHint(NAMES[claim.from] + ' 打出 ' + T.name(claim.kind));
     });
@@ -450,7 +470,10 @@
         if (p) p.resolve(act);
       };
       bar.appendChild(actionButton('hu', '拉杠胡', huLabel(info.preview) + ' ×3', () => finish({ type: 'hu' }), [info.kind]));
-      bar.appendChild(actionButton('pass', '过', '', () => finish({ type: 'pass' })));
+      bar.appendChild(actionButton('pass', '过', '', () => {
+        voice.say('guo', view.seat);
+        finish({ type: 'pass' });
+      }));
       bar.hidden = false;
       setHint(NAMES[info.from] + ' 在加杠 ' + T.name(info.kind) + '，可以拉杠胡');
     });
@@ -858,6 +881,8 @@
     $('btnSound').addEventListener('click', () => {
       soundOn = !soundOn;
       $('btnSound').innerHTML = '<span class="lbl">声音：</span>' + (soundOn ? '开' : '关');
+      if (soundOn) voice.unlock();
+      else voice.stop();
     });
     $('btnViewTable').addEventListener('click', () => {
       $('resultScreen').hidden = true;

@@ -1,10 +1,11 @@
-/* 规则、裁判、AI 公平性的无界面测试： node tests/run_tests.js [模拟局数] */
+/* 规则、裁判、AI 公平性、语音的无界面测试： node tests/run_tests.js [模拟局数] */
 'use strict';
 const assert = require('assert');
 const T = require('../js/tiles.js');
 const R = require('../js/rules.js');
 const { Hand } = require('../js/game.js');
 const AI = require('../js/ai.js');
+const Voice = require('../js/voice.js');
 
 const K = {
   w: (n) => n - 1,
@@ -485,6 +486,374 @@ const filler = {
     const src = require('fs').readFileSync(require.resolve('../js/ai.js'), 'utf8');
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
     assert.ok(!/Math\.random|crypto|game\.js|\bHand\b/.test(code), 'AI 不该用随机数或碰裁判');
+  });
+
+  // ---- 语音 ------------------------------------------------------------------
+  const src = (f) => require('fs').readFileSync(require.resolve('../js/' + f), 'utf8');
+  const voiceOf = (name, lang, localService) => ({ name, lang, localService: localService !== false, voiceURI: name + lang });
+  const XT = voiceOf('Microsoft Xiaotong Online (Natural)', 'wuu-CN', false);
+  const YZ = voiceOf('Microsoft Yunzhe Online (Natural)', 'wuu-CN', false);
+  const HH = voiceOf('Microsoft Huihui', 'zh-CN');
+  const XX = voiceOf('Microsoft 晓晓 Online (Natural)', 'zh-CN', false);
+  const TW = voiceOf('Microsoft Hanhan', 'zh-TW');
+  const HK = voiceOf('Microsoft Tracy', 'zh-HK');
+  const SV = voiceOf('Microsoft Bengt', 'sv-SE');
+
+  /** 假的 speechSynthesis：记下要说的话，什么时候出声、说完由测试决定。 */
+  function voiceRig(voices, extra) {
+    const r = { t: 0, on: true, online: true, log: [], cancels: 0, timers: [], voices };
+    class U { constructor(text) { this.text = text; this.volume = 1; } }
+    const opts = {
+      isOn: () => r.on,
+      synth: {
+        getVoices: () => r.voices,
+        speak: (u) => r.log.push(u),
+        cancel: () => {
+          r.cancels++;
+          const u = r.log[r.log.length - 1];
+          if (u && u.onerror) u.onerror({ error: 'canceled' });
+        },
+      },
+      Utterance: U,
+      now: () => r.t,
+      setTimer: (f, ms) => { const x = { f, at: r.t + ms, off: false }; r.timers.push(x); return x; },
+      clearTimer: (x) => { x.off = true; },
+      online: () => r.online,
+      ...extra,
+    };
+    r.v = new Voice.Speaker(opts);
+    r.said = () => r.log.filter((u) => u.text).map((u) => u.text);
+    r.last = () => r.log[r.log.length - 1];
+    r.start = () => r.last().onstart();
+    r.end = () => r.last().onend();
+    r.wait = (ms) => {
+      const end = r.t + ms;
+      for (;;) {
+        const due = r.timers.filter((x) => !x.off && x.at <= end).sort((a, b2) => a.at - b2.at)[0];
+        if (!due) break;
+        due.off = true;
+        r.t = due.at;
+        due.f();
+      }
+      r.t = end;
+    };
+    return r;
+  }
+  const ready = (voices, extra) => { const r = voiceRig(voices, extra); r.v.unlock(); return r; };
+
+  test('语音表：每句都是简体中文，短', () => {
+    for (const [k, text] of Object.entries(Voice.PHRASES)) {
+      assert.ok(/^[一-鿿]{1,4}[！。]$/.test(text), k + ' ' + text);
+      assert.ok(!/[過槓補開寶暗碰杠]/.test(text.replace(/[暗碰杠]/g, '')), k + ' 不是简体 ' + text);
+    }
+  });
+  test('语音表：裁判的每种事件、每种胡法、每个按钮都有话说（发牌、摸牌、打牌、轮到谁不说）', () => {
+    const game = src('game.js');
+    const types = new Set([...game.matchAll(/#emit\(\{\s*type: '(\w+)'/g)].map((m) => m[1]));
+    const silent = ['deal', 'dealDone', 'handReady', 'draw', 'turn', 'discard'];
+    const speaks = ['handStart', 'flower', 'kongAttempt', 'meld', 'sankou', 'handEnd'];
+    assert.deepEqual([...types].sort(), [...silent, ...speaks].sort());
+    for (const x of silent) assert.deepEqual(Voice.forEvent({ type: x, seat: 1 }), [], x);
+    const say = (e) => Voice.forEvent(e).map((l) => [Voice.PHRASES[l.key], l.seat]);
+    assert.deepEqual(say({ type: 'handStart', dealer: 2, kaibao: true }), [['开宝！', 2]]);
+    assert.deepEqual(say({ type: 'handStart', dealer: 2, kaibao: false }), []);
+    assert.deepEqual(say({ type: 'flower', seat: 3 }), [['补花！', 3]]);
+    assert.deepEqual(say({ type: 'kongAttempt', seat: 1 }), [['加杠！', 1]]);
+    assert.deepEqual(say({ type: 'meld', seat: 1, mtype: 'chi' }), [['吃！', 1]]);
+    assert.deepEqual(say({ type: 'meld', seat: 2, mtype: 'peng' }), [['碰！', 2]]);
+    assert.deepEqual(say({ type: 'meld', seat: 2, mtype: 'gang', sub: 'ming' }), [['杠！', 2]]);
+    assert.deepEqual(say({ type: 'meld', seat: 2, mtype: 'gang', sub: 'an' }), [['暗杠！', 2]]);
+    assert.deepEqual(say({ type: 'meld', seat: 2, mtype: 'gang', sub: 'jia' }), []); // 推出来的时候喊过了
+    assert.deepEqual(say({ type: 'sankou', a: 1, b: 2 }), [['三口！', 1]]);
+    const end = (...winners) => say({ type: 'handEnd', result: { type: 'win', winners: winners.map(([seat, how, ...patterns]) => ({ seat, how, score: { patterns } })) } });
+    assert.deepEqual(say({ type: 'handEnd', result: { type: 'draw', winners: [] } }), [['流局！', 0]]);
+    assert.deepEqual(end([1, 'zimo', '清一色']), [['自摸！', 1]]);
+    assert.deepEqual(end([1, 'ron', '混一色'], [3, 'ron', '碰碰胡']), [['胡了！', 1], ['胡了！', 3]]);
+    assert.deepEqual(end([2, 'rob', '混一色', '拉杠胡']), [['拉杠胡！', 2]]);
+    assert.deepEqual(end([2, 'qizhuoyi', '七捉一']), [['七捉一！', 2]]);
+    assert.deepEqual(end([2, 'zimo', '八花']), [['八花！', 2]]);
+    assert.deepEqual(end([0, 'zimo', '天胡', '清一色']), [['天胡！', 0]]);
+    assert.deepEqual(end([0, 'ron', '地胡', '混一色']), [['地胡！', 0]]);
+    const hows = new Set([...game.matchAll(/how: '(\w+)'/g)].map((m) => m[1]));
+    assert.deepEqual([...hows].sort(), ['qizhuoyi', 'rob', 'ron', 'zimo']);
+    for (const h of hows) assert.ok(Voice.PHRASES[h], '胡法 ' + h);
+    // 按钮：建按钮的那几行里写的字，每个都要有一句
+    const app = src('app.js');
+    const labels = new Set();
+    for (const m of app.matchAll(/appendChild\(actionButton\('\w+', ([^\n]*?), (?:''|huLabel)/g)) for (const x of m[1].matchAll(/'([一-鿿]+)'/g)) labels.add(x[1]);
+    assert.deepEqual([...labels].sort(), ['加杠', '吃', '抓牌', '拉杠胡', '暗杠', '杠', '碰', '胡', '过'].sort());
+    for (const l of labels) assert.ok(Object.values(Voice.PHRASES).some((p) => p.replace(/了?[！。]$/, '') === l), '按钮「' + l + '」没有话');
+    const said = [...app.matchAll(/voice\.say\((.+), view\.seat\)/g)].flatMap((m) => [...m[1].matchAll(/'(\w+)'/g)].map((x) => x[1]));
+    assert.deepEqual([...new Set(said)].sort(), ['guo', 'zhuapai']);
+    assert.equal((app.match(/^\s+speak\(e\);$/gm) || []).length, speaks.length, '每种说话的事件都要在 app.js 里说一次');
+  });
+  await testAsync('语音表：真的打 60 局，每句要说的话都在表里', async () => {
+    const seen = {};
+    for (let i = 0; i < 60; i++) {
+      const ai = AI.createPlayer();
+      await new Hand({
+        dealer: i % 4, adapters: [ai, ai, ai, ai],
+        hook: (e) => {
+          for (const l of Voice.forEvent(e)) {
+            assert.ok(Voice.PHRASES[l.key], l.key);
+            assert.ok(l.seat >= 0 && l.seat < 4);
+            seen[l.key] = (seen[l.key] || 0) + 1;
+          }
+        },
+      }).run();
+    }
+    assert.ok(seen.peng && seen.chi && seen.buhua && seen.ron, JSON.stringify(seen));
+  });
+
+  test('声音：上海话 > 普通话 > 别的中文 > 粤语，不是中文的不用', () => {
+    const tiers = {
+      'wuu-CN': 0, wuu_CN: 0, 'zh-CN': 1, zh_CN: 1, zh: 1, 'zh-Hans-CN': 1, 'cmn-CN': 1, 'cmn-Hans-CN': 1, 'zho-CHN': 1,
+      'zh-CN-liaoning': 2, 'zh-TW': 2, 'zh-Hant-TW': 2, 'zh-SG': 2, 'zho-TWN': 2, 'zh-HK': 3, 'zho-HKG': 3, 'yue-Hant-HK': 3, 'zh-Hant-HK': 3,
+      'sv-SE': -1, 'ja-JP': -1, '': -1, 'zhx-XX': -1,
+    };
+    for (const [lang, tier] of Object.entries(tiers)) assert.equal(Voice.tierOf({ lang }), tier, lang);
+    const first = (...vs) => { const p = Voice.pickVoices(vs); return p && p[0].voice; };
+    assert.equal(first(SV, HK, TW, HH, XX, XT), XT);
+    assert.equal(first(SV, HK, TW, HH, XX, XT, YZ), YZ); // 四家都是男的，男声在前
+    assert.equal(first(SV, HK, TW, XX), XX);
+    assert.equal(first(XX, HH), HH); // 本机的在前
+    assert.equal(first(SV, HK, TW), TW);
+    assert.equal(first(SV, HK), HK);
+    assert.equal(first(SV), null);
+    assert.equal(first(), null);
+    assert.equal(first(voiceOf('Eddy (中文（中国大陆）)', 'zh-CN'), voiceOf('婷婷', 'zh-CN')).name, '婷婷');
+    assert.equal(first(voiceOf('Eddy (中文（中国大陆）)', 'zh-CN')).name, 'Eddy (中文（中国大陆）)');
+  });
+  test('声音：四家分得开，够四个声音各用各的，不够的用音高和语速分', () => {
+    const A = voiceOf('a', 'zh-CN'), B = voiceOf('b', 'zh-CN'), C = voiceOf('c', 'zh-CN');
+    for (const vs of [[HH], [XT, YZ], [HH, XX, A], [HH, XX, A, B, C]]) {
+      const p = Voice.pickVoices(vs);
+      assert.equal(p.length, 4);
+      assert.equal(new Set(p.map((x) => x.voice.voiceURI + x.pitch)).size, 4);
+      assert.equal(new Set(p.map((x) => x.voice.voiceURI)).size, Math.min(4, vs.length));
+      for (const x of p) assert.ok(x.pitch >= 0.5 && x.pitch <= 2 && x.rate >= 0.8 && x.rate <= 1.5);
+    }
+  });
+
+  test('说话：第一次点击之前不说；解锁的那句听不见', () => {
+    const r = voiceRig([HH]);
+    r.v.say('peng', 1);
+    assert.equal(r.log.length, 0);
+    r.v.unlock();
+    r.v.unlock();
+    assert.deepEqual(r.log.map((u) => [u.text, u.volume]), [['', 0]]);
+    r.v.say('peng', 1);
+    assert.deepEqual(r.said(), ['碰！']);
+    assert.equal(r.last().voice, HH);
+    assert.equal(r.last().lang, 'zh-CN');
+  });
+  test('说话：声音关着一句也不说（连解锁的空话也没有），关掉马上停', () => {
+    const r = voiceRig([HH]);
+    r.on = false;
+    r.v.unlock();
+    for (const k of Object.keys(Voice.PHRASES)) r.v.say(k, 0);
+    assert.equal(r.log.length, 0);
+    r.on = true;
+    r.v.unlock();
+    r.v.say('peng', 1);
+    r.v.say('chi', 2);
+    r.on = false;
+    r.v.stop();
+    assert.equal(r.cancels, 1);
+    r.wait(10000);
+    r.v.say('gang', 1);
+    assert.deepEqual(r.said(), ['碰！']);
+    r.on = true;
+    r.v.say('gang', 1);
+    assert.deepEqual(r.said(), ['碰！', '杠！']);
+  });
+  test('说话：没有 speechSynthesis、没有 Utterance、每个调用都出错，都不抛出', () => {
+    const boom = () => { throw new Error('boom'); };
+    const bad = [
+      { synth: null }, { Utterance: null }, { Utterance: boom }, { synth: {} },
+      { synth: { getVoices: boom, speak: boom, cancel: boom } },
+      { synth: { getVoices: () => null, speak: boom, cancel: boom } },
+      { synth: { getVoices: () => [HH], speak: (u) => { if (u.text) boom(); }, cancel: boom } },
+    ];
+    for (const extra of bad) {
+      const r = voiceRig([HH], extra);
+      r.v.unlock();
+      for (const k of Object.keys(Voice.PHRASES)) r.v.say(k, 3);
+      r.v.announce([{ key: 'ron', seat: 1 }, { key: 'ron', seat: 2 }]);
+      r.v.stop();
+      r.wait(99999);
+      assert.equal(r.said().length, 0);
+    }
+    const s = new Voice.Speaker({ isOn: () => true }); // 这个环境本来就没有
+    s.unlock();
+    s.say('peng', 0);
+    s.stop();
+  });
+  test('说话：没有中文声音就不说；声音晚载入的，载入以后就说', () => {
+    const r = ready([]);
+    r.v.say('peng', 1);
+    r.voices = [SV];
+    r.v.say('peng', 1);
+    assert.equal(r.said().length, 0);
+    r.voices = [SV, HH, XT];
+    r.v.say('chi', 1);
+    assert.deepEqual(r.said(), ['吃！']);
+    assert.equal(r.last().voice, XT);
+  });
+  test('排队：正在说的说完，排队的只留最新一句', () => {
+    const r = ready([HH]);
+    r.v.say('buhua', 0);
+    r.start();
+    r.v.say('buhua', 1);
+    r.v.say('peng', 2);
+    r.v.say('chi', 3);
+    assert.deepEqual(r.said(), ['补花！']);
+    r.wait(600);
+    r.end();
+    assert.deepEqual(r.said(), ['补花！', '吃！']);
+    r.start();
+    r.end();
+    assert.equal(r.said().length, 2);
+    assert.equal(r.cancels, 0);
+  });
+  test('排队：等得太久的不说，胡牌再久也说', () => {
+    const r = ready([HH]);
+    r.v.say('buhua', 0); // 迟迟不出声
+    r.v.say('peng', 1);
+    r.wait(1600);
+    r.start();
+    r.end();
+    assert.deepEqual(r.said(), ['补花！']);
+    r.v.say('zimo', 1);
+    r.v.say('ron', 2);
+    r.v.say('buhua', 3); // 不挤掉胡牌
+    r.wait(1600);
+    r.start();
+    r.end();
+    assert.deepEqual(r.said(), ['补花！', '自摸！', '胡了！']);
+  });
+  test('排队：念出声就接着说后面的，不等声音拖的空白；后面没话就让它自己说完', () => {
+    const r = ready([HH]);
+    r.v.say('peng', 0);
+    r.wait(150);
+    r.start();
+    r.wait(100);
+    r.v.say('sankou', 0);
+    r.wait(400);
+    assert.deepEqual(r.said(), ['碰！']); // 「碰」还在念
+    r.wait(40);
+    assert.deepEqual(r.said(), ['碰！', '三口！']);
+    assert.equal(r.cancels, 1);
+    r.start();
+    r.wait(1900);
+    assert.equal(r.cancels, 1); // 后面没话，不打断
+    r.v.say('chi', 1); // 早念完了，只是还没报「说完」：马上说
+    assert.deepEqual(r.said(), ['碰！', '三口！', '吃！']);
+    const q = ready([HH]); // 排队时还没出声：从出声算起
+    q.v.say('peng', 0);
+    q.v.say('chi', 1);
+    q.wait(800);
+    q.start();
+    q.wait(520);
+    assert.deepEqual(q.said(), ['碰！']);
+    q.wait(20);
+    assert.deepEqual(q.said(), ['碰！', '吃！']);
+    const m = ready([HH]); // 一炮多响：第二家不等第一家的尾巴
+    m.v.announce([{ key: 'ron', seat: 1 }, { key: 'ron', seat: 2 }]);
+    m.start();
+    m.wait(770);
+    assert.deepEqual(m.said(), ['胡了！', '胡了！']);
+    m.start();
+    m.wait(3900);
+    assert.equal(m.cancels, 1);
+  });
+  test('排队：还没出声的让给胡牌；已经出声的让它说完', () => {
+    const r = ready([HH]);
+    r.v.say('peng', 0);
+    r.v.say('ron', 1);
+    assert.deepEqual(r.said(), ['碰！', '胡了！']);
+    assert.equal(r.cancels, 1);
+    const q = ready([HH]);
+    q.v.say('peng', 0);
+    q.start();
+    q.v.say('ron', 1);
+    assert.deepEqual(q.said(), ['碰！']);
+    q.wait(540);
+    assert.deepEqual(q.said(), ['碰！', '胡了！']);
+  });
+  test('一炮多响：几家各用自己的声音说一句', () => {
+    const r = ready([XT, YZ]); // 排好以后 YZ 在前：沈强 YZ、王雷 XT、徐涌 YZ 低一点、吴忠 XT 低一点
+    r.v.announce([{ key: 'ron', seat: 1 }, { key: 'ron', seat: 2 }]);
+    r.start();
+    r.end();
+    assert.deepEqual(r.log.filter((u) => u.text).map((u) => [u.text, u.voice === YZ ? 'YZ' : 'XT', u.pitch]), [['胡了！', 'XT', 1], ['胡了！', 'YZ', 0.8]]);
+  });
+  test('卡住：四秒还没说完就不等它，接着说后面的', () => {
+    const r = ready([HH]);
+    r.v.say('peng', 0);
+    r.wait(3000);
+    r.v.say('chi', 1);
+    r.wait(1000);
+    assert.deepEqual(r.said(), ['碰！', '吃！']);
+    assert.equal(r.cancels, 1);
+    r.start();
+    r.end();
+    assert.equal(r.cancels, 1);
+  });
+  test('联网的声音出不来：先再试一次，还不行就一分钟内改用本机的普通话，之后再试；断网时直接用本机的', () => {
+    const r = ready([XT, HH]);
+    const next = () => { r.v.say('peng', 0); return r.last().voice; };
+    const finish = () => { r.start(); r.end(); };
+    assert.equal(next(), XT);
+    r.last().onerror({ error: 'synthesis-failed' }); // 失败一次：再说一次
+    assert.deepEqual(r.said(), ['碰！', '碰！']);
+    assert.equal(r.last().voice, XT);
+    finish();
+    assert.equal(next(), XT);
+    r.last().onerror({ error: 'network' });
+    assert.equal(r.last().voice, XT);
+    r.last().onerror({ error: 'network' }); // 连着失败两次：一分钟内不再用联网的
+    assert.equal(r.said().length, 4);
+    assert.equal(next(), HH);
+    finish();
+    r.wait(61000);
+    assert.equal(next(), XT);
+    finish();
+    r.online = false;
+    assert.equal(next(), HH);
+    finish();
+    r.online = true;
+    assert.equal(next(), XT); // 连得上，但是四秒没有声音
+    r.wait(4000);
+    assert.equal(next(), HH);
+    const n = r.log.length;
+    r.last().onerror({ error: 'voice-unavailable' }); // 本机的这个用不了：不再用它
+    r.v.say('chi', 0);
+    assert.equal(r.log.length, n);
+    const q = ready([HH, TW]); // 一个用不了，马上换一个把这句说了
+    q.v.say('peng', 0);
+    q.last().onerror({ error: 'voice-unavailable' });
+    assert.deepEqual(q.log.filter((u) => u.text).map((u) => [u.text, u.voice]), [['碰！', HH], ['碰！', TW]]);
+    const m = ready([XT]); // 失败的时候后面有话等着：不再说这句，接着说后面的
+    m.v.say('peng', 0);
+    m.v.say('chi', 1);
+    m.last().onerror({ error: 'synthesis-failed' });
+    assert.deepEqual(m.said(), ['碰！', '吃！']);
+    const s = ready([XT]); // 出了声才出错的不重说
+    s.v.say('peng', 0);
+    s.start();
+    s.last().onerror({ error: 'synthesis-failed' });
+    assert.deepEqual(s.said(), ['碰！']);
+  });
+  test('浏览器不让出声（not-allowed）：下一次点击再解锁', () => {
+    const r = ready([HH]);
+    r.v.say('peng', 0);
+    r.last().onerror({ error: 'not-allowed' });
+    r.v.say('chi', 0);
+    assert.deepEqual(r.said(), ['碰！']);
+    r.v.unlock();
+    r.v.say('chi', 0);
+    assert.deepEqual(r.said(), ['碰！', '吃！']);
   });
 
   // ---- 大量模拟 --------------------------------------------------------------

@@ -386,7 +386,7 @@ button {
 .intro li { padding-left: 16px; position: relative; }
 .intro li::before { content: "·"; position: absolute; left: 3px; color: var(--gold); font-weight: 700; }
 .intro .ghost { margin-left: 10px; }
-/* 开始画面：已经累计的总输赢和「清零」 */
+/* 开始画面：已经累计的总输赢和「所有玩家积分清零」 */
 .totals-line {
   display: flex;
   flex-wrap: wrap;
@@ -398,11 +398,13 @@ button {
   color: var(--muted);
   line-height: 1.8;
 }
-.totals-line[hidden] { display: none; }
-#totalsText { display: contents; } /* 标题、四家、「清零」排成一行，放不下时各自整块换行，仍然居中 */
+#totalsText { display: contents; } /* 标题、四家、清零的按键各占一行（手机上排成一行，放不下时各自整块换行），都居中 */
+.totals-line .title, #totalsText::after { flex-basis: 100%; }
+#totalsText::after { content: ""; height: 4px; }
 .totals-line .who { white-space: nowrap; color: var(--ink); }
 .totals-line b { font-variant-numeric: tabular-nums; color: var(--ink); }
-.intro .totals-line .ghost { min-width: 6.5em; margin-left: 0; padding: 2px 8px; font-size: 12px; }
+.intro .totals-line .reset { min-width: 11em; min-height: 44px; margin-left: 0; padding: 2px 14px; font-size: 14px; }
+.intro .totals-line .reset.armed { border-color: var(--red); background: rgba(212, 82, 74, .35); } /* 等第二下 */
 
 .rules { width: min(680px, calc(var(--lw) * 96 / 100)); font-size: 14px; line-height: 1.7; }
 .rules h2 { margin: 0 0 4px; font-family: var(--serif); color: var(--gold); }
@@ -535,8 +537,10 @@ html.compact .overlay { padding: 6px; }
 html.compact .card { padding: 12px 16px; max-height: calc(var(--lh) * 97 / 100); border-radius: 10px; }
 html.compact .intro h1 { font-size: 34px; letter-spacing: 5px; }
 html.compact .intro .sub { margin: 0 0 6px; font-size: 13px; }
-html.compact .totals-line { margin-top: 6px; font-size: 11.5px; line-height: 1.6; }
-html.compact .intro .totals-line .ghost { padding: 1px 8px; font-size: 11px; }
+html.compact .totals-line { margin-top: 3px; font-size: 11.5px; line-height: 1.6; }
+html.compact .totals-line .title { flex-basis: auto; }
+html.compact #totalsText::after { content: none; }
+html.compact .intro .totals-line .reset { padding: 1px 10px; font-size: 12px; }
 html.compact .intro ul { margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
 html.compact .primary.big { padding: 8px 26px; font-size: 16px; }
 html.compact .verdict { font-size: 28px; }
@@ -597,7 +601,8 @@ html.compact.narrow #plate1, html.compact.narrow #plate3 { top: 16%; }
 .intro .dedication p:last-child { margin: 0; }
 .intro .dedication a { color: var(--gold); text-decoration: none; word-break: break-all; }
   html.compact .intro { width: min(640px, calc(var(--lw) * 94 / 100)); }
-html.compact .intro .dedication { margin-top: 8px; padding: 6px 10px; font-size: 11.5px; line-height: 1.5; }
+html.compact .intro .dedication { margin-top: 4px; padding: 4px 10px; font-size: 11.5px; line-height: 1.5; }
+html.compact #startScreen .card { padding: 5px 16px 6px; }
 html.compact .intro .dedication p { margin: 0 0 2px; }
 
 

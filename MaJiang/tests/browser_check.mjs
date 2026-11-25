@@ -37,7 +37,8 @@ ws.addEventListener('message', (m) => {
   } else if (msg.method === 'Runtime.consoleAPICalled' && (msg.params.type === 'error' || msg.params.type === 'warning')) {
     problems.push(msg.params.type + ': ' + msg.params.args.map((a) => a.value ?? a.description).join(' '));
   } else if (msg.method === 'Log.entryAdded' && msg.params.entry.level === 'error') {
-    problems.push('日志: ' + msg.params.entry.text);
+    const e = msg.params.entry;
+    if (!/manifest\.webmanifest/.test(e.text + e.url)) problems.push('日志: ' + e.text); // file: 时浏览器不肯读 manifest，不碍事
   }
 });
 const send = (method, params = {}) => new Promise((r) => { const i = ++msgId; pendingMsgs.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
@@ -82,6 +83,10 @@ await send('Emulation.setFocusEmulationEnabled', { enabled: true });
 const url = 'file:///' + root.replace(/\\/g, '/') + '/index.html?speed=' + speed + (auto === 'auto' ? '&auto=1' : '');
 await send('Page.navigate', { url });
 await sleep(2500);
+if (touch) { // 无头 Edge：触摸模拟之后第一次打开的网页不给全屏，再打开一次才给
+  await send('Page.navigate', { url });
+  await sleep(2500);
+}
 await shot('start');
 
 const finished = [];
